@@ -1,24 +1,32 @@
-FROM php:8.2-apache
+version: '3.8'
 
-# Instalación de extensiones de PHP necesarias para Laravel/Chibutech
-RUN apt-get update && apt-get install -y \
-    libzip-dev \
-    zip \
-    unzip \
-    git \
-    && docker-php-ext-install pdo_mysql zip
+services:
+  db:
+    image: mariadb:10.11
+    container_name: chibutech_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_super_secreto
+      MYSQL_DATABASE: chibutech_dev
+      MYSQL_USER: chibu_user
+      MYSQL_PASSWORD: chibu_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
 
-# Habilitar mod_rewrite de Apache
-RUN a2enmod rewrite
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chibutech_backend
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./backend:/var/www/html
+    depends_on:
+      - db
 
-# Copiar configuración de virtualhost si existiera, o configurar ServerName
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
-
-# Directorio de trabajo
-WORKDIR /var/www/html
-
-# Copiar archivos del backend
-COPY . /var/www/html/
-
-# Permisos
-RUN chown -R www-data:www-data /var/www/html
+volumes:
+  db_data:
