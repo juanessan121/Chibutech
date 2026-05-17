@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   db:
-    image: mariadb:10.11
+    image: mariadb:10.6.25-jammy
     container_name: chibutech_db
     restart: always
     environment:
@@ -14,6 +14,7 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
+      - ./database:/docker-entrypoint-initdb.d
 
   backend:
     build:
