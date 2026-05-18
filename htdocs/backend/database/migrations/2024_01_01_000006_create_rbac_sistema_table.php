@@ -25,12 +25,12 @@ return new class extends Migration
             $table->primary(['id_rol', 'id_permiso']);
 
             $table->foreign('id_rol')
-                  ->references('id_rol')->on('rol_sistema')
-                  ->onDelete('cascade');
+                ->references('id_rol')->on('rol_sistema')
+                ->onDelete('cascade');
 
             $table->foreign('id_permiso')
-                  ->references('id_permiso')->on('permiso_sistema')
-                  ->onDelete('cascade');
+                ->references('id_permiso')->on('permiso_sistema')
+                ->onDelete('cascade');
         });
 
         Schema::create('usuario_sistema', function (Blueprint $table) {
@@ -42,28 +42,15 @@ return new class extends Migration
             $table->string('password_salt', 255);
 
             $table->foreign('id_persona')
-                  ->references('id_persona')->on('persona');
+                ->references('id_persona')->on('persona');
 
             $table->foreign('id_rol')
-                  ->references('id_rol')->on('rol_sistema');
-        });
-
-        // Tokens Sanctum — autenticación API
-        Schema::create('personal_access_tokens', function (Blueprint $table) {
-            $table->id();
-            $table->morphs('tokenable');
-            $table->string('name');
-            $table->string('token', 64)->unique();
-            $table->text('abilities')->nullable();
-            $table->timestamp('last_used_at')->nullable();
-            $table->timestamp('expires_at')->nullable();
-            $table->timestamps();
+                ->references('id_rol')->on('rol_sistema');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('personal_access_tokens');
         Schema::dropIfExists('usuario_sistema');
         Schema::dropIfExists('permiso_rol');
         Schema::dropIfExists('permiso_sistema');
