@@ -1,122 +1,49 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React from 'react';
+import './App.css'; 
 
 function App() {
-  const [count, setCount] = useState(0)
+return (
+    <div className="container">
+      {/* 1. Título de Bienvenida claro y grande */}
+    <header style={{ padding: '40px 20px' }}>
+        <h1>Bienvenidos a la Comunidad Chibuleo</h1>
+        <p style={{ textAlign: 'center', maxWidth: '800px', margin: '0 auto' }}>
+        Un espacio creado para honrar nuestra cultura y facilitar el acceso a la información para todos.
+        </p>
+    </header>
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+      {/* 2. Sección de Impacto Visual */}
+    <section className="galeria-comunidad">
+        <img 
+        src="https://scontent.fatf6-1.fna.fbcdn.net/v/t39.30808-6/549766587_1523762829061070_244675907634113662_n.jpg?stp=cp6_dst-jpg_s720x720_tt6&_nc_cat=105&ccb=1-7&_nc_sid=127cfc&_nc_ohc=39oh-bcNA24Q7kNvwHry__w&_nc_oc=AdoEU3hxuIo2hVUDF-24E6IJid8h4Tob7ADBiMQP30lOSqpW6rpimZNDeZ3XQYwQcB4&_nc_zt=23&_nc_ht=scontent.fatf6-1.fna&_nc_gid=pZQJWzU8gj2-_xXnHbt9mg&_nc_ss=7a289&oh=00_Af4UdRbnBoY22bNtsvoPmGY7c2XqtqI_u2q4V1PLpSPu-w&oe=6A106EDB" 
+        alt="Paisaje de la Comunidad Chibuleo" 
+        style={{ width: '100%', display: 'block' }}
+        />
+    </section>
+
+      {/* 3. Botones "A prueba de fallos" con Iconos y Texto */}
+    <main style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', padding: '20px' }}>
+        
+        {/* Usamos lenguaje directo como "Enviar información"  */}
+        <button className="btn-chibuleo">
+        Inicio
         </button>
-      </section>
 
-      <div className="ticks"></div>
+        <button className="btn-chibuleo">
+        Nuestra Cultura
+        </button>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        <button className="btn-chibuleo">
+        Enviar información
+        </button>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    </main>
+
+    <footer style={{ textAlign: 'center', padding: '40px', color: '#666', fontSize: '14px' }}>
+        © 2026 Comunidad Chibuleo - Diseño Accesible para Todos
+    </footer>
+    </div>
+    );
 }
 
-export default App
+export default App;
