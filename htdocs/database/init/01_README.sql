@@ -1,0 +1,14 @@
+-- ============================================================
+-- NOTA: Este directorio contiene scripts que MariaDB ejecuta
+-- automáticamente al crear el volumen por primera vez.
+-- Orden de ejecución (alfabético):
+--   01_README.sql         → este archivo (no hace nada)
+--   02_carreras_cine.sql  → 2510 registros del catálogo CINE
+--   03_auditoria_triggers → tabla Auditoria + 18 triggers
+--
+-- IMPORTANTE: Las tablas base las crea Laravel (php artisan migrate)
+-- vía docker-entrypoint.sh ANTES de que estos scripts corran.
+-- Si la BD ya existe (volumen previo), estos scripts NO se re-ejecutan.
+-- Para forzar un reset: make fresh
+-- ============================================================
+SELECT 'Chibutech DB init scripts ejecutados' AS info;
