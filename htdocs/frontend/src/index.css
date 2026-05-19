@@ -1,67 +1,351 @@
-/* 1. Definición de Identidad Visual */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
 :root {
-  /* Un lila muy claro que se oscurece sutilmente */
-  --color-fondo: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
-  --color-identidad: #935CD2;
-  --color-texto: #08e594;
-  --color-texto-claro: #FFFFFF;
+  /* Paleta Chibuleo */
+  --red: #ff2a2a; /* Fuerza y el sol */
+  --red-dark: #cc0000;
+  --red-glow: rgba(255, 42, 42, 0.35);
+  
+  --green: #22c55e; /* Naturaleza */
+  --turquoise: #06b6d4; /* Naturaleza */
+  --green-glow: rgba(34, 197, 94, 0.35);
+  
+  --yellow: #facc15; /* Maíz */
+  --yellow-glow: rgba(250, 204, 21, 0.35);
+
+  --black: #0a0a0a;
+  --black-soft: rgba(20, 20, 20, 0.85);
+  --black-card: rgba(26, 26, 26, 0.7);
+  --white: #ffffff;
+  --white-soft: #f5f5f5;
+  
+  --text-muted: #a3a3a3;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-red: rgba(255, 42, 42, 0.25);
 }
 
-/* 2. Reglas de Accesibilidad Globales */
-body {
-  background: var(--color-fondo);
-  background-attachment: fixed;
+* {
   margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: var(--color-fondo);
-  color: var(--color-texto);
-  font-size: 18px;
-  line-height: 1.6;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-/* 3. Títulos Grandes y Fuertes */
-h1, h2, h3 {
-  color: var(--color-identidad);
-  font-weight: bold;
+body {
+  font-family: 'Outfit', sans-serif;
+  color: var(--white);
+  min-height: 100vh;
+  overflow-x: hidden;
+  /* Imagen de fondo con overlay oscuro */
+  background: 
+    linear-gradient(to bottom, rgba(10, 10, 10, 0.85), rgba(10, 10, 10, 0.95)),
+    url('https://scontent.fatf6-1.fna.fbcdn.net/v/t39.30808-6/549766587_1523762829061070_244675907634113662_n.jpg?stp=cp6_dst-jpg_s720x720_tt6&_nc_cat=105&ccb=1-7&_nc_sid=127cfc&_nc_ohc=39oh-bcNA24Q7kNvwHry__w&_nc_oc=AdoEU3hxuIo2hVUDF-24E6IJid8h4Tob7ADBiMQP30lOSqpW6rpimZNDeZ3XQYwQcB4&_nc_zt=23&_nc_ht=scontent.fatf6-1.fna&_nc_gid=pZQJWzU8gj2-_xXnHbt9mg&_nc_ss=7a289&oh=00_Af4UdRbnBoY22bNtsvoPmGY7c2XqtqI_u2q4V1PLpSPu-w&oe=6A106EDB') no-repeat center center fixed;
+  background-size: cover;
 }
 
-h1 {
-  font-size: 2.5rem;
-  text-align: center;
+a {
+  color: var(--turquoise);
+  text-decoration: none;
+  transition: all 0.3s;
 }
 
-/* 4. Botones "A prueba de fallos" */
-.btn-chibuleo {
-  background-color: var(--color-identidad);
-  color: var(--color-texto-claro);
-  border: none;
-  border-radius: 8px;
-  
-  /* Bloques grandes y fáciles de presionar  */
-  padding: 15px 30px;
-  font-size: 1.2rem;
-  font-weight: bold;
-  cursor: pointer;
-  
-  /* Separación para evitar clics por error en móviles  */
-  margin: 10px;
+a:hover {
+  color: var(--yellow);
+}
+
+::selection {
+  background: var(--red);
+  color: var(--white);
+}
+
+/* ──────────── NAVBAR TOP ──────────── */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 40px;
+  background: rgba(10, 10, 10, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+
+.nav-brand {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--white);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-shadow: 0 0 20px var(--red-glow);
+}
+
+.nav-brand span {
+  color: var(--red);
+}
+
+.nav-actions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+/* ──────────── BOTONES ÉPICOS ──────────── */
+.btn {
   display: inline-flex;
   align-items: center;
-  gap: 10px; /* Espacio entre icono y texto */
-  
-  transition: background-color 0.3s ease;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: none;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.btn-chibuleo:hover {
-  background-color: #7a48b5; /* Un morado un poco más oscuro al pasar el mouse */
+.btn-primary {
+  background: var(--red);
+  color: var(--white);
+  box-shadow: 0 4px 20px var(--red-glow);
+  border: 1px solid transparent;
 }
 
-/* Contenedor de imágenes con impacto visual */
-.galeria-comunidad {
-  width: 90%;
-  max-width: 350px;
-  margin: 20px auto;
-  border-radius: 15px;
+.btn-primary:hover {
+  background: var(--red-dark);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px var(--red-glow);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--white);
+  border: 1px solid var(--turquoise);
+  box-shadow: inset 0 0 10px rgba(6, 182, 212, 0.1);
+}
+
+.btn-secondary:hover {
+  background: rgba(6, 182, 212, 0.1);
+  border-color: var(--turquoise);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(6, 182, 212, 0.3);
+}
+
+.btn-yellow {
+  background: var(--yellow);
+  color: var(--black);
+  box-shadow: 0 4px 20px var(--yellow-glow);
+}
+
+.btn-yellow:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px var(--yellow-glow);
+}
+
+/* ──────────── DESPLEGABLES (DROPDOWNS) ──────────── */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+  opacity: 0;
+  visibility: hidden;
+  position: absolute;
+  right: 0;
+  top: 130%;
+  background: var(--black-card);
+  min-width: 220px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transform: translateY(-15px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(239, 4, 4, 0.688);
+  z-index: 1000;
+  padding: 10px 0;
+}
+
+.dropdown:hover .dropdown-content {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.dropdown-item {
+  padding: 14px 24px;
+  display: block;
+  color: var(--white-soft);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--yellow);
+  border-left: 3px solid var(--yellow);
+  padding-left: 28px;
+}
+
+/* ──────────── MAIN HERO / DASHBOARD ──────────── */
+.main-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 80px);
+  position: relative;
+  overflow: hidden;
+  padding: 40px;
+}
+
+/* Círculos de luz de fondo para el efecto épico */
+.main-content::before {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, var(--red-glow) 0%, transparent 70%);
+  top: 20%;
+  left: 10%;
+  z-index: -1;
+  animation: breathe 8s ease-in-out infinite alternate;
+}
+
+.main-content::after {
+  content: '';
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.2) 0%, transparent 70%);
+  bottom: 10%;
+  right: 10%;
+  z-index: -1;
+  animation: breathe 6s ease-in-out infinite alternate-reverse;
+}
+
+.hero-card {
+  background: var(--black-card);
+  border: 1px solid var(--border);
+  padding: 50px;
+  border-radius: 24px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  max-width: 900px;
+  text-align: center;
+  animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--red), var(--yellow), var(--green), var(--turquoise));
+}
+
+.hero-card h1 {
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin-bottom: 20px;
+  background: linear-gradient(to right, var(--white), var(--yellow));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.2;
+}
+
+.hero-card p {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  line-height: 1.8;
+  max-width: 700px;
+  margin: 0 auto 30px auto;
+}
+
+/* ──────────── SWITCHER DE VISTAS (PRUEBAS) ──────────── */
+.view-switcher {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--black-card);
+  padding: 10px 20px;
+  border-radius: 20px;
+  display: flex;
+  gap: 15px;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.view-switcher span {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-right: 10px;
+}
+
+.view-switcher button {
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.05);
+  color: var(--white);
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.3s;
+}
+
+.view-switcher button:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+.view-switcher button.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--white);
+  box-shadow: 0 0 15px var(--red-glow);
+}
+
+/* ──────────── ANIMACIONES ──────────── */
+@keyframes breathe {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.3); opacity: 0.8; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .navbar { flex-direction: column; gap: 15px; padding: 20px; }
+  .nav-actions { flex-wrap: wrap; justify-content: center; }
+  .hero-card h1 { font-size: 2.5rem; }
+  .view-switcher { flex-wrap: wrap; width: 90%; justify-content: center; }
 }
