@@ -1,8 +1,10 @@
 // src/login.jsx
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './login.css';
 
-const Login = ({ onSwitchToRegister, onLoginSuccess }) => {
+const Login = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -19,11 +21,9 @@ const Login = ({ onSwitchToRegister, onLoginSuccess }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Por ahora solo simulación, sin base de datos
     console.log('Login intentado:', formData);
-    if (onLoginSuccess) {
-      onLoginSuccess(); // Simular login exitoso
-    }
+    // Simular login exitoso e ir al dashboard
+    navigate('/dashboard');
   };
 
   return (
@@ -113,7 +113,7 @@ const Login = ({ onSwitchToRegister, onLoginSuccess }) => {
           <button 
             type="button" 
             className="btn-register-redirect"
-            onClick={onSwitchToRegister}
+            onClick={() => navigate('/register')}
           >
             <span>📝</span>
             Crear una cuenta nueva

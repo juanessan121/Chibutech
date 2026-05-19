@@ -1,8 +1,10 @@
 // src/register.jsx
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './login.css'; // Reutilizamos el mismo CSS
 
-const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
+const Register = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     nombres: '',
     apellidos: '',
@@ -48,9 +50,8 @@ const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
     }
     
     console.log('Registro intentado:', formData);
-    if (onRegisterSuccess) {
-      onRegisterSuccess(); // Simular registro exitoso
-    }
+    // Simular registro exitoso e ir al dashboard
+    navigate('/dashboard');
   };
 
   return (
@@ -238,7 +239,7 @@ const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
           <button 
             type="button" 
             className="btn-register-redirect back-to-login"
-            onClick={onSwitchToLogin}
+            onClick={() => navigate('/login')}
           >
             <span>←</span>
             Volver a Iniciar Sesión

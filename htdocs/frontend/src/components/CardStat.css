@@ -1,0 +1,69 @@
+.card-stat {
+  background: var(--black-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.3s;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.card-stat:hover {
+  transform: translateY(-5px);
+}
+
+.card-stat-info h3 {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.card-stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--white);
+  line-height: 1;
+}
+
+.card-stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Clases de color para los íconos */
+.stat-red .card-stat-icon {
+  background: rgba(255, 42, 42, 0.1);
+  color: var(--red);
+  box-shadow: 0 0 20px var(--red-glow);
+}
+.stat-red:hover { border-color: var(--red); }
+
+.stat-green .card-stat-icon {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--green);
+  box-shadow: 0 0 20px var(--green-glow);
+}
+.stat-green:hover { border-color: var(--green); }
+
+.stat-yellow .card-stat-icon {
+  background: rgba(250, 204, 21, 0.1);
+  color: var(--yellow);
+  box-shadow: 0 0 20px var(--yellow-glow);
+}
+.stat-yellow:hover { border-color: var(--yellow); }
+
+.stat-turquoise .card-stat-icon {
+  background: rgba(6, 182, 212, 0.1);
+  color: var(--turquoise);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+}
+.stat-turquoise:hover { border-color: var(--turquoise); }

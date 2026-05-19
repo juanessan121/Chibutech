@@ -1,0 +1,93 @@
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  background: var(--black-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.custom-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.custom-table th,
+.custom-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.custom-table th {
+  background: rgba(0, 0, 0, 0.3);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+.custom-table tbody tr {
+  transition: all 0.2s;
+}
+
+.custom-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.custom-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.custom-table td {
+  font-size: 0.95rem;
+  color: var(--white);
+}
+
+.table-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-action {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.btn-action.edit {
+  background: rgba(6, 182, 212, 0.1);
+  color: var(--turquoise);
+  border: 1px solid var(--turquoise);
+}
+
+.btn-action.edit:hover {
+  background: var(--turquoise);
+  color: var(--black);
+}
+
+.btn-action.delete {
+  background: rgba(255, 42, 42, 0.1);
+  color: var(--red);
+  border: 1px solid var(--red);
+}
+
+.btn-action.delete:hover {
+  background: var(--red);
+  color: var(--white);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.py-4 {
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
+}
