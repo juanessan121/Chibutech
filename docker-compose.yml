@@ -1,0 +1,61 @@
+version: '3.8'
+
+# =============================================================================
+# ERP CHIBUTECH - Entorno de Desarrollo Local
+# =============================================================================
+# INSTRUCCIONES PARA COMPAÑEROS:
+#   1. Tener Docker Desktop instalado y corriendo
+#   2. Clonar el repositorio
+#   3. Ejecutar: docker-compose up -d
+#   4. Esperar ~30 segundos la primera vez (se importa la BD sola)
+#   5. Acceder a:
+#        - Backend PHP:  http://localhost:8080
+#        - Base de datos: usar DBeaver o TablePlus con los datos de abajo
+#
+# CREDENCIALES DE BASE DE DATOS:
+#   Host:     127.0.0.1
+#   Puerto:   3306
+#   Usuario:  ChibuleoP2026
+#   Clave:    Chibutech2026
+#   BD:       basechi
+# =============================================================================
+
+services:
+
+  db:
+    image: mariadb:10.6.25-jammy
+    container_name: chibutech_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_super_secreto
+      MYSQL_DATABASE: basechi
+      MYSQL_USER: ChibuleoP2026
+      MYSQL_PASSWORD: Chibutech2026
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      # Esta línea importa automáticamente todos los .sql de /database al iniciar
+      - ./database:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chibutech_backend
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./backend:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:
