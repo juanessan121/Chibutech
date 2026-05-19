@@ -3,127 +3,127 @@ import './index.css'; // Usamos el CSS épico que acabamos de crear
 
 function App() {
   // Estado para simular las 3 vistas: 'unregistered', 'registered', 'admin'
-  const [userRole, setUserRole] = useState('unregistered');
+const [userRole, setUserRole] = useState('unregistered');
 
-  return (
+return (
     <>
       {/* NAVBAR SUPERIOR - MODO ÉPICO */}
-      <nav className="navbar">
+    <nav className="navbar">
         <div className="nav-brand">
-          <span>●</span> Comunidad Chibuleo
+        <span>●</span> Comunidad Chibuleo
         </div>
 
         <div className="nav-actions">
           {/* VISTA 1: Usuario sin registrar */}
-          {userRole === 'unregistered' && (
+        {userRole === 'unregistered' && (
             <button className="btn btn-primary">
-              Iniciar Sesión
+            Iniciar Sesión
             </button>
-          )}
+        )}
 
           {/* VISTA 2: Usuario común registrado */}
-          {userRole === 'registered' && (
+        {userRole === 'registered' && (
             <>
-              <button className="btn btn-yellow">
+            <button className="btn btn-yellow">
                 Inscribirse a Minga
-              </button>
+            </button>
 
               {/* Botón Desplegable */}
-              <div className="dropdown">
+            <div className="dropdown">
                 <button className="btn btn-secondary">
-                  Mi Cuenta ▼
+                Mi Cuenta ▼
                 </button>
                 <div className="dropdown-content">
-                  <a className="dropdown-item">Perfil Personal</a>
-                  <a className="dropdown-item">Reportes de Multas</a>
-                  <a className="dropdown-item" style={{ color: 'var(--red)' }}>Cerrar Sesión</a>
+                <a className="dropdown-item">Perfil Personal</a>
+                <a className="dropdown-item">Reportes de Multas</a>
+                <a className="dropdown-item" style={{ color: 'var(--red)' }}>Cerrar Sesión</a>
                 </div>
-              </div>
+            </div>
             </>
-          )}
+        )}
 
           {/* VISTA 3: Administrador */}
-          {userRole === 'admin' && (
+        {userRole === 'admin' && (
             <>
               {/* Desplegable de Administración */}
-              <div className="dropdown">
+            <div className="dropdown">
                 <button className="btn btn-primary">
-                  Panel de Administración ▼
+                Panel de Administración ▼
                 </button>
                 <div className="dropdown-content">
-                  <a className="dropdown-item">Gestionar Mingas</a>
-                  <a className="dropdown-item">Gestionar Usuarios</a>
-                  <a className="dropdown-item">Caja Comunitaria</a>
-                  <a className="dropdown-item">Gestionar Multas</a>
+                <a className="dropdown-item">Gestionar Mingas</a>
+                <a className="dropdown-item">Gestionar Usuarios</a>
+                <a className="dropdown-item">Caja Comunitaria</a>
+                <a className="dropdown-item">Gestionar Multas</a>
                 </div>
-              </div>
-              
+            </div>
+            
               {/* Desplegable de Cuenta Admin */}
-              <div className="dropdown">
+            <div className="dropdown">
                 <button className="btn btn-secondary">
-                  Mi Cuenta ▼
+                Mi Cuenta ▼
                 </button>
                 <div className="dropdown-content">
-                  <a className="dropdown-item">Perfil Admin</a>
-                  <a className="dropdown-item" style={{ color: 'var(--red)' }}>Cerrar Sesión</a>
+                <a className="dropdown-item">Perfil Admin</a>
+                <a className="dropdown-item" style={{ color: 'var(--red)' }}>Cerrar Sesión</a>
                 </div>
-              </div>
+            </div>
             </>
-          )}
+        )}
         </div>
-      </nav>
+    </nav>
 
       {/* CONTENIDO PRINCIPAL - HERO CARD */}
-      <main className="main-content">
+    <main className="main-content">
         <div className="hero-card">
-          <h1>Sistema de Gestión de Mingas</h1>
-          <p>
+        <h1>Sistema de Gestión de Mingas</h1>
+        <p>
             Un espacio digital profesional creado para organizar, gestionar y honrar nuestra 
             cultura mediante el trabajo comunitario en la <strong>Comunidad Chibuleo</strong>.
-          </p>
-          
-          {userRole === 'unregistered' && (
+        </p>
+        
+        {userRole === 'unregistered' && (
             <button className="btn btn-primary" style={{ marginTop: '15px', padding: '15px 30px', fontSize: '1.1rem' }}>
-              Comenzar Ahora
+            Comenzar Ahora
             </button>
-          )}
-          {userRole === 'registered' && (
+        )}
+        {userRole === 'registered' && (
             <button className="btn btn-yellow" style={{ marginTop: '15px', padding: '15px 30px', fontSize: '1.1rem' }}>
-              Ver Próximas Mingas
+            Ver Próximas Mingas
             </button>
-          )}
-          {userRole === 'admin' && (
+        )}
+        {userRole === 'admin' && (
             <button className="btn btn-primary" style={{ marginTop: '15px', padding: '15px 30px', fontSize: '1.1rem' }}>
-              Ir al Dashboard
+            Ir al Dashboard
             </button>
-          )}
+        )}
         </div>
-      </main>
+    </main>
 
       {/* SWITCHER PARA PROBAR LAS VISTAS (Solo Desarrollo) */}
-      <div className="view-switcher">
+    <div className="view-switcher">
         <span>Vistas de Prueba:</span>
         <button 
-          className={userRole === 'unregistered' ? 'active' : ''} 
-          onClick={() => setUserRole('unregistered')}
+        className={userRole === 'unregistered' ? 'active' : ''} 
+        onClick={() => setUserRole('unregistered')}
         >
-          Sin Registrar
+        Sin Registrar
         </button>
         <button 
-          className={userRole === 'registered' ? 'active' : ''} 
-          onClick={() => setUserRole('registered')}
+        className={userRole === 'registered' ? 'active' : ''} 
+        onClick={() => setUserRole('registered')}
         >
-          Usuario Común
+        Usuario Común
         </button>
         <button 
-          className={userRole === 'admin' ? 'active' : ''} 
-          onClick={() => setUserRole('admin')}
+        className={userRole === 'admin' ? 'active' : ''} 
+        onClick={() => setUserRole('admin')}
         >
-          Administrador
+        Administrador
         </button>
-      </div>
+    </div>
     </>
-  );
+    );
 }
 
 export default App;

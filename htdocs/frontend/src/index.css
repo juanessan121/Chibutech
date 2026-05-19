@@ -2,15 +2,15 @@
 
 :root {
   /* Paleta Chibuleo */
-  --red: #ff2a2a; /* Fuerza y el sol */
+  --red: #ff2a2a;
   --red-dark: #cc0000;
   --red-glow: rgba(255, 42, 42, 0.35);
-  
-  --green: #22c55e; /* Naturaleza */
-  --turquoise: #06b6d4; /* Naturaleza */
+
+  --green: #22c55e;
+  --turquoise: #06b6d4;
   --green-glow: rgba(34, 197, 94, 0.35);
-  
-  --yellow: #facc15; /* Maíz */
+
+  --yellow: #facc15;
   --yellow-glow: rgba(250, 204, 21, 0.35);
 
   --black: #0a0a0a;
@@ -18,7 +18,7 @@
   --black-card: rgba(26, 26, 26, 0.7);
   --white: #ffffff;
   --white-soft: #f5f5f5;
-  
+
   --text-muted: #a3a3a3;
   --border: rgba(255, 255, 255, 0.1);
   --border-red: rgba(255, 42, 42, 0.25);
@@ -36,7 +36,7 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   /* Imagen de fondo con overlay oscuro */
-  background: 
+  background:
     linear-gradient(to bottom, rgba(10, 10, 10, 0.85), rgba(10, 10, 10, 0.95)),
     url('https://scontent.fatf6-1.fna.fbcdn.net/v/t39.30808-6/549766587_1523762829061070_244675907634113662_n.jpg?stp=cp6_dst-jpg_s720x720_tt6&_nc_cat=105&ccb=1-7&_nc_sid=127cfc&_nc_ohc=39oh-bcNA24Q7kNvwHry__w&_nc_oc=AdoEU3hxuIo2hVUDF-24E6IJid8h4Tob7ADBiMQP30lOSqpW6rpimZNDeZ3XQYwQcB4&_nc_zt=23&_nc_ht=scontent.fatf6-1.fna&_nc_gid=pZQJWzU8gj2-_xXnHbt9mg&_nc_ss=7a289&oh=00_Af4UdRbnBoY22bNtsvoPmGY7c2XqtqI_u2q4V1PLpSPu-w&oe=6A106EDB') no-repeat center center fixed;
   background-size: cover;
@@ -57,7 +57,7 @@ a:hover {
   color: var(--white);
 }
 
-/* ──────────── NAVBAR TOP ──────────── */
+/* NAVBAR */
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -95,7 +95,7 @@ a:hover {
   align-items: center;
 }
 
-/* ──────────── BOTONES ÉPICOS ──────────── */
+/* BOTONES ÉPICOS */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -150,7 +150,7 @@ a:hover {
   box-shadow: 0 8px 30px var(--yellow-glow);
 }
 
-/* ──────────── DESPLEGABLES (DROPDOWNS) ──────────── */
+/* DESPLEGABLES */
 .dropdown {
   position: relative;
   display: inline-block;
@@ -201,7 +201,7 @@ a:hover {
   padding-left: 28px;
 }
 
-/* ──────────── MAIN HERO / DASHBOARD ──────────── */
+/* DASHBOARD */
 .main-content {
   display: flex;
   flex-direction: column;
@@ -269,6 +269,7 @@ a:hover {
   margin-bottom: 20px;
   background: linear-gradient(to right, var(--white), var(--yellow));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   line-height: 1.2;
 }
@@ -281,7 +282,7 @@ a:hover {
   margin: 0 auto 30px auto;
 }
 
-/* ──────────── SWITCHER DE VISTAS (PRUEBAS) ──────────── */
+/* SWITCHER DE VISTAS */
 .view-switcher {
   position: fixed;
   bottom: 20px;
@@ -295,7 +296,7 @@ a:hover {
   z-index: 1000;
   backdrop-filter: blur(10px);
   border: 1px solid var(--border);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 .view-switcher span {
@@ -312,7 +313,7 @@ a:hover {
   padding: 8px 16px;
   font-size: 0.85rem;
   border: 1px solid var(--border);
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--white);
   border-radius: 10px;
   cursor: pointer;
@@ -321,7 +322,7 @@ a:hover {
 }
 
 .view-switcher button:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .view-switcher button.active {
@@ -333,19 +334,49 @@ a:hover {
 
 /* ──────────── ANIMACIONES ──────────── */
 @keyframes breathe {
-  0% { transform: scale(1); opacity: 0.5; }
-  100% { transform: scale(1.3); opacity: 0.8; }
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+
+  100% {
+    transform: scale(1.3);
+    opacity: 0.8;
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(40px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* RESPONSIVE */
 @media (max-width: 768px) {
-  .navbar { flex-direction: column; gap: 15px; padding: 20px; }
-  .nav-actions { flex-wrap: wrap; justify-content: center; }
-  .hero-card h1 { font-size: 2.5rem; }
-  .view-switcher { flex-wrap: wrap; width: 90%; justify-content: center; }
+  .navbar {
+    flex-direction: column;
+    gap: 15px;
+    padding: 20px;
+  }
+
+  .nav-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .hero-card h1 {
+    font-size: 2.5rem;
+  }
+
+  .view-switcher {
+    flex-wrap: wrap;
+    width: 90%;
+    justify-content: center;
+  }
 }
