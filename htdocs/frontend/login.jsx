@@ -37,7 +37,7 @@ const Login = () => {
       <div className="login-card">
         <div className="login-header">
           <div className="chibuleo-symbol">
-            <span className="symbol-icon"></span>
+            <span className="symbol-icon">🏔️</span>
             <span className="symbol-text">Chibuleo</span>
           </div>
           <h2>Bienvenido de vuelta</h2>
@@ -47,7 +47,7 @@ const Login = () => {
         <form onSubmit={handleSubmit} className="login-form">
           <div className="input-group">
             <label htmlFor="email">
-              <span className="label-icon"></span>
+              <span className="label-icon">📧</span>
               Correo Electrónico
             </label>
             <input
@@ -64,7 +64,7 @@ const Login = () => {
 
           <div className="input-group">
             <label htmlFor="password">
-              <span className="label-icon"></span>
+              <span className="label-icon">🔒</span>
               Contraseña
             </label>
             <div className="password-wrapper">
@@ -115,7 +115,7 @@ const Login = () => {
             className="btn-register-redirect"
             onClick={() => navigate('/register')}
           >
-            <span></span>
+            <span>📝</span>
             Crear una cuenta nueva
           </button>
         </form>
