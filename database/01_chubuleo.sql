@@ -2,9 +2,9 @@ CREATE DATABASE IF NOT EXISTS basechi;
 USE basechi;
 
 -- =============================================================================
--- ERP JUNTAS DE AGUA - ARQUITECTURA DEFINITIVA (V6 - PRODUCCIÓN MASTER)
+-- ERP JUNTAS DE AGUA - ARQUITECTURA DEFINITIVA (V7 - MASTER PRODUCCIÓN)
 -- MOTOR: InnoDB | DEFAULT CHARSET: utf8mb4 
--- DISEÑO: Cero datos quemados, GPS, finanzas flexibles y auditoría por Triggers.
+-- DISEÑO: Cero datos quemados, Jefes de Zona, Demografía, GPS, Finanzas y Auditoría.
 -- =============================================================================
 
 -- -----------------------------------------------------
@@ -83,6 +83,13 @@ CREATE TABLE Catalogo_Nivel_Academico (
 INSERT INTO Catalogo_Nivel_Academico (id_nivel_academico, nombre_nivel) VALUES 
 (1, 'No Especificado'), (2, 'Técnico/Tecnológico'), (3, 'Tercer Nivel'), (4, 'Cuarto Nivel'), (5, 'Quinto Nivel');
 
+CREATE TABLE Catalogo_Genero (
+    id_genero INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_genero VARCHAR(50) NOT NULL UNIQUE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO Catalogo_Genero (nombre_genero) VALUES ('Masculino'), ('Femenino');
+
 
 -- -----------------------------------------------------
 -- PARTE 2: CATÁLOGO NACIONAL DE TÍTULOS
@@ -102,7 +109,7 @@ ALTER TABLE Catalogo_Titulo_Educativo ADD FULLTEXT INDEX idx_cat_nombre (nombre)
 
 
 -- -----------------------------------------------------
--- PARTE 3: NÚCLEO DE PERSONAS Y GOBERNANZA
+-- PARTE 3: NÚCLEO DE PERSONAS, DEMOGRAFÍA Y DIRECTIVA
 -- -----------------------------------------------------
 CREATE TABLE Persona (
     id_persona INT AUTO_INCREMENT PRIMARY KEY,
@@ -110,12 +117,14 @@ CREATE TABLE Persona (
     nombre VARCHAR(100) NOT NULL,
     apellido VARCHAR(100) NOT NULL,
     fecha_nacimiento DATE,
+    id_genero INT NULL,
     id_zona INT NULL,
     id_representante_familia INT NULL,
     id_condicion_especial INT NOT NULL DEFAULT 1,
     estado_vital ENUM('Vivo', 'Fallecido') DEFAULT 'Vivo',
     fecha_defuncion DATE NULL,
 
+    CONSTRAINT fk_persona_genero FOREIGN KEY (id_genero) REFERENCES Catalogo_Genero(id_genero) ON DELETE RESTRICT,
     CONSTRAINT fk_persona_zona FOREIGN KEY (id_zona) REFERENCES Zona(id_zona) ON DELETE SET NULL,
     CONSTRAINT fk_persona_tutor FOREIGN KEY (id_representante_familia) REFERENCES Persona(id_persona) ON DELETE SET NULL,
     CONSTRAINT fk_persona_condicion FOREIGN KEY (id_condicion_especial) REFERENCES Catalogo_Condicion_Especial(id_condicion) ON DELETE RESTRICT
@@ -133,10 +142,6 @@ CREATE TABLE Miembro_Directiva (
     CONSTRAINT fk_directiva_cargo FOREIGN KEY (id_cargo_directivo) REFERENCES Catalogo_Cargo_Directivo(id_cargo_directivo) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-
--- -----------------------------------------------------
--- PARTE 3.1: GESTIÓN TERRITORIAL (JEFES DE ZONA)
--- -----------------------------------------------------
 CREATE TABLE Jefe_Zona (
     id_jefe_zona INT AUTO_INCREMENT PRIMARY KEY,
     id_zona INT NOT NULL,
@@ -167,13 +172,9 @@ CREATE TABLE Contacto_Persona (
     id_persona INT NOT NULL,
     id_tipo_contacto INT NOT NULL, 
     valor_contacto VARCHAR(150) NOT NULL,
-    
-    -- La nueva columna clave para resolver tu requerimiento
-    referencia_propietario VARCHAR(100) NULL COMMENT 'Ej: Hijo Juan, Esposa, Vecino (NULL si es del propio titular)',
-    
-    operadora_o_detalle VARCHAR(50) NULL COMMENT 'Ej: Claro, Movistar, CNT, Casa, Trabajo',
+    referencia_propietario VARCHAR(100) NULL,
+    operadora_o_detalle VARCHAR(50) NULL,
     es_principal BOOLEAN DEFAULT FALSE,
-    
     CONSTRAINT fk_contacto_persona FOREIGN KEY (id_persona) REFERENCES Persona(id_persona) ON DELETE CASCADE,
     CONSTRAINT fk_contacto_tipo FOREIGN KEY (id_tipo_contacto) REFERENCES Catalogo_Tipo_Contacto(id_tipo_contacto) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -188,8 +189,7 @@ CREATE TABLE Terreno (
     clave_catastral VARCHAR(50) UNIQUE NOT NULL,
     latitud DECIMAL(10,8) NULL,
     longitud DECIMAL(11,8) NULL,
-    archivo_planimetria MEDIUMBLOB NULL COMMENT 'Almacena el binario del PDF (hasta 16MB)',
-    archivo_escritura MEDIUMBLOB NULL COMMENT 'Almacena el binario del PDF (hasta 16MB)',
+    url_planimetria VARCHAR(255) NULL,
     peso_archivo_bytes INT NULL,
     area_total DECIMAL(10, 2) NOT NULL,
     id_estado_construccion INT NOT NULL DEFAULT 1,
@@ -296,7 +296,7 @@ CREATE TABLE Multa (
     motivo_multa VARCHAR(200) NOT NULL,
     monto DECIMAL(8, 2) NOT NULL,
     estado_pago ENUM('Pendiente', 'Pagada', 'Anulada') DEFAULT 'Pendiente',
-    archivo_documento_justificativo MEDIUMBLOB NULL COMMENT 'Almacena el PDF/Imagen de justificación (hasta 16MB)',
+    url_documento_justificativo VARCHAR(255) NULL,
     observacion_anulacion TEXT NULL,
     fecha_emision TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_multa_persona FOREIGN KEY (id_persona) REFERENCES Persona(id_persona) ON DELETE CASCADE

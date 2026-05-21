@@ -20,6 +20,7 @@ BEGIN
         'nombre', NEW.nombre,
         'apellido', NEW.apellido,
         'fecha_nacimiento', NEW.fecha_nacimiento,
+        'id_genero', NEW.id_genero,
         'id_zona', NEW.id_zona,
         'id_condicion_especial', NEW.id_condicion_especial,
         'estado_vital', NEW.estado_vital
@@ -36,6 +37,7 @@ BEGIN
         'nombre', OLD.nombre,
         'apellido', OLD.apellido,
         'fecha_nacimiento', OLD.fecha_nacimiento,
+        'id_genero', OLD.id_genero,
         'id_zona', OLD.id_zona,
         'id_condicion_especial', OLD.id_condicion_especial,
         'estado_vital', OLD.estado_vital,
@@ -46,6 +48,7 @@ BEGIN
         'nombre', NEW.nombre,
         'apellido', NEW.apellido,
         'fecha_nacimiento', NEW.fecha_nacimiento,
+        'id_genero', NEW.id_genero,
         'id_zona', NEW.id_zona,
         'id_condicion_especial', NEW.id_condicion_especial,
         'estado_vital', NEW.estado_vital,
@@ -63,6 +66,7 @@ BEGIN
         'nombre', OLD.nombre,
         'apellido', OLD.apellido,
         'fecha_nacimiento', OLD.fecha_nacimiento,
+        'id_genero', OLD.id_genero,
         'id_zona', OLD.id_zona,
         'estado_vital', OLD.estado_vital
     ), NULL, @id_usuario_actual);
