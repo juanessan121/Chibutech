@@ -135,6 +135,22 @@ CREATE TABLE Miembro_Directiva (
 
 
 -- -----------------------------------------------------
+-- PARTE 3.1: GESTIÓN TERRITORIAL (JEFES DE ZONA)
+-- -----------------------------------------------------
+CREATE TABLE Jefe_Zona (
+    id_jefe_zona INT AUTO_INCREMENT PRIMARY KEY,
+    id_zona INT NOT NULL,
+    id_persona INT NOT NULL,
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NULL,
+    estado ENUM('Activo', 'Finalizado') DEFAULT 'Activo',
+    
+    CONSTRAINT fk_jefe_zona FOREIGN KEY (id_zona) REFERENCES Zona(id_zona) ON DELETE CASCADE,
+    CONSTRAINT fk_jefe_persona FOREIGN KEY (id_persona) REFERENCES Persona(id_persona) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- -----------------------------------------------------
 -- PARTE 4: EDUCACIÓN Y CONTACTOS PERSONALES
 -- -----------------------------------------------------
 CREATE TABLE Perfil_Educativo_Persona (
