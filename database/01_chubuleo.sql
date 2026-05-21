@@ -2,16 +2,15 @@ CREATE DATABASE IF NOT EXISTS basechi;
 USE basechi;
 
 -- =============================================================================
--- ERP JUNTAS DE AGUA - ARQUITECTURA DEFINITIVA (V4 - 100% DINÁMICA Y FINANCIERA)
+-- ERP JUNTAS DE AGUA - ARQUITECTURA DEFINITIVA (V6 - PRODUCCIÓN MASTER)
 -- MOTOR: InnoDB | DEFAULT CHARSET: utf8mb4 
--- DISEÑO: Cero datos quemados, jerarquía de multas, manejo de imprevistos y auditoría.
+-- DISEÑO: Cero datos quemados, GPS, finanzas flexibles y auditoría por Triggers.
 -- =============================================================================
 
 -- -----------------------------------------------------
 -- PARTE 1: CATÁLOGOS GLOBALES Y DINÁMICOS
 -- -----------------------------------------------------
 
--- 1.1 Geografía y Directiva
 CREATE TABLE Zona (
     id_zona INT AUTO_INCREMENT PRIMARY KEY,
     nombre_zona VARCHAR(100) NOT NULL UNIQUE,
@@ -24,7 +23,6 @@ CREATE TABLE Catalogo_Cargo_Directivo (
     descripcion TEXT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 1.2 Personas y Contactos
 CREATE TABLE Catalogo_Condicion_Especial (
     id_condicion INT AUTO_INCREMENT PRIMARY KEY,
     nombre_condicion VARCHAR(100) NOT NULL UNIQUE
@@ -41,7 +39,6 @@ CREATE TABLE Catalogo_Tipo_Contacto (
 INSERT INTO Catalogo_Tipo_Contacto (nombre_tipo) VALUES 
 ('Celular'), ('Teléfono Fijo'), ('Correo Electrónico'), ('WhatsApp');
 
--- 1.3 Infraestructura y Catastro
 CREATE TABLE Catalogo_Estado_Construccion (
     id_estado_construccion INT AUTO_INCREMENT PRIMARY KEY,
     nombre_estado VARCHAR(50) NOT NULL UNIQUE
@@ -50,7 +47,14 @@ CREATE TABLE Catalogo_Estado_Construccion (
 INSERT INTO Catalogo_Estado_Construccion (nombre_estado) VALUES 
 ('Lote Baldío'), ('En Planificación'), ('En Construcción'), ('Construida');
 
--- 1.4 Catálogos para Mingas (Trabajo Comunitario)
+CREATE TABLE Catalogo_Tipo_Evento (
+    id_tipo_evento INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_tipo VARCHAR(100) NOT NULL UNIQUE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO Catalogo_Tipo_Evento (nombre_tipo) VALUES 
+('Minga Comunitaria'), ('Asamblea General'), ('Sesión de Directiva'), ('Inspección de Campo');
+
 CREATE TABLE Catalogo_Actividad_Minga (
     id_actividad INT AUTO_INCREMENT PRIMARY KEY,
     nombre_actividad VARCHAR(150) NOT NULL UNIQUE
@@ -66,10 +70,11 @@ CREATE TABLE Catalogo_Estado_Asistencia (
     nombre_estado VARCHAR(50) NOT NULL UNIQUE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO Catalogo_Estado_Minga (nombre_estado) VALUES ('Programada'), ('En Ejecución'), ('Finalizada'), ('Suspendida'), ('Cancelada');
-INSERT INTO Catalogo_Estado_Asistencia (nombre_estado) VALUES ('Pendiente'), ('Presente'), ('Faltó'), ('Justificado');
+INSERT INTO Catalogo_Estado_Minga (nombre_estado) VALUES 
+('Programada'), ('En Ejecución'), ('Finalizada'), ('Suspendida'), ('Cancelada');
+INSERT INTO Catalogo_Estado_Asistencia (nombre_estado) VALUES 
+('Pendiente'), ('Presente'), ('Faltó'), ('Justificado');
 
--- 1.5 Educación
 CREATE TABLE Catalogo_Nivel_Academico (
     id_nivel_academico INT AUTO_INCREMENT PRIMARY KEY,
     nombre_nivel VARCHAR(100) NOT NULL UNIQUE
@@ -80,16 +85,14 @@ INSERT INTO Catalogo_Nivel_Academico (id_nivel_academico, nombre_nivel) VALUES
 
 
 -- -----------------------------------------------------
--- PARTE 2: CATÁLOGO NACIONAL DE TÍTULOS (SENESCYT)
+-- PARTE 2: CATÁLOGO NACIONAL DE TÍTULOS
 -- -----------------------------------------------------
 CREATE TABLE Catalogo_Titulo_Educativo (
-    codigo VARCHAR(15) PRIMARY KEY COMMENT 'Código oficial CINE',
+    codigo VARCHAR(15) PRIMARY KEY,
     nombre VARCHAR(255) NOT NULL,
     nivel_jerarquico INT NOT NULL,
-    
     id_nivel_academico INT NOT NULL DEFAULT 1,
     parent_codigo VARCHAR(15) NULL,
-    
     CONSTRAINT fk_cat_titulo_parent FOREIGN KEY (parent_codigo) REFERENCES Catalogo_Titulo_Educativo(codigo) ON DELETE RESTRICT,
     CONSTRAINT fk_cat_titulo_nivel FOREIGN KEY (id_nivel_academico) REFERENCES Catalogo_Nivel_Academico(id_nivel_academico) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -108,11 +111,9 @@ CREATE TABLE Persona (
     apellido VARCHAR(100) NOT NULL,
     fecha_nacimiento DATE,
     id_zona INT NULL,
-    
-    id_representante_familia INT NULL COMMENT 'Apunta al ID del tutor si es dependiente',
+    id_representante_familia INT NULL,
     id_condicion_especial INT NOT NULL DEFAULT 1,
-    
-    estado_vital ENUM('Vivo', 'Fallecido') DEFAULT 'Vivo' COMMENT 'Único ENUM válido por ser biológico e inmutable',
+    estado_vital ENUM('Vivo', 'Fallecido') DEFAULT 'Vivo',
     fecha_defuncion DATE NULL,
 
     CONSTRAINT fk_persona_zona FOREIGN KEY (id_zona) REFERENCES Zona(id_zona) ON DELETE SET NULL,
@@ -141,7 +142,6 @@ CREATE TABLE Perfil_Educativo_Persona (
     id_persona INT NOT NULL,
     codigo_titulo_cine VARCHAR(15) NOT NULL, 
     estado_estudio ENUM('Cursando', 'Finalizado', 'Abandonado') DEFAULT 'Finalizado',
-    
     CONSTRAINT fk_edu_persona FOREIGN KEY (id_persona) REFERENCES Persona(id_persona) ON DELETE CASCADE,
     CONSTRAINT fk_edu_titulo FOREIGN KEY (codigo_titulo_cine) REFERENCES Catalogo_Titulo_Educativo(codigo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -153,7 +153,6 @@ CREATE TABLE Contacto_Persona (
     valor_contacto VARCHAR(150) NOT NULL,
     operadora_o_detalle VARCHAR(50) NULL,
     es_principal BOOLEAN DEFAULT FALSE,
-    
     CONSTRAINT fk_contacto_persona FOREIGN KEY (id_persona) REFERENCES Persona(id_persona) ON DELETE CASCADE,
     CONSTRAINT fk_contacto_tipo FOREIGN KEY (id_tipo_contacto) REFERENCES Catalogo_Tipo_Contacto(id_tipo_contacto) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -166,6 +165,11 @@ CREATE TABLE Terreno (
     id_terreno INT AUTO_INCREMENT PRIMARY KEY,
     id_persona INT NOT NULL,
     clave_catastral VARCHAR(50) UNIQUE NOT NULL,
+    latitud DECIMAL(10,8) NULL,
+    longitud DECIMAL(11,8) NULL,
+    archivo_planimetria MEDIUMBLOB NULL COMMENT 'Almacena el binario del PDF (hasta 16MB)',
+    archivo_escritura MEDIUMBLOB NULL COMMENT 'Almacena el binario del PDF (hasta 16MB)',
+    peso_archivo_bytes INT NULL,
     area_total DECIMAL(10, 2) NOT NULL,
     id_estado_construccion INT NOT NULL DEFAULT 1,
     
@@ -173,9 +177,18 @@ CREATE TABLE Terreno (
     CONSTRAINT fk_terreno_estado FOREIGN KEY (id_estado_construccion) REFERENCES Catalogo_Estado_Construccion(id_estado_construccion) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE Colindante_Terreno (
+    id_terreno_principal INT NOT NULL,
+    id_terreno_colindante INT NOT NULL,
+    punto_cardinal VARCHAR(50) NULL,
+    PRIMARY KEY (id_terreno_principal, id_terreno_colindante),
+    CONSTRAINT fk_colindante_principal FOREIGN KEY (id_terreno_principal) REFERENCES Terreno(id_terreno) ON DELETE CASCADE,
+    CONSTRAINT fk_colindante_vecino FOREIGN KEY (id_terreno_colindante) REFERENCES Terreno(id_terreno) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 -- -----------------------------------------------------
--- PARTE 6: SEGURIDAD INFORMÁTICA - RBAC DINÁMICO
+-- PARTE 6: SEGURIDAD INFORMÁTICA - RBAC
 -- -----------------------------------------------------
 CREATE TABLE Rol_Sistema (
     id_rol INT AUTO_INCREMENT PRIMARY KEY,
@@ -203,28 +216,27 @@ CREATE TABLE Usuario_Sistema (
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     password_salt VARCHAR(255) NOT NULL,
-    
     CONSTRAINT fk_usuario_persona FOREIGN KEY (id_persona) REFERENCES Persona(id_persona),
     CONSTRAINT fk_usuario_rol FOREIGN KEY (id_rol) REFERENCES Rol_Sistema(id_rol)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- -----------------------------------------------------
--- PARTE 7: TRABAJO COMUNITARIO Y MANTENIMIENTO (MINGAS 2.0)
+-- PARTE 7: GESTIÓN DE EVENTOS COMUNITARIOS
 -- -----------------------------------------------------
 CREATE TABLE Minga (
     id_minga INT AUTO_INCREMENT PRIMARY KEY,
+    id_tipo_evento INT NOT NULL DEFAULT 1,
     fecha_programada DATE NOT NULL,
     motivo_general VARCHAR(255) NOT NULL,
     lugar_encuentro VARCHAR(150) NOT NULL,
+    latitud DECIMAL(10,8) NULL,
+    longitud DECIMAL(11,8) NULL,
     id_estado_minga INT NOT NULL,
-    
-    -- Campos agregados para jerarquía de precios e imprevistos
-    valor_multa_inasistencia DECIMAL(8,2) NOT NULL DEFAULT 0.00 COMMENT 'Multa base para esta minga',
-    observacion_estado TEXT NULL COMMENT 'Motivo de cancelación o suspensión',
-    
+    valor_multa_inasistencia DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+    observacion_estado TEXT NULL,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+    CONSTRAINT fk_minga_tipo_evento FOREIGN KEY (id_tipo_evento) REFERENCES Catalogo_Tipo_Evento(id_tipo_evento) ON DELETE RESTRICT,
     CONSTRAINT fk_minga_estado FOREIGN KEY (id_estado_minga) REFERENCES Catalogo_Estado_Minga(id_estado_minga) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -233,10 +245,7 @@ CREATE TABLE Asignacion_Zona_Minga (
     id_minga INT NOT NULL,
     id_zona INT NOT NULL,
     id_actividad INT NOT NULL,
-    
-    -- Campo agregado para sobrescribir la multa por zona/grupo
-    valor_multa_grupo DECIMAL(8,2) NULL COMMENT 'Sobrescribe la multa general si el grupo tiene un trabajo más/menos pesado',
-    
+    valor_multa_grupo DECIMAL(8,2) NULL,
     CONSTRAINT fk_asig_zona_minga FOREIGN KEY (id_minga) REFERENCES Minga(id_minga) ON DELETE CASCADE,
     CONSTRAINT fk_asig_zona_lugar FOREIGN KEY (id_zona) REFERENCES Zona(id_zona) ON DELETE CASCADE,
     CONSTRAINT fk_asig_zona_actividad FOREIGN KEY (id_actividad) REFERENCES Catalogo_Actividad_Minga(id_actividad) ON DELETE RESTRICT
@@ -248,14 +257,12 @@ CREATE TABLE Asistencia_Minga (
     id_persona INT NOT NULL,
     id_actividad_especifica INT NULL,
     id_estado_asistencia INT NOT NULL,
-    observacion VARCHAR(255) NULL COMMENT 'Aquí se registra si presentó justificación o certificado médico',
-    
+    observacion VARCHAR(255) NULL,
     CONSTRAINT fk_asistencia_minga FOREIGN KEY (id_minga) REFERENCES Minga(id_minga) ON DELETE CASCADE,
     CONSTRAINT fk_asistencia_persona FOREIGN KEY (id_persona) REFERENCES Persona(id_persona) ON DELETE CASCADE,
     CONSTRAINT fk_asistencia_actividad FOREIGN KEY (id_actividad_especifica) REFERENCES Catalogo_Actividad_Minga(id_actividad) ON DELETE SET NULL,
     CONSTRAINT fk_asistencia_estado FOREIGN KEY (id_estado_asistencia) REFERENCES Catalogo_Estado_Asistencia(id_estado_asistencia) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE INDEX idx_asistencia_control ON Asistencia_Minga(id_minga, id_estado_asistencia);
 
 
@@ -268,8 +275,9 @@ CREATE TABLE Multa (
     motivo_multa VARCHAR(200) NOT NULL,
     monto DECIMAL(8, 2) NOT NULL,
     estado_pago ENUM('Pendiente', 'Pagada', 'Anulada') DEFAULT 'Pendiente',
+    archivo_documento_justificativo MEDIUMBLOB NULL COMMENT 'Almacena el PDF/Imagen de justificación (hasta 16MB)',
+    observacion_anulacion TEXT NULL,
     fecha_emision TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
     CONSTRAINT fk_multa_persona FOREIGN KEY (id_persona) REFERENCES Persona(id_persona) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -281,7 +289,6 @@ CREATE TABLE Caja_Comunitaria (
     id_multa INT NULL,
     monto DECIMAL(12, 2) NOT NULL,
     responsable_registro INT NOT NULL,
-    
     CONSTRAINT fk_caja_multa FOREIGN KEY (id_multa) REFERENCES Multa(id_multa) ON DELETE SET NULL,
     CONSTRAINT fk_caja_usuario FOREIGN KEY (responsable_registro) REFERENCES Usuario_Sistema(id_usuario)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -295,41 +302,21 @@ CREATE TABLE Configuracion_Global (
 
 
 -- -----------------------------------------------------
--- PARTE 9: AUDITORÍA Y TRAZABILIDAD DEL SISTEMA
+-- PARTE 9: SISTEMA DE AUDITORÍA (TABLA CENTRAL)
 -- -----------------------------------------------------
-CREATE TABLE Auditoria_Sistema (
-    id_auditoria INT AUTO_INCREMENT PRIMARY KEY,
-    tabla_afectada VARCHAR(100) NOT NULL,
-    accion ENUM('INSERT', 'UPDATE', 'DELETE') NOT NULL,
-    id_registro_afectado INT NOT NULL,
-    
-    valores_antiguos JSON NULL,
-    valores_nuevos JSON NULL,
-    
-    id_usuario_responsable INT NULL,
-    ip_origen VARCHAR(45) NULL,
-    fecha_accion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT fk_auditoria_usuario FOREIGN KEY (id_usuario_responsable) REFERENCES Usuario_Sistema(id_usuario) ON DELETE SET NULL
+CREATE TABLE Auditoria (
+    id_auditoria    BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tabla_afectada  VARCHAR(100) NOT NULL,
+    operacion       ENUM('INSERT', 'UPDATE', 'DELETE') NOT NULL,
+    id_registro     VARCHAR(50) NOT NULL,
+    datos_anteriores JSON NULL,
+    datos_nuevos     JSON NULL,
+    id_usuario      INT NULL,
+    fecha_hora      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ip_origen       VARCHAR(45) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE INDEX idx_auditoria_busqueda ON Auditoria_Sistema(tabla_afectada, id_registro_afectado);
-
-
--- -----------------------------------------------------
--- PARTE 10: TRIGGERS Y REGLAS DE NEGOCIO (Blindaje)
--- -----------------------------------------------------
-DELIMITER //
-
-CREATE TRIGGER trg_bloqueo_admin_delete
-BEFORE DELETE ON Usuario_Sistema
-FOR EACH ROW
-BEGIN
-    -- Bloqueo estricto para proteger al super administrador (ID 1)
-    IF OLD.id_usuario = 1 THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Bloqueo crítico: No se puede eliminar al administrador principal porque sin él se acaba el programa.';
-    END IF;
-END; //
-
-DELIMITER ;
+CREATE INDEX idx_aud_tabla     ON Auditoria(tabla_afectada);
+CREATE INDEX idx_aud_fecha     ON Auditoria(fecha_hora);
+CREATE INDEX idx_aud_usuario   ON Auditoria(id_usuario);
+CREATE INDEX idx_aud_operacion ON Auditoria(operacion);

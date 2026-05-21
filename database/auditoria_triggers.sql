@@ -3,25 +3,7 @@
 -- Tabla: Auditoria + 18 Triggers (6 tablas x 3 operaciones)
 -- ============================================================
 
--- ------------------------------------------------------------
--- TABLA DE AUDITORÍA
--- ------------------------------------------------------------
-CREATE TABLE Auditoria (
-    id_auditoria    BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tabla_afectada  VARCHAR(100) NOT NULL COMMENT 'Nombre de la tabla modificada',
-    operacion       ENUM('INSERT', 'UPDATE', 'DELETE') NOT NULL,
-    id_registro     VARCHAR(50) NOT NULL COMMENT 'PK del registro afectado',
-    datos_anteriores JSON NULL COMMENT 'Valores ANTES del cambio (NULL en INSERT)',
-    datos_nuevos     JSON NULL COMMENT 'Valores DESPUÉS del cambio (NULL en DELETE)',
-    id_usuario      INT NULL COMMENT 'Usuario del sistema que ejecutó la acción (vía @id_usuario_actual)',
-    fecha_hora      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    ip_origen       VARCHAR(45) NULL COMMENT 'IP de conexión (llenada por el backend opcionalmente)'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE INDEX idx_aud_tabla     ON Auditoria(tabla_afectada);
-CREATE INDEX idx_aud_fecha     ON Auditoria(fecha_hora);
-CREATE INDEX idx_aud_usuario   ON Auditoria(id_usuario);
-CREATE INDEX idx_aud_operacion ON Auditoria(operacion);
 
 -- ============================================================
 -- TRIGGERS: PERSONA
@@ -331,6 +313,18 @@ BEGIN
         'area_total', OLD.area_total,
         'id_estado_construccion', OLD.id_estado_construccion
     ), NULL, @id_usuario_actual);
+END$$
+
+-- ============================================================
+-- 10.1 TRIGGER DE SEGURIDAD (ADMINISTRADOR)
+-- ============================================================
+CREATE TRIGGER trg_bloqueo_admin_delete
+BEFORE DELETE ON Usuario_Sistema FOR EACH ROW
+BEGIN
+    IF OLD.id_usuario = 1 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Bloqueo crítico: No se puede eliminar al administrador principal.';
+    END IF;
 END$$
 
 DELIMITER ;

@@ -32,7 +32,7 @@ services:
       MYSQL_USER: ChibuleoP2026
       MYSQL_PASSWORD: Chibutech2026
     ports:
-      - "3306:3306"
+      - "3308:3306"
     volumes:
       - db_data:/var/lib/mysql
       # Esta línea importa automáticamente todos los .sql de /database al iniciar
@@ -53,6 +53,20 @@ services:
       - "8080:80"
     volumes:
       - ./backend:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: chibutech_phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: root_super_secreto
+    ports:
+      - "8081:80"
     depends_on:
       db:
         condition: service_healthy
