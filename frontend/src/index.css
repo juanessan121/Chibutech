@@ -11,6 +11,14 @@
   --error-bg: rgba(239, 68, 68, 0.1);
   --error-text: #fca5a5;
   --error-border: rgba(239, 68, 68, 0.3);
+  /* ===== SEMANTIC COLOR TOKENS ===== */
+  --green:  #10b981;
+  --red:    #ef4444;
+  --yellow: #f59e0b;
+  --purple: #8b5cf6;
+  --blue:   #0ea5e9;
+  --earth:  #f59e0b;
+  --pink:   #ec4899;
 }
 
 * {
@@ -56,8 +64,30 @@ body {
   animation: fadeIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
+.spin {
+  animation: spin 1s linear infinite;
+}
+
 .spinner {
   animation: spin 1s linear infinite;
+}
+
+/* ===== UTILITY CLASSES (previously missing) ===== */
+.cursor-pointer { cursor: pointer; }
+.pb-10 { padding-bottom: 2.5rem; }
+.pb-6  { padding-bottom: 1.5rem; }
+.mt-4  { margin-top: 1rem; }
+.mt-6  { margin-top: 1.5rem; }
+.gap-2 { gap: 0.5rem; }
+.w-full { width: 100%; }
+
+/* hover-scale: was used in JSX but never defined */
+.hover-scale {
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease;
+}
+.hover-scale:hover {
+  transform: scale(1.04);
+  box-shadow: 0 8px 20px -4px rgba(14, 165, 233, 0.25);
 }
 
 /* Glassmorphism utility */
@@ -265,17 +295,18 @@ body {
   gap: 1.5rem;
 }
 
+/* module-card: defined once here as base. The extended version at line ~798 overrides padding to 0 for the banner layout. */
 .module-card {
-  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.3s ease, border-color 0.3s ease;
+  overflow: hidden;
+  position: relative;
 }
 
 .module-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 20px 40px -10px rgba(14, 165, 233, 0.3);
+  transform: translateY(-6px);
+  box-shadow: 0 25px 50px -10px rgba(14, 165, 233, 0.35);
   border-color: rgba(14, 165, 233, 0.4);
 }
 
@@ -794,11 +825,9 @@ body {
   margin-top: 0.25rem;
 }
 
-/* Custom Module Cards */
+/* Extended module-card for banner layout (padding:0 to let the banner bleed edge-to-edge) */
 .module-card {
-  padding: 0; /* Removing padding because of banner */
-  overflow: hidden;
-  position: relative;
+  padding: 0;
 }
 
 .module-banner {
@@ -819,10 +848,13 @@ body {
 .bg-earth { color: #fcd34d; background: rgba(245, 158, 11, 0.15); }
 
 .text-purple { color: #c084fc; }
-.text-green { color: #34d399; }
-.text-red { color: #f87171; }
-.text-blue { color: #60a5fa; }
-.text-earth { color: #fbbf24; }
+.text-green  { color: #34d399; }
+.text-red    { color: #f87171; }
+.text-blue   { color: #60a5fa; }
+.text-earth  { color: #fbbf24; }
+.text-yellow { color: #fbbf24; } /* alias for text-earth, both valid */
+.text-pink   { color: #f472b6; }
+.text-muted  { color: var(--text-muted); }
 
 .module-content {
   padding: 2rem 1.5rem;
@@ -869,9 +901,14 @@ body {
   gap: 0.75rem;
 }
 
+.hover-glow {
+  transition: transform 0.3s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.3s ease;
+}
 .hover-glow:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255,255,255,0.1);
+  transform: translateY(-6px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8),
+              0 0 0 1px rgba(14, 165, 233, 0.2),
+              inset 0 1px 1px rgba(255,255,255,0.12);
 }
 
 /* ==================================================

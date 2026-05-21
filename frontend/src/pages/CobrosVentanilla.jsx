@@ -182,11 +182,22 @@ export default function CobrosVentanilla() {
 
           {/* TOTAL Y BOTÓN DE PAGO */}
           <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <span className="text-muted" style={{ fontSize: '1.1rem' }}>Total Seleccionado:</span>
               <span style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--green)' }}>
                 ${totalAPagar.toFixed(2)}
               </span>
+            </div>
+
+            {/* Número de comprobante — cubre columna numero_comprobante de Caja_Comunitaria */}
+            <div className="input-group" style={{ marginBottom: '1rem' }}>
+              <label className="input-label" style={{ fontSize: '0.8rem' }}>N° Comprobante (Opcional — se autogenera si se deja vacío)</label>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="Ej. REC-2026-001"
+                style={{ padding: '0.6rem 1rem', fontSize: '0.9rem' }}
+              />
             </div>
             
             <button 

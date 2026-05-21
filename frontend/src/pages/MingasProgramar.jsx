@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarPlus, ArrowLeft, Save, MapPin, DollarSign, Clock, Users, FileText } from 'lucide-react';
+import { CalendarPlus, ArrowLeft, Save, MapPin, DollarSign, Clock, Users, FileText, Tag, Navigation } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { getZonas, getActividadesMinga } from '../services/catalogoService';
 import { programarMinga } from '../services/mingaService';
+
+// Catálogo local de tipos de evento (refleja Catalogo_Tipo_Evento de la BD)
+const TIPOS_EVENTO = [
+  { id: 1, nombre: 'Minga Comunitaria' },
+  { id: 2, nombre: 'Asamblea General' },
+  { id: 3, nombre: 'Sesión de Directiva' },
+  { id: 4, nombre: 'Inspección de Campo' },
+];
 
 export default function MingasProgramar() {
   const navigate = useNavigate();
@@ -107,7 +115,18 @@ export default function MingasProgramar() {
             Detalles de la Jornada
           </h3>
 
+          {/* Tipo de Evento — cubre columna id_tipo_evento de tabla Minga */}
           <div className="form-grid">
+            <div className="input-group">
+              <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Tag size={14} className="text-purple" /> Tipo de Evento *
+              </label>
+              <select className="form-select" {...register('id_tipo_evento', { required: true })}>
+                {TIPOS_EVENTO.map(t => (
+                  <option key={t.id} value={t.id}>{t.nombre}</option>
+                ))}
+              </select>
+            </div>
             <div className="input-group">
               <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Clock size={16} className="text-blue" /> Fecha y Hora Programada *
@@ -119,6 +138,7 @@ export default function MingasProgramar() {
               />
               {errors.fecha_hora_programada && <span className="text-red" style={{fontSize:'0.75rem'}}>{errors.fecha_hora_programada.message}</span>}
             </div>
+          </div>
 
             <div className="input-group">
               <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -145,7 +165,20 @@ export default function MingasProgramar() {
             </div>
           </div>
 
-          <div className="form-grid" style={{ marginTop: '0.5rem' }}>
+          <div className="form-grid">
+            <div className="input-group">
+              <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Navigation size={14} className="text-muted" /> Latitud GPS (Opcional)
+              </label>
+              <input type="number" step="any" className="input-field" placeholder="Ej. -1.3281" {...register('latitud')} />
+            </div>
+            <div className="input-group">
+              <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Navigation size={14} className="text-muted" /> Longitud GPS (Opcional)
+              </label>
+              <input type="number" step="any" className="input-field" placeholder="Ej. -78.5528" {...register('longitud')} />
+            </div>
+          </div>
             <div className="input-group">
               <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <DollarSign size={16} className="text-green" /> Valor Multa General Inasistencia ($) *

@@ -84,8 +84,8 @@ export default function Dashboard() {
                   {user?.rol?.toUpperCase()}
                 </span>
               </div>
-              <p className="text-muted" style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>
-                Comunero Activo • C.I: 1802345678 • Sector Centro, Lote #45
+              <p className="text-muted" style={{ marginBottom: '1.5rem', fontSize: '1rem' }}>
+                Comunero Activo • Miembro registrado en el sistema de la Junta de Agua Chibuleo
               </p>
             </div>
             
@@ -133,7 +133,7 @@ export default function Dashboard() {
         <div className="modules-grid animate-fade-in" style={{ marginTop: '2.5rem' }}>
           
           {/* Card: Terrenos y Derechos de Agua */}
-          <div className="glass-card module-card hover-glow" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer', borderTop: '4px solid #0ea5e9' }}>
+          <div className="glass-card module-card hover-glow cursor-pointer" onClick={() => navigate('/dashboard/catastro')} style={{ borderTop: '4px solid #0ea5e9' }}>
             <div className="module-banner" style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.2), rgba(3,105,161,0.2))' }}></div>
             <div className="module-content" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div className="module-icon" style={{ background: 'linear-gradient(135deg, #0ea5e9, #0369a1)', color: 'white', boxShadow: '0 10px 20px rgba(14,165,233,0.3)' }}><Droplets size={28} /></div>
@@ -149,7 +149,7 @@ export default function Dashboard() {
           </div>
 
           {/* Card: Próxima Minga / Convocatoria */}
-          <div className="glass-card module-card hover-glow" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer', borderTop: '4px solid #f59e0b' }}>
+          <div className="glass-card module-card hover-glow cursor-pointer" onClick={() => navigate('/dashboard/mingas')} style={{ borderTop: '4px solid #f59e0b' }}>
             <div className="module-banner" style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.2), rgba(180,83,9,0.2))' }}></div>
             <div className="module-content" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div className="module-icon" style={{ background: 'linear-gradient(135deg, #f59e0b, #b45309)', color: 'white', boxShadow: '0 10px 20px rgba(245,158,11,0.3)' }}><Users size={28} /></div>
@@ -168,7 +168,7 @@ export default function Dashboard() {
           </div>
 
           {/* Card: Estado Financiero / Multas */}
-          <div className="glass-card module-card hover-glow" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer', borderTop: '4px solid #ef4444' }}>
+          <div className="glass-card module-card hover-glow cursor-pointer" onClick={() => navigate('/dashboard/mis-deudas')} style={{ borderTop: '4px solid #ef4444' }}>
             <div className="module-banner" style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(185,28,28,0.2))' }}></div>
             <div className="module-content" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div className="module-icon" style={{ background: 'linear-gradient(135deg, #ef4444, #b91c1c)', color: 'white', boxShadow: '0 10px 20px rgba(239,68,68,0.3)' }}><ShieldAlert size={28} /></div>
@@ -192,7 +192,7 @@ export default function Dashboard() {
       <div className="modules-grid" style={{ marginTop: '2rem' }}>
         
         {hasPermission('crear_usuario') && (
-          <div className="glass-card module-card hover-glow" onClick={() => navigate('/dashboard/usuarios')} style={{ cursor: 'pointer' }}>
+          <div className="glass-card module-card hover-glow cursor-pointer" onClick={() => navigate('/dashboard/usuarios')} >
             <div className="module-banner bg-gradient-purple" style={{ backgroundImage: `url(${bgUsuarios})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.8 }}></div>
             <div className="module-content">
               <div className="module-icon bg-purple"><Settings size={28} /></div>
@@ -204,7 +204,7 @@ export default function Dashboard() {
         )}
 
         {hasPermission('gestionar_mingas') && (
-          <div className="glass-card module-card hover-glow" onClick={() => navigate('/dashboard/mingas')} style={{ cursor: 'pointer' }}>
+          <div className="glass-card module-card hover-glow cursor-pointer" onClick={() => navigate('/dashboard/mingas')} >
             <div className="module-banner bg-gradient-green" style={{ backgroundImage: `url(${bgMingas})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.8 }}></div>
             <div className="module-content">
               <div className="module-icon bg-green"><Users size={28} /></div>
@@ -216,7 +216,7 @@ export default function Dashboard() {
         )}
 
         {hasPermission('gestionar_multas') && (
-          <div className="glass-card module-card hover-glow" onClick={() => navigate('/dashboard/cobros')} style={{ cursor: 'pointer' }}>
+          <div className="glass-card module-card hover-glow cursor-pointer" onClick={() => navigate('/dashboard/cobros')} >
             <div className="module-banner bg-gradient-red" style={{ backgroundImage: `url(${bgCobros})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.8 }}></div>
             <div className="module-content">
               <div className="module-icon bg-red"><ShieldAlert size={28} /></div>
@@ -228,7 +228,7 @@ export default function Dashboard() {
         )}
 
         {hasPermission('ver_reportes') && (
-          <div className="glass-card module-card hover-glow" onClick={() => navigate('/dashboard/reportes')} style={{ cursor: 'pointer' }}>
+          <div className="glass-card module-card hover-glow cursor-pointer" onClick={() => navigate('/dashboard/reportes')} >
             <div className="module-banner bg-gradient-blue" style={{ backgroundImage: `url(${bgReportes})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.8 }}></div>
             <div className="module-content">
               <div className="module-icon bg-blue"><FileText size={28} /></div>
@@ -240,7 +240,7 @@ export default function Dashboard() {
         )}
 
         {hasPermission('ver_mis_multas') && !hasPermission('gestionar_multas') && (
-          <div className="glass-card module-card hover-glow" onClick={() => navigate('/dashboard/deudas')} style={{ cursor: 'pointer' }}>
+          <div className="glass-card module-card hover-glow cursor-pointer" onClick={() => navigate('/dashboard/mis-deudas')} >
             <div className="module-banner bg-gradient-earth" style={{ backgroundImage: `url(${bgDeudas})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.8 }}></div>
             <div className="module-content">
               <div className="module-icon bg-earth"><Droplets size={28} /></div>
