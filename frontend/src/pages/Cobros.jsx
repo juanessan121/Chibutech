@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, Search, PlusCircle, BarChart3, ArrowRight } from 'lucide-react';
+import { Wallet, Search, PlusCircle, BarChart3, ArrowRight, Droplets } from 'lucide-react';
 import bgVentanillaCobro from '../assets/bg_ventanilla_cobro.png';
 import bgGenerarMulta from '../assets/bg_generar_multa.png';
 import bgRegistrarEgreso from '../assets/bg_registrar_egreso.png';
@@ -82,6 +82,22 @@ export default function CobrosMenu() {
             <p>Revisa todos los ingresos y egresos para el control financiero de la Junta.</p>
             <button className="btn-module text-purple">
               Ver Transacciones <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* TARJETA 5: EMITIR PLANILLAS DE AGUA */}
+        <div 
+          className="glass-card module-card hover-glow cursor-pointer"
+          onClick={() => navigate('/dashboard/cobros/planilla')}
+        >
+          <div className="module-banner" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', opacity: 0.8 }}></div>
+          <div className="module-content">
+            <div className="module-icon" style={{ background: '#3b82f6', color: 'white' }}><Droplets size={28} /></div>
+            <h3>Emitir Planillas</h3>
+            <p>Genera las facturas o planillas de agua mensuales de forma masiva o individual.</p>
+            <button className="btn-module text-blue" style={{ color: '#3b82f6' }}>
+              Generar Planilla <ArrowRight size={16} />
             </button>
           </div>
         </div>

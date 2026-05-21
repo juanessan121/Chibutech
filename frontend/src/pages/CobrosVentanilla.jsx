@@ -17,11 +17,14 @@ export default function CobrosVentanilla() {
 
   const mockDeudas = {
     1: [
-      { id_multa: 101, motivo: 'Inasistencia a Minga (Limpieza Acequias)', fecha_emision: '2025-10-15', monto: 10.00 },
-      { id_multa: 102, motivo: 'Daño a tubería principal', fecha_emision: '2025-11-20', monto: 25.50 }
+      { id_multa: 101, motivo: 'Inasistencia a Minga (Limpieza Acequias)', fecha_emision: '2025-10-15', monto: 10.00, tipo: 'Multa' },
+      { id_multa: 102, motivo: 'Daño a tubería principal', fecha_emision: '2025-11-20', monto: 25.50, tipo: 'Multa' },
+      { id_multa: 201, motivo: 'Planilla de Agua - Enero 2026', fecha_emision: '2026-01-01', monto: 5.00, tipo: 'Planilla' }
     ],
     2: [
-      { id_multa: 103, motivo: 'Inasistencia a Minga (Mantenimiento)', fecha_emision: '2026-02-10', monto: 15.00 }
+      { id_multa: 103, motivo: 'Inasistencia a Minga (Mantenimiento)', fecha_emision: '2026-02-10', monto: 15.00, tipo: 'Multa' },
+      { id_multa: 202, motivo: 'Planilla de Agua - Enero 2026', fecha_emision: '2026-01-01', monto: 5.00, tipo: 'Planilla' },
+      { id_multa: 203, motivo: 'Planilla de Agua - Febrero 2026', fecha_emision: '2026-02-01', monto: 5.00, tipo: 'Planilla' }
     ]
   };
 
@@ -168,7 +171,11 @@ export default function CobrosVentanilla() {
                       style={{ width: '20px', height: '20px', accentColor: 'var(--primary)', cursor: 'pointer' }}
                     />
                     <div>
-                      <p style={{ fontWeight: '500', color: 'var(--text-main)', margin: 0, marginBottom: '0.2rem' }}>{deuda.motivo}</p>
+                      <p style={{ fontWeight: '500', color: 'var(--text-main)', margin: 0, marginBottom: '0.2rem' }}>
+                        {deuda.tipo === 'Planilla' && <span style={{ background: 'var(--blue)', color: 'white', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.7rem', marginRight: '0.5rem' }}>Planilla</span>}
+                        {deuda.tipo === 'Multa' && <span style={{ background: 'var(--red)', color: 'white', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.7rem', marginRight: '0.5rem' }}>Multa</span>}
+                        {deuda.motivo}
+                      </p>
                       <p className="text-muted" style={{ fontSize: '0.8rem', margin: 0 }}>Emitida: {deuda.fecha_emision}</p>
                     </div>
                   </div>

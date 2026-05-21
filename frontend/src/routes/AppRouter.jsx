@@ -17,6 +17,7 @@ import CobrosVentanilla from '../pages/CobrosVentanilla';
 import CobrosGenerar from '../pages/CobrosGenerar';
 import CobrosEgreso from '../pages/CobrosEgreso';
 import CobrosHistorial from '../pages/CobrosHistorial';
+import CobrosPlanilla from '../pages/CobrosPlanilla';
 import ReportesMenu from '../pages/ReportesMenu';
 import MisDeudas from '../pages/MisDeudas';
 import Directiva from '../pages/Directiva';
@@ -72,6 +73,7 @@ export default function AppRouter() {
             <Route index element={<PrivateRoute><Cobros /></PrivateRoute>} />
             <Route path="ventanilla" element={<PrivateRoute><CobrosVentanilla /></PrivateRoute>} />
             <Route path="generar" element={<PrivateRoute><CobrosGenerar /></PrivateRoute>} />
+            <Route path="planilla" element={<PrivateRoute><CobrosPlanilla /></PrivateRoute>} />
             <Route path="egreso" element={<PrivateRoute><CobrosEgreso /></PrivateRoute>} />
             <Route path="historial" element={<PrivateRoute><CobrosHistorial /></PrivateRoute>} />
           </Route>

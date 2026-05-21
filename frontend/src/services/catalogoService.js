@@ -35,3 +35,8 @@ export const getActividadesMinga = async () => {
   const { data } = await axios.get('/catalogos/actividades-minga');
   return data;
 };
+
+export const getGeneros = async () => {
+  const { data } = await axios.get('/catalogos/generos');
+  return data;
+};

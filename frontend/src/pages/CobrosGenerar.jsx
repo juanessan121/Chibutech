@@ -10,6 +10,7 @@ export default function CobrosGenerar() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [motivo, setMotivo] = useState('');
   const [monto, setMonto] = useState('');
+  const [urlDocumento, setUrlDocumento] = useState('');
 
   // Mocks simulando la base de datos
   const mockUsers = [
@@ -125,6 +126,19 @@ export default function CobrosGenerar() {
                   value={monto}
                   onChange={(e) => setMonto(e.target.value)}
                   required
+                />
+              </div>
+            </div>
+
+            <div className="form-grid full" style={{ marginTop: '1rem' }}>
+              <div className="input-group">
+                <label className="input-label">Documento Justificativo (URL / Enlace Opcional)</label>
+                <input 
+                  type="url" 
+                  className="input-field" 
+                  placeholder="https://drive.google.com/... (Evidencia, Foto, Parte)" 
+                  value={urlDocumento}
+                  onChange={(e) => setUrlDocumento(e.target.value)}
                 />
               </div>
             </div>

@@ -1,20 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Map, Search, FileDown, Eye, Building2, Fence, MapPin } from 'lucide-react';
+import { Map, Search, ExternalLink, Building2, Fence, MapPin } from 'lucide-react';
 
-// Simulación de datos de la tabla Terreno + JOIN con Persona y Zona
+// Simulación de datos: tabla Terreno JOIN Persona JOIN Zona JOIN Catalogo_Estado_Construccion
 const terrenosMock = [
   {
     id_terreno: 1,
     propietario: 'Carlos Ruiz Masaquiza',
     cedula: '1801112223',
     zona: 'Sector Centro',
-    estado_construccion: 'Construido',
+    estado_construccion: 'Construida',
     area_m2: 350.5,
     latitud: -1.3281,
     longitud: -78.5528,
-    tiene_escritura: true,
-    tiene_planimetria: true,
+    url_planimetria: 'https://drive.google.com/file/d/abc123',
   },
   {
     id_terreno: 2,
@@ -25,40 +24,38 @@ const terrenosMock = [
     area_m2: 210.0,
     latitud: -1.3300,
     longitud: -78.5510,
-    tiene_escritura: true,
-    tiene_planimetria: false,
+    url_planimetria: null,
   },
   {
     id_terreno: 3,
     propietario: 'José Luis Tixilema',
     cedula: '1803334445',
     zona: 'San Francisco',
-    estado_construccion: 'Solar/Terreno',
+    estado_construccion: 'Lote Baldío',
     area_m2: 500.0,
     latitud: null,
     longitud: null,
-    tiene_escritura: false,
-    tiene_planimetria: false,
+    url_planimetria: null,
   },
   {
     id_terreno: 4,
     propietario: 'María Rosario Chango',
     cedula: '1809990001',
     zona: 'San Miguel',
-    estado_construccion: 'Construido',
+    estado_construccion: 'Construida',
     area_m2: 180.75,
     latitud: -1.3260,
     longitud: -78.5545,
-    tiene_escritura: true,
-    tiene_planimetria: true,
+    url_planimetria: 'https://drive.google.com/file/d/xyz789',
   },
 ];
 
 const estadoColor = {
-  'Construido': '#10b981',
-  'En Construcción': '#f59e0b',
-  'Solar/Terreno': '#64748b',
-  'Demolido': '#ef4444',
+  'Construida':       '#10b981',
+  'En Construcción':  '#f59e0b',
+  'Lote Baldío':      '#64748b',
+  'En Planificación': '#3b82f6',
+  'Demolido':         '#ef4444',
 };
 
 export default function CatastroGlobal() {
@@ -70,11 +67,6 @@ export default function CatastroGlobal() {
     t.cedula.includes(busqueda) ||
     t.zona.toLowerCase().includes(busqueda.toLowerCase())
   );
-
-  const handleDescargarPdf = (idTerreno, tipo) => {
-    // En producción: llama al backend que retorna el MEDIUMBLOB como blob descargable
-    alert(`Descargando ${tipo} del terreno #${idTerreno} desde la base de datos...`);
-  };
 
   return (
     <div className="animate-fade-in pb-10">
@@ -99,7 +91,7 @@ export default function CatastroGlobal() {
           </div>
         </div>
 
-        {/* Resumen rápido */}
+        {/* Resumen por estado de construcción */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
           {Object.entries(
             terrenosMock.reduce((acc, t) => {
@@ -119,17 +111,18 @@ export default function CatastroGlobal() {
       </div>
 
       <div className="glass-card" style={{ padding: '1.5rem', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '750px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '720px' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
-              {['Propietario', 'Zona / Sector', 'Estado', 'Área (m²)', 'Coordenadas', 'Escritura', 'Planimetría'].map(h => (
+              {['Propietario', 'Zona / Sector', 'Estado', 'Área (m²)', 'Coordenadas GPS', 'Planimetría'].map(h => (
                 <th key={h} style={{ padding: '0.9rem 1rem', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: '700' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {terrenosFiltrados.map(t => (
-              <tr key={t.id_terreno} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }}
+              <tr key={t.id_terreno}
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
@@ -144,24 +137,21 @@ export default function CatastroGlobal() {
                 </td>
                 <td style={{ padding: '1rem' }}>
                   <span style={{
-                    padding: '0.3rem 0.75rem',
-                    borderRadius: '1rem',
-                    fontSize: '0.78rem',
-                    fontWeight: 'bold',
+                    padding: '0.3rem 0.75rem', borderRadius: '1rem', fontSize: '0.78rem', fontWeight: 'bold',
                     background: `${estadoColor[t.estado_construccion] || '#64748b'}20`,
-                    color: estadoColor[t.estado_construccion] || '#64748b',
-                    whiteSpace: 'nowrap'
+                    color: estadoColor[t.estado_construccion] || '#64748b', whiteSpace: 'nowrap'
                   }}>
                     {t.estado_construccion}
                   </span>
                 </td>
-                <td style={{ padding: '1rem', color: 'var(--text-main)' }}>{t.area_m2} m²</td>
+                <td style={{ padding: '1rem', color: 'var(--text-main)', fontWeight: '500' }}>
+                  {t.area_m2.toLocaleString('es-EC', { minimumFractionDigits: 2 })} m²
+                </td>
                 <td style={{ padding: '1rem' }}>
                   {t.latitud ? (
                     <a
                       href={`https://www.google.com/maps?q=${t.latitud},${t.longitud}`}
-                      target="_blank"
-                      rel="noreferrer"
+                      target="_blank" rel="noreferrer"
                       style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--primary)', fontSize: '0.8rem' }}
                     >
                       <MapPin size={14} /> Ver en Mapa
@@ -171,27 +161,15 @@ export default function CatastroGlobal() {
                   )}
                 </td>
                 <td style={{ padding: '1rem' }}>
-                  {t.tiene_escritura ? (
-                    <button
-                      onClick={() => handleDescargarPdf(t.id_terreno, 'Escritura')}
+                  {t.url_planimetria ? (
+                    <a
+                      href={t.url_planimetria}
+                      target="_blank" rel="noreferrer"
                       className="btn-secondary"
-                      style={{ padding: '0.35rem 0.7rem', fontSize: '0.78rem', gap: '0.4rem' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.7rem', fontSize: '0.78rem', textDecoration: 'none' }}
                     >
-                      <FileDown size={14} /> Escritura
-                    </button>
-                  ) : (
-                    <span className="text-muted" style={{ fontSize: '0.78rem' }}>Sin archivo</span>
-                  )}
-                </td>
-                <td style={{ padding: '1rem' }}>
-                  {t.tiene_planimetria ? (
-                    <button
-                      onClick={() => handleDescargarPdf(t.id_terreno, 'Planimetría')}
-                      className="btn-secondary"
-                      style={{ padding: '0.35rem 0.7rem', fontSize: '0.78rem', gap: '0.4rem' }}
-                    >
-                      <FileDown size={14} /> Planimetría
-                    </button>
+                      <ExternalLink size={14} /> Ver Planimetría
+                    </a>
                   ) : (
                     <span className="text-muted" style={{ fontSize: '0.78rem' }}>Sin archivo</span>
                   )}
@@ -200,7 +178,7 @@ export default function CatastroGlobal() {
             ))}
             {terrenosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                   No se encontraron predios para tu búsqueda.
                 </td>
               </tr>
