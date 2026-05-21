@@ -316,6 +316,49 @@ BEGIN
 END$$
 
 -- ============================================================
+-- TRIGGERS DE AUDITORÍA: JEFE_ZONA
+-- ============================================================
+CREATE TRIGGER trg_jefe_zona_insert
+AFTER INSERT ON Jefe_Zona FOR EACH ROW
+BEGIN
+    INSERT INTO Auditoria (tabla_afectada, operacion, id_registro, datos_anteriores, datos_nuevos, id_usuario)
+    VALUES ('Jefe_Zona', 'INSERT', NEW.id_jefe_zona, NULL, JSON_OBJECT(
+        'id_jefe_zona', NEW.id_jefe_zona,
+        'id_zona', NEW.id_zona,
+        'id_persona', NEW.id_persona,
+        'fecha_inicio', NEW.fecha_inicio,
+        'fecha_fin', NEW.fecha_fin,
+        'estado', NEW.estado
+    ), @id_usuario_actual);
+END$$
+
+CREATE TRIGGER trg_jefe_zona_update
+AFTER UPDATE ON Jefe_Zona FOR EACH ROW
+BEGIN
+    INSERT INTO Auditoria (tabla_afectada, operacion, id_registro, datos_anteriores, datos_nuevos, id_usuario)
+    VALUES ('Jefe_Zona', 'UPDATE', NEW.id_jefe_zona,
+    JSON_OBJECT(
+        'id_zona', OLD.id_zona, 'id_persona', OLD.id_persona, 'fecha_inicio', OLD.fecha_inicio, 'fecha_fin', OLD.fecha_fin, 'estado', OLD.estado
+    ),
+    JSON_OBJECT(
+        'id_zona', NEW.id_zona, 'id_persona', NEW.id_persona, 'fecha_inicio', NEW.fecha_inicio, 'fecha_fin', NEW.fecha_fin, 'estado', NEW.estado
+    ), @id_usuario_actual);
+END$$
+
+CREATE TRIGGER trg_jefe_zona_delete
+BEFORE DELETE ON Jefe_Zona FOR EACH ROW
+BEGIN
+    INSERT INTO Auditoria (tabla_afectada, operacion, id_registro, datos_anteriores, datos_nuevos, id_usuario)
+    VALUES ('Jefe_Zona', 'DELETE', OLD.id_jefe_zona, JSON_OBJECT(
+        'id_jefe_zona', OLD.id_jefe_zona,
+        'id_zona', OLD.id_zona,
+        'id_persona', OLD.id_persona,
+        'fecha_inicio', OLD.fecha_inicio,
+        'estado', OLD.estado
+    ), NULL, @id_usuario_actual);
+END$$
+
+-- ============================================================
 -- 10.1 TRIGGER DE SEGURIDAD (ADMINISTRADOR)
 -- ============================================================
 CREATE TRIGGER trg_bloqueo_admin_delete
