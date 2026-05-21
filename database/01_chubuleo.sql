@@ -2,15 +2,14 @@ CREATE DATABASE IF NOT EXISTS basechi;
 USE basechi;
 
 -- =============================================================================
--- ERP JUNTAS DE AGUA - ARQUITECTURA DEFINITIVA (V7 - MASTER PRODUCCIÓN)
+-- ERP JUNTAS DE AGUA - ARQUITECTURA DEFINITIVA (PRODUCCIÓN MASTER)
 -- MOTOR: InnoDB | DEFAULT CHARSET: utf8mb4 
--- DISEÑO: Cero datos quemados, Jefes de Zona, Demografía, GPS, Finanzas y Auditoría.
+-- DISEÑO: Cero datos quemados, cobro dinámico multiterreno, GPS y auditoría total.
 -- =============================================================================
 
 -- -----------------------------------------------------
 -- PARTE 1: CATÁLOGOS GLOBALES Y DINÁMICOS
 -- -----------------------------------------------------
-
 CREATE TABLE Zona (
     id_zona INT AUTO_INCREMENT PRIMARY KEY,
     nombre_zona VARCHAR(100) NOT NULL UNIQUE,
@@ -109,7 +108,7 @@ ALTER TABLE Catalogo_Titulo_Educativo ADD FULLTEXT INDEX idx_cat_nombre (nombre)
 
 
 -- -----------------------------------------------------
--- PARTE 3: NÚCLEO DE PERSONAS, DEMOGRAFÍA Y DIRECTIVA
+-- PARTE 3: NÚCLEO DE PERSONAS, DEMOGRAFÍA Y LIDERAZGO
 -- -----------------------------------------------------
 CREATE TABLE Persona (
     id_persona INT AUTO_INCREMENT PRIMARY KEY,
@@ -172,7 +171,7 @@ CREATE TABLE Contacto_Persona (
     id_persona INT NOT NULL,
     id_tipo_contacto INT NOT NULL, 
     valor_contacto VARCHAR(150) NOT NULL,
-    referencia_propietario VARCHAR(100) NULL,
+    referencia_propietario VARCHAR(100) NULL COMMENT 'Ej: Hijo, Esposa (NULL si es del titular)',
     operadora_o_detalle VARCHAR(50) NULL,
     es_principal BOOLEAN DEFAULT FALSE,
     CONSTRAINT fk_contacto_persona FOREIGN KEY (id_persona) REFERENCES Persona(id_persona) ON DELETE CASCADE,
@@ -181,7 +180,7 @@ CREATE TABLE Contacto_Persona (
 
 
 -- -----------------------------------------------------
--- PARTE 5: CATASTRO Y CONTROL DE TIERRAS
+-- PARTE 5: CATASTRO Y CONTROL DE TIERRAS (GPS)
 -- -----------------------------------------------------
 CREATE TABLE Terreno (
     id_terreno INT AUTO_INCREMENT PRIMARY KEY,
@@ -191,7 +190,7 @@ CREATE TABLE Terreno (
     longitud DECIMAL(11,8) NULL,
     url_planimetria VARCHAR(255) NULL,
     peso_archivo_bytes INT NULL,
-    area_total DECIMAL(10, 2) NOT NULL,
+    area_total DECIMAL(10, 2) NOT NULL COMMENT 'M² para el cálculo de tasas',
     id_estado_construccion INT NOT NULL DEFAULT 1,
     
     CONSTRAINT fk_terreno_persona FOREIGN KEY (id_persona) REFERENCES Persona(id_persona),
@@ -288,8 +287,30 @@ CREATE INDEX idx_asistencia_control ON Asistencia_Minga(id_minga, id_estado_asis
 
 
 -- -----------------------------------------------------
--- PARTE 8: FINANZAS Y CONFIGURACIÓN GLOBAL
+-- PARTE 8: MÓDULO FINANCIERO Y DESGLOSE MULTITERRENO
 -- -----------------------------------------------------
+CREATE TABLE Planilla_Cabecera (
+    id_planilla INT AUTO_INCREMENT PRIMARY KEY,
+    id_persona INT NOT NULL,
+    fecha_emision DATE NOT NULL,
+    anio_fiscal INT NOT NULL,
+    mes_fiscal INT NOT NULL,
+    total_pagar DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    estado_pago ENUM('Pendiente', 'Pagada', 'Anulada') DEFAULT 'Pendiente',
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_planilla_persona FOREIGN KEY (id_persona) REFERENCES Persona(id_persona) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE Planilla_Detalle_Terreno (
+    id_detalle INT AUTO_INCREMENT PRIMARY KEY,
+    id_planilla INT NOT NULL,
+    id_terreno INT NOT NULL,
+    area_terreno_copia DECIMAL(10,2) NOT NULL COMMENT 'Congela el área cobrada en ese mes',
+    subtotal_calculado DECIMAL(10,2) NOT NULL COMMENT 'Resultado dinámico calculado por el Backend',
+    CONSTRAINT fk_detalle_planilla FOREIGN KEY (id_planilla) REFERENCES Planilla_Cabecera(id_planilla) ON DELETE CASCADE,
+    CONSTRAINT fk_detalle_terreno FOREIGN KEY (id_terreno) REFERENCES Terreno(id_terreno) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE Multa (
     id_multa INT AUTO_INCREMENT PRIMARY KEY,
     id_persona INT NOT NULL,
@@ -308,9 +329,11 @@ CREATE TABLE Caja_Comunitaria (
     tipo_movimiento ENUM('Ingreso', 'Egreso') NOT NULL,
     concepto VARCHAR(255) NOT NULL,
     id_multa INT NULL,
+    id_planilla INT NULL,
     monto DECIMAL(12, 2) NOT NULL,
     responsable_registro INT NOT NULL,
     CONSTRAINT fk_caja_multa FOREIGN KEY (id_multa) REFERENCES Multa(id_multa) ON DELETE SET NULL,
+    CONSTRAINT fk_caja_planilla FOREIGN KEY (id_planilla) REFERENCES Planilla_Cabecera(id_planilla) ON DELETE SET NULL,
     CONSTRAINT fk_caja_usuario FOREIGN KEY (responsable_registro) REFERENCES Usuario_Sistema(id_usuario)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -320,6 +343,10 @@ CREATE TABLE Configuracion_Global (
     valor VARCHAR(255) NOT NULL,
     tipo_dato ENUM('Entero', 'Decimal', 'Texto', 'Booleano') NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO Configuracion_Global (clave, valor, tipo_dato) VALUES 
+('TARIFA_METROS_BASE', '1000.00', 'Decimal'),
+('TARIFA_VALOR_BASE', '5.00', 'Decimal');
 
 
 -- -----------------------------------------------------
