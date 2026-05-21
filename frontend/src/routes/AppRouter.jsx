@@ -23,6 +23,7 @@ import Directiva from '../pages/Directiva';
 import DirectivaGestion from '../pages/DirectivaGestion';
 import Bitacora from '../pages/Bitacora';
 import Configuracion from '../pages/Configuracion';
+import Administracion from '../pages/Administracion';
 import CatastroGlobal from '../pages/CatastroGlobal';
 import useAuthStore from '../store/useAuthStore';
 
@@ -90,11 +91,12 @@ export default function AppRouter() {
           {/* Módulo de Catastro */}
           <Route path="catastro" element={<PrivateRoute><CatastroGlobal /></PrivateRoute>} />
 
-          {/* Módulo de Configuración (solo Admin) */}
-          <Route path="configuracion" element={<PrivateRoute><Configuracion /></PrivateRoute>} />
-
-          {/* Módulo de Bitácora / Auditoría (solo Admin) */}
-          <Route path="bitacora" element={<PrivateRoute><Bitacora /></PrivateRoute>} />
+          {/* Módulo de Administración (solo Admin) */}
+          <Route path="administracion">
+            <Route index element={<PrivateRoute><Administracion /></PrivateRoute>} />
+            <Route path="configuracion" element={<PrivateRoute><Configuracion /></PrivateRoute>} />
+            <Route path="bitacora" element={<PrivateRoute><Bitacora /></PrivateRoute>} />
+          </Route>
           
         </Route>
         

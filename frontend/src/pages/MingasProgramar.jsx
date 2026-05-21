@@ -140,6 +140,7 @@ export default function MingasProgramar() {
             </div>
           </div>
 
+          <div className="form-grid full">
             <div className="input-group">
               <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <MapPin size={16} className="text-earth" /> Lugar de Encuentro *
@@ -179,6 +180,8 @@ export default function MingasProgramar() {
               <input type="number" step="any" className="input-field" placeholder="Ej. -78.5528" {...register('longitud')} />
             </div>
           </div>
+
+          <div className="form-grid">
             <div className="input-group">
               <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <DollarSign size={16} className="text-green" /> Valor Multa General Inasistencia ($) *

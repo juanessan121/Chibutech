@@ -25,8 +25,7 @@ export default function DashboardLayout() {
     { name: 'Multas y Cobros', path: '/dashboard/cobros', icon: ShieldAlert, show: hasPermission('gestionar_multas') },
     { name: 'Reportes', path: '/dashboard/reportes', icon: FileText, show: hasPermission('ver_reportes') },
     { name: 'Mis Deudas', path: '/dashboard/mis-deudas', icon: Droplet, show: hasPermission('ver_mis_multas') && !hasPermission('gestionar_multas') },
-    { name: 'Bitácora / Auditoría', path: '/dashboard/bitacora', icon: ShieldAlert, show: hasPermission('gestionar_multas') },
-    { name: 'Configuración', path: '/dashboard/configuracion', icon: Settings, show: hasPermission('gestionar_multas') },
+    { name: 'Administración', path: '/dashboard/administracion', icon: Settings, show: hasPermission('gestionar_multas') },
   ];
 
   return (
