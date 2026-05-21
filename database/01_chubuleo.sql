@@ -167,8 +167,13 @@ CREATE TABLE Contacto_Persona (
     id_persona INT NOT NULL,
     id_tipo_contacto INT NOT NULL, 
     valor_contacto VARCHAR(150) NOT NULL,
-    operadora_o_detalle VARCHAR(50) NULL,
+    
+    -- La nueva columna clave para resolver tu requerimiento
+    referencia_propietario VARCHAR(100) NULL COMMENT 'Ej: Hijo Juan, Esposa, Vecino (NULL si es del propio titular)',
+    
+    operadora_o_detalle VARCHAR(50) NULL COMMENT 'Ej: Claro, Movistar, CNT, Casa, Trabajo',
     es_principal BOOLEAN DEFAULT FALSE,
+    
     CONSTRAINT fk_contacto_persona FOREIGN KEY (id_persona) REFERENCES Persona(id_persona) ON DELETE CASCADE,
     CONSTRAINT fk_contacto_tipo FOREIGN KEY (id_tipo_contacto) REFERENCES Catalogo_Tipo_Contacto(id_tipo_contacto) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
