@@ -1,0 +1,59 @@
+.card-slider-container {
+  max-width: 800px;
+  margin: 0 auto;
+  overflow: hidden;
+  padding: 1rem 0;
+}
+
+.slider-indicators {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.indicator {
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.indicator.active {
+  background: rgba(14, 165, 233, 0.1);
+  color: var(--primary);
+  border-color: var(--primary);
+  font-weight: bold;
+}
+
+.indicator.completed {
+  color: var(--green);
+}
+
+.slider-viewport {
+  overflow: hidden;
+  width: 100%;
+}
+
+.slider-track {
+  display: flex;
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  width: 100%;
+}
+
+.slider-slide {
+  min-width: 100%;
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+
+.slider-navigation {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
