@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { addUser } from '../services/userService';
 import { getZonas, getCondicionesEspeciales, getTiposContacto, getGeneros } from '../services/catalogoService';
-import { UserPlus, ArrowLeft, PhoneCall, Users as UsersIcon } from 'lucide-react';
+import { UserPlus, ArrowLeft, PhoneCall, Users as UsersIcon, Plus, Trash2 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -17,6 +17,16 @@ const HijoFields = ({ control, index, register, generos }) => {
 
   const showDepCarrera = parseInt(depNivel) === 3;
   const showDepMasterado = parseInt(depNivel) === 4;
+
+  const { fields: carrerasFields, append: appendCarrera, remove: removeCarrera } = useFieldArray({
+    control,
+    name: `dependientes.${index}.carreras`
+  });
+
+  const { fields: masteradosFields, append: appendMasterado, remove: removeMasterado } = useFieldArray({
+    control,
+    name: `dependientes.${index}.masterados`
+  });
 
   return (
     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -58,16 +68,54 @@ const HijoFields = ({ control, index, register, generos }) => {
       </div>
 
       {showDepCarrera && (
-        <div className="input-group animate-fade-in" style={{ marginTop: '0.75rem' }}>
-          <label className="input-label" style={{ fontSize: '0.7rem' }}>Seleccione la Carrera</label>
-          <input type="text" className="input-field" placeholder="Nombre de la carrera..." {...register(`dependientes.${index}.carrera`)} />
+        <div className="animate-fade-in" style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '0.5rem', border: '1px dashed var(--border-color)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <label className="input-label" style={{ margin: 0, fontSize: '0.75rem' }}>Carreras de Tercer Nivel</label>
+            <button type="button" className="btn-secondary hover-scale" style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', gap: '0.3rem' }} onClick={() => appendCarrera({ nombre: '' })}>
+              <Plus size={14} /> Añadir Otra Carrera
+            </button>
+          </div>
+          {carrerasFields.map((field, cIndex) => (
+            <div key={field.id} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <input type="text" className="input-field" placeholder="Nombre de la carrera..." {...register(`dependientes.${index}.carreras.${cIndex}.nombre`, { required: true })} />
+              {carrerasFields.length > 1 && (
+                <button type="button" className="btn-icon text-red" onClick={() => removeCarrera(cIndex)}>
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
+          ))}
+          {carrerasFields.length === 0 && (
+            <button type="button" className="btn-secondary" style={{ width: '100%' }} onClick={() => appendCarrera({ nombre: '' })}>
+              <Plus size={14} /> Registrar Primera Carrera
+            </button>
+          )}
         </div>
       )}
 
       {showDepMasterado && (
-        <div className="input-group animate-fade-in" style={{ marginTop: '0.75rem' }}>
-          <label className="input-label" style={{ fontSize: '0.7rem' }}>Especifique el Masterado</label>
-          <input type="text" className="input-field" placeholder="Título del masterado..." {...register(`dependientes.${index}.masterado`)} />
+        <div className="animate-fade-in" style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '0.5rem', border: '1px dashed var(--border-color)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <label className="input-label" style={{ margin: 0, fontSize: '0.75rem' }}>Títulos de Masterado</label>
+            <button type="button" className="btn-secondary hover-scale" style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', gap: '0.3rem' }} onClick={() => appendMasterado({ nombre: '' })}>
+              <Plus size={14} /> Añadir Otro Masterado
+            </button>
+          </div>
+          {masteradosFields.map((field, mIndex) => (
+            <div key={field.id} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <input type="text" className="input-field" placeholder="Título del masterado..." {...register(`dependientes.${index}.masterados.${mIndex}.nombre`, { required: true })} />
+              {masteradosFields.length > 1 && (
+                <button type="button" className="btn-icon text-red" onClick={() => removeMasterado(mIndex)}>
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
+          ))}
+          {masteradosFields.length === 0 && (
+            <button type="button" className="btn-secondary" style={{ width: '100%' }} onClick={() => appendMasterado({ nombre: '' })}>
+              <Plus size={14} /> Registrar Primer Masterado
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -104,6 +152,8 @@ export default function UsuariosAgregar() {
       contactos: [{ id_tipo_contacto: '1', valor_contacto: '', operadora_o_detalle: '', referencia_propietario: '' }],
       dependientes: [],
       nivel_educativo_principal: '1',
+      carreras_principal: [{ nombre: '' }],
+      masterados_principal: [{ nombre: '' }],
       numero_hijos: 0
     }
   });
@@ -116,6 +166,8 @@ export default function UsuariosAgregar() {
 
   const { fields: contactosFields } = useFieldArray({ control, name: "contactos" });
   const { fields: dependientesFields, append: appendDependiente, remove: removeDependiente } = useFieldArray({ control, name: "dependientes" });
+  const { fields: titularCarrerasFields, append: appendTitularCarrera, remove: removeTitularCarrera } = useFieldArray({ control, name: "carreras_principal" });
+  const { fields: titularMasteradosFields, append: appendTitularMasterado, remove: removeTitularMasterado } = useFieldArray({ control, name: "masterados_principal" });
 
   useEffect(() => {
     const num = parseInt(numeroHijos) || 0;
@@ -251,16 +303,58 @@ export default function UsuariosAgregar() {
             </div>
             
             {showTitularCarrera && (
-              <div className="input-group animate-fade-in">
-                <label className="input-label">Carrera de Tercer Nivel</label>
-                <input type="text" className="input-field" placeholder="Nombre de la carrera..." {...register("carrera_principal")} />
+              <div className="animate-fade-in" style={{ gridColumn: '1 / -1', marginTop: '1rem', padding: '1.5rem', background: 'rgba(0,0,0,0.2)', borderRadius: '0.5rem', border: '1px dashed var(--border-color)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <label className="input-label" style={{ margin: 0 }}>Carreras de Tercer Nivel</label>
+                  <button type="button" className="btn-secondary hover-scale" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={() => appendTitularCarrera({ nombre: '' })}>
+                    <Plus size={16} /> Añadir Otra Carrera
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {titularCarrerasFields.map((field, index) => (
+                    <div key={field.id} style={{ display: 'flex', gap: '0.75rem' }}>
+                      <input type="text" className="input-field" placeholder="Nombre de la carrera..." {...register(`carreras_principal.${index}.nombre`, { required: true })} />
+                      {titularCarrerasFields.length > 1 && (
+                        <button type="button" className="btn-icon text-red" onClick={() => removeTitularCarrera(index)}>
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {titularCarrerasFields.length === 0 && (
+                    <button type="button" className="btn-secondary" style={{ width: '100%' }} onClick={() => appendTitularCarrera({ nombre: '' })}>
+                      <Plus size={16} /> Registrar Primera Carrera
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
             {showTitularMasterado && (
-              <div className="input-group animate-fade-in">
-                <label className="input-label">Título de Masterado</label>
-                <input type="text" className="input-field" placeholder="Especifique su masterado..." {...register("masterado_principal")} />
+              <div className="animate-fade-in" style={{ gridColumn: '1 / -1', marginTop: '1rem', padding: '1.5rem', background: 'rgba(0,0,0,0.2)', borderRadius: '0.5rem', border: '1px dashed var(--border-color)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <label className="input-label" style={{ margin: 0 }}>Títulos de Masterado</label>
+                  <button type="button" className="btn-secondary hover-scale" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={() => appendTitularMasterado({ nombre: '' })}>
+                    <Plus size={16} /> Añadir Otro Masterado
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {titularMasteradosFields.map((field, index) => (
+                    <div key={field.id} style={{ display: 'flex', gap: '0.75rem' }}>
+                      <input type="text" className="input-field" placeholder="Especifique su masterado..." {...register(`masterados_principal.${index}.nombre`, { required: true })} />
+                      {titularMasteradosFields.length > 1 && (
+                        <button type="button" className="btn-icon text-red" onClick={() => removeTitularMasterado(index)}>
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {titularMasteradosFields.length === 0 && (
+                    <button type="button" className="btn-secondary" style={{ width: '100%' }} onClick={() => appendTitularMasterado({ nombre: '' })}>
+                      <Plus size={16} /> Registrar Primer Masterado
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
