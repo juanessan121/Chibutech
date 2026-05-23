@@ -1257,3 +1257,57 @@ body {
   from { opacity: 0; transform: translateX(20px); }
   to { opacity: 1; transform: translateX(0); }
 }
+
+/* ==================================================
+   NUEVOS ESTILOS — PERSONA 1: DASHBOARD + PDF
+================================================== */
+
+/* Animación skeleton para StatCard y DataTable */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* Hover de filas en DataTable */
+.table-row-hover:hover {
+  background: rgba(14, 165, 233, 0.06) !important;
+  transition: background 0.15s ease;
+}
+
+/* Animación spin para PDFDownloadButton loader */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Colores adicionales para bg-purple y bg-red en módulos */
+.bg-purple {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  box-shadow: 0 10px 20px rgba(139,92,246,0.3);
+}
+.bg-red {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  box-shadow: 0 10px 20px rgba(239,68,68,0.3);
+}
+
+/* form-grid para los filtros en ReportesMenu */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+}
+
+/* hover-glow — añadir aquí si no existe en otro lugar */
+.hover-glow {
+  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+}
+.hover-glow:hover {
+  box-shadow: 0 0 30px rgba(14, 165, 233, 0.2), 0 20px 40px -10px rgba(0,0,0,0.4);
+}
+
+/* text-green helper */
+.text-green { color: #10b981; }
+.text-blue  { color: #0ea5e9; }
+.text-red   { color: #ef4444; }
+.text-muted { color: var(--text-muted); }
+
