@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
-import { Droplets, LogOut, LayoutDashboard, Users, FileText, Settings, ShieldAlert, UserCircle, Droplet, Award, Map } from 'lucide-react';
+import { Droplets, LogOut, LayoutDashboard, Users, FileText, Settings, ShieldAlert, UserCircle, Droplet, Award, Map, MapPin } from 'lucide-react';
 import { usePermissions } from '../hooks/usePermissions';
 import bgLayout from '../assets/bg_layout.png';
 
@@ -22,6 +22,7 @@ export default function DashboardLayout() {
     { name: 'Usuarios', path: '/dashboard/usuarios', icon: Users, show: hasPermission('crear_usuario') },
     { name: 'Mingas', path: '/dashboard/mingas', icon: Users, show: hasPermission('gestionar_mingas') },
     { name: 'Catastro de Predios', path: '/dashboard/catastro', icon: Map, show: hasPermission('gestionar_mingas') || hasPermission('crear_usuario') },
+    { name: 'Registro de Terrenos', path: '/dashboard/terrenos', icon: MapPin, show: hasPermission('gestionar_mingas') || hasPermission('crear_usuario') },
     { name: 'Multas y Cobros', path: '/dashboard/cobros', icon: ShieldAlert, show: hasPermission('gestionar_multas') },
     { name: 'Reportes', path: '/dashboard/reportes', icon: FileText, show: hasPermission('ver_reportes') },
     { name: 'Mis Deudas', path: '/dashboard/mis-deudas', icon: Droplet, show: hasPermission('ver_mis_multas') && !hasPermission('gestionar_multas') },

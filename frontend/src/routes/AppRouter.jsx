@@ -26,6 +26,7 @@ import Bitacora from '../pages/Bitacora';
 import Configuracion from '../pages/Configuracion';
 import Administracion from '../pages/Administracion';
 import CatastroGlobal from '../pages/CatastroGlobal';
+import TerrenosRegistro from '../pages/TerrenosRegistro';
 import useAuthStore from '../store/useAuthStore';
 
 // Un componente para proteger las rutas privadas
@@ -92,6 +93,9 @@ export default function AppRouter() {
 
           {/* Módulo de Catastro */}
           <Route path="catastro" element={<PrivateRoute><CatastroGlobal /></PrivateRoute>} />
+          
+          {/* Módulo de Terrenos (Registro) */}
+          <Route path="terrenos" element={<PrivateRoute><TerrenosRegistro /></PrivateRoute>} />
 
           {/* Módulo de Administración (solo Admin) */}
           <Route path="administracion">
