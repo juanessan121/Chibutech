@@ -237,7 +237,7 @@ export default function Dashboard() {
       {isUsuarioBase && (
         <div className="modules-grid animate-fade-in" style={{ marginTop: '2.5rem' }}>
 
-          <div className="glass-card module-card hover-glow cursor-pointer" onClick={() => navigate('/dashboard/catastro')} style={{ borderTop: '4px solid #0ea5e9' }}>
+          <div className="glass-card module-card hover-glow cursor-pointer" onClick={() => navigate('/dashboard/terrenos')} style={{ borderTop: '4px solid #0ea5e9' }}>
             <div className="module-banner" style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.2), rgba(3,105,161,0.2))' }} />
             <div className="module-content" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div className="module-icon" style={{ background: 'linear-gradient(135deg, #0ea5e9, #0369a1)', color: 'white', boxShadow: '0 10px 20px rgba(14,165,233,0.3)' }}><Droplets size={28} /></div>
@@ -287,19 +287,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {hasPermission('ver_mis_multas') && !hasPermission('gestionar_multas') && (
-            <div className="glass-card module-card hover-glow cursor-pointer" onClick={() => navigate('/dashboard/mis-deudas')}>
-              <div className="module-banner bg-gradient-earth" style={{ backgroundImage: `url(${bgDeudas})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.8 }} />
-              <div className="module-content">
-                <div className="module-icon bg-earth"><Droplets size={28} /></div>
-                <h3>Mis Deudas y Turnos</h3>
-                <p>Revisa tus pagos pendientes y tus próximos turnos de riego.</p>
-                <button className="btn-module text-earth" onClick={(e) => { e.stopPropagation(); navigate('/dashboard/mis-deudas'); }}>
-                  Abrir Módulo <ArrowRight size={16} />
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
