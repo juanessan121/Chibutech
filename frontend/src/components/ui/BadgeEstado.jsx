@@ -26,6 +26,12 @@ const ESTADO_CONFIG = {
   'Administrador':{ bg: 'rgba(139,92,246,0.15)',  border: 'rgba(139,92,246,0.4)',  color: '#a78bfa', dot: '#a78bfa' },
   'Directiva':    { bg: 'rgba(14,165,233,0.15)',  border: 'rgba(14,165,233,0.4)',  color: '#0ea5e9', dot: '#0ea5e9' },
   'Usuario':      { bg: 'rgba(100,116,139,0.15)', border: 'rgba(100,116,139,0.4)', color: '#94a3b8', dot: '#94a3b8' },
+  // Terrenos
+  'Construida':       { bg: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.4)',  color: '#10b981', dot: '#10b981' },
+  'En Construcción':  { bg: 'rgba(245,158,11,0.15)',  border: 'rgba(245,158,11,0.4)',  color: '#f59e0b', dot: '#f59e0b' },
+  'Lote Baldío':      { bg: 'rgba(100,116,139,0.15)', border: 'rgba(100,116,139,0.4)', color: '#94a3b8', dot: '#94a3b8' },
+  'Sembrio':          { bg: 'rgba(132,204,22,0.15)',  border: 'rgba(132,204,22,0.4)',  color: '#84cc16', dot: '#84cc16' },
+  'Abandonado':       { bg: 'rgba(239,68,68,0.15)',   border: 'rgba(239,68,68,0.4)',   color: '#ef4444', dot: '#ef4444' },
 };
 
 const DEFAULT_CONFIG = {

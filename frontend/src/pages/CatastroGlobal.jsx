@@ -78,7 +78,7 @@ export default function CatastroGlobal() {
             </h1>
             <p className="text-muted">Registro global de todos los terrenos y propiedades en las zonas de la Junta.</p>
           </div>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <div style={{ position: 'relative' }}>
               <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <input
@@ -87,35 +87,42 @@ export default function CatastroGlobal() {
                 placeholder="Buscar por propietario, cédula o zona..."
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
-                style={{ paddingLeft: '2.25rem', minWidth: '280px' }}
+                style={{ paddingLeft: '2.25rem', minWidth: '320px' }}
               />
             </div>
-            <button 
-              className="btn-primary" 
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-              onClick={() => navigate('/dashboard/terrenos')}
-            >
-              <Plus size={18} /> Registrar Terreno
-            </button>
           </div>
         </div>
 
-        {/* Resumen por estado de construcción */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
-          {Object.entries(
-            terrenosMock.reduce((acc, t) => {
-              acc[t.estado_construccion] = (acc[t.estado_construccion] || 0) + 1;
-              return acc;
-            }, {})
-          ).map(([estado, count]) => (
-            <div key={estado} className="glass-card" style={{ padding: '1rem', borderLeft: `4px solid ${estadoColor[estado] || '#64748b'}`, display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <Building2 size={24} style={{ color: estadoColor[estado] || '#64748b' }} />
-              <div>
-                <p style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{count}</p>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: estadoColor[estado] || '#64748b' }}>{estado}</p>
+        {/* Resumen por estado de construcción y botón de acción */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginTop: '1.5rem', alignItems: 'stretch' }}>
+          {/* Tarjetas resumen */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', flex: 1 }}>
+            {Object.entries(
+              terrenosMock.reduce((acc, t) => {
+                acc[t.estado_construccion] = (acc[t.estado_construccion] || 0) + 1;
+                return acc;
+              }, {})
+            ).map(([estado, count]) => (
+              <div key={estado} className="glass-card" style={{ padding: '0.75rem 1.25rem', borderLeft: `4px solid ${estadoColor[estado] || '#64748b'}`, display: 'flex', alignItems: 'center', gap: '1rem', minWidth: '180px' }}>
+                <Building2 size={24} style={{ color: estadoColor[estado] || '#64748b' }} />
+                <div>
+                  <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{count}</p>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: estadoColor[estado] || '#64748b' }}>{estado}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
+          {/* Botón Registrar reubicado */}
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button 
+              className="btn-primary" 
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: 'auto', padding: '0.75rem 2rem', height: '100%', minHeight: '60px' }}
+              onClick={() => navigate('/dashboard/terrenos')}
+            >
+              <Plus size={20} /> Registrar Terreno
+            </button>
+          </div>
         </div>
       </div>
 

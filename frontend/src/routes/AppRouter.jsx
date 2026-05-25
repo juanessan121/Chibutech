@@ -20,6 +20,7 @@ import CobrosHistorial from '../pages/CobrosHistorial';
 import CobrosPlanilla from '../pages/CobrosPlanilla';
 import ReportesMenu from '../pages/ReportesMenu';
 import MisDeudas from '../pages/MisDeudas';
+import MisTerrenos from '../pages/MisTerrenos';
 import Directiva from '../pages/Directiva';
 import DirectivaGestion from '../pages/DirectivaGestion';
 import Bitacora from '../pages/Bitacora';
@@ -86,6 +87,7 @@ export default function AppRouter() {
 
           {/* Módulo para el agricultor normal (Mis Deudas) */}
           <Route path="mis-deudas" element={<PrivateRoute><MisDeudas /></PrivateRoute>} />
+          <Route path="mis-terrenos" element={<PrivateRoute><MisTerrenos /></PrivateRoute>} />
 
           {/* Módulo de Directiva */}
           <Route path="directiva">

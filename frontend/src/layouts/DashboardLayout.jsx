@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
 import { Droplets, LogOut, LayoutDashboard, Users, FileText, Settings, ShieldAlert, UserCircle, Droplet, Award, Map, MapPin, Menu, Bell, Search, User, X } from 'lucide-react';
 import { usePermissions } from '../hooks/usePermissions';
+import { Toaster } from 'sonner';
 import bgLayout from '../assets/bg_layout.png';
 
 export default function DashboardLayout() {
@@ -46,6 +47,7 @@ export default function DashboardLayout() {
       backgroundPosition: 'center',
       backgroundAttachment: 'fixed'
     }}>
+      <Toaster richColors position="top-right" />
       
       {/* Sidebar Overlay (Móvil) */}
       <div 
