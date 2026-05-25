@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Map, Search, ExternalLink, Building2, Fence, MapPin } from 'lucide-react';
+import { Map, Search, ExternalLink, Building2, Fence, MapPin, Plus } from 'lucide-react';
 
 // Simulación de datos: tabla Terreno JOIN Persona JOIN Zona JOIN Catalogo_Estado_Construccion
 const terrenosMock = [
@@ -78,16 +78,25 @@ export default function CatastroGlobal() {
             </h1>
             <p className="text-muted">Registro global de todos los terrenos y propiedades en las zonas de la Junta.</p>
           </div>
-          <div style={{ position: 'relative' }}>
-            <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input
-              type="text"
-              className="input-field"
-              placeholder="Buscar por propietario, cédula o zona..."
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-              style={{ paddingLeft: '2.25rem', minWidth: '280px' }}
-            />
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                className="input-field"
+                placeholder="Buscar por propietario, cédula o zona..."
+                value={busqueda}
+                onChange={e => setBusqueda(e.target.value)}
+                style={{ paddingLeft: '2.25rem', minWidth: '280px' }}
+              />
+            </div>
+            <button 
+              className="btn-primary" 
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              onClick={() => navigate('/dashboard/terrenos')}
+            >
+              <Plus size={18} /> Registrar Terreno
+            </button>
           </div>
         </div>
 
