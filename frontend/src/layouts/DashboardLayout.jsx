@@ -33,7 +33,7 @@ export default function DashboardLayout() {
     { name: 'Usuarios', path: '/dashboard/usuarios', icon: Users, show: hasPermission('crear_usuario') },
     { name: 'Mingas', path: '/dashboard/mingas', icon: Users, show: hasPermission('gestionar_mingas') },
     { name: 'Catastro de Predios', path: '/dashboard/catastro', icon: Map, show: hasPermission('gestionar_mingas') || hasPermission('crear_usuario') },
-    { name: 'Mi Predio', path: '/dashboard/terrenos', icon: MapPin, show: isRole('Usuario Regular') },
+    { name: 'Mi Predio', path: '/dashboard/catastro/detalles/1', icon: MapPin, show: isRole('Usuario Regular') },
     { name: 'Multas y Cobros', path: '/dashboard/cobros', icon: ShieldAlert, show: hasPermission('gestionar_multas') },
     { name: 'Reportes', path: '/dashboard/reportes', icon: FileText, show: hasPermission('ver_reportes') },
     { name: 'Mis Deudas', path: '/dashboard/mis-deudas', icon: Droplet, show: isRole('Usuario Regular') },

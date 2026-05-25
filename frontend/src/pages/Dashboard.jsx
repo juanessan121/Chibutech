@@ -412,7 +412,7 @@ export default function Dashboard() {
       {isUsuarioBase && (
         <div className="modules-grid animate-fade-in" style={{ marginTop: '2.5rem' }}>
 
-          <div className="glass-card module-card hover-glow cursor-pointer" onClick={() => navigate('/dashboard/terrenos')} style={{ borderTop: '4px solid #0ea5e9' }}>
+          <div className="glass-card module-card hover-glow cursor-pointer" onClick={() => navigate('/dashboard/catastro/detalles/1')} style={{ borderTop: '4px solid #0ea5e9' }}>
             <div className="module-banner" style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.2), rgba(3,105,161,0.2))' }} />
             <div className="module-content" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div className="module-icon" style={{ background: 'linear-gradient(135deg, #0ea5e9, #0369a1)', color: 'white', boxShadow: '0 10px 20px rgba(14,165,233,0.3)' }}><Droplets size={28} /></div>

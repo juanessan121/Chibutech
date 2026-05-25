@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Map, ArrowLeft, Calendar, FileText, Info, Compass, HelpCircle, FileDown, Droplet } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import useAuthStore from '../store/useAuthStore';
 
 // Simulación de datos (debe coincidir con CatastroGlobal.jsx)
 const terrenosMock = [
@@ -67,6 +68,8 @@ export default function TerrenoDetalles() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('ficha');
+  const { user } = useAuthStore();
+  const isUsuarioBase = user?.rol === 'Usuario Regular' || user?.rol === 'Usuario';
 
   // Buscar el terreno por ID
   const terreno = terrenosMock.find((t) => t.id_terreno === parseInt(id)) || terrenosMock[0];
@@ -252,9 +255,9 @@ export default function TerrenoDetalles() {
         <button 
           className="btn-secondary" 
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', borderRadius: '2rem', marginBottom: '1rem' }}
-          onClick={() => navigate('/dashboard/catastro')}
+          onClick={() => navigate(isUsuarioBase ? '/dashboard' : '/dashboard/catastro')}
         >
-          <ArrowLeft size={16} /> Volver al Catastro
+          <ArrowLeft size={16} /> {isUsuarioBase ? 'Volver al Inicio' : 'Volver al Catastro'}
         </button>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
