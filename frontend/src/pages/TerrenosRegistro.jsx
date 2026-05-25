@@ -5,12 +5,19 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import CoordinateCapture from '../components/CoordinateCapture';
 import PdfUpload from '../components/PdfUpload';
+import useAuthStore from '../store/useAuthStore';
 
 export default function TerrenosRegistro() {
   const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors } } = useForm();
   const [step, setStep] = useState(1);
   const [terrenoData, setTerrenoData] = useState(null);
+
+  // Obtener usuario actual (por defecto asumimos que un usuario no autenticado en dev se comporta como comunero o rol 1)
+  const user = useAuthStore(state => state.user);
+  const isComunero = !user || user?.id_rol === 1;
+  const backRoute = isComunero ? '/dashboard/mis-terrenos' : '/dashboard/catastro';
+  const backText = isComunero ? 'Volver a Mis Terrenos' : 'Volver a Catastro';
 
   const onSubmitStep1 = (data) => {
     console.log("Datos del terreno (Fase 1):", data);
@@ -22,7 +29,7 @@ export default function TerrenosRegistro() {
   const handleFinalize = () => {
     toast.success('¡Registro completado con éxito!');
     setTimeout(() => {
-      navigate('/dashboard/catastro');
+      navigate(backRoute);
     }, 1500);
   };
 
@@ -30,8 +37,8 @@ export default function TerrenosRegistro() {
     <div className="animate-fade-in pb-10">
       <div className="page-header" style={{ marginBottom: '2rem' }}>
         <div>
-          <button className="btn-back" onClick={() => navigate('/dashboard/catastro')} style={{ marginBottom: '1rem' }}>
-            <ArrowLeft size={18} /> Volver a Catastro
+          <button className="btn-back" onClick={() => navigate(backRoute)} style={{ marginBottom: '1rem' }}>
+            <ArrowLeft size={18} /> {backText}
           </button>
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <MapPin className="text-earth" /> Registro de Terrenos
