@@ -2,6 +2,8 @@ import React from 'react';
 import { MapPin, Save, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import CoordinateCapture from '../components/CoordinateCapture';
+import PdfUpload from '../components/PdfUpload';
 
 export default function TerrenosRegistro() {
   const navigate = useNavigate();
@@ -81,6 +83,14 @@ export default function TerrenosRegistro() {
                 <option value="Abandonado">Abandonado</option>
               </select>
             </div>
+          </div>
+
+          <div style={{ marginTop: '2rem' }}>
+            <CoordinateCapture onCapture={(coords) => console.log('Coordenadas capturadas:', coords)} />
+          </div>
+
+          <div style={{ marginTop: '2rem' }}>
+            <PdfUpload onFileSelect={(file) => console.log('PDF seleccionado:', file.name)} />
           </div>
 
           <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
