@@ -403,13 +403,14 @@ body {
 
 .hero-section {
   position: relative;
-  height: 85vh;
+  min-height: 90vh;
   display: flex;
   align-items: center;
   justify-content: center;
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
+  padding: 8rem 0 6rem 0;
 }
 
 .hero-overlay {
