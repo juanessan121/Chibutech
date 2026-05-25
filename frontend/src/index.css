@@ -1311,3 +1311,522 @@ body {
 .text-red   { color: #ef4444; }
 .text-muted { color: var(--text-muted); }
 
+
+/* ==================================================
+   NUEVOS ESTILOS — MEJORAS FRONTEND, RESPONSIVE & ANIMACIONES
+================================================== */
+
+/* Animación de Entrada de Páginas */
+.page-slide-in {
+  animation: pageSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pageSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Animación de la Campana de Notificaciones */
+@keyframes bellRing {
+  0%, 100% { transform: rotate(0); }
+  20%, 60% { transform: rotate(15deg); }
+  40%, 80% { transform: rotate(-15deg); }
+}
+
+.bell-animate {
+  animation: bellRing 1.5s ease-in-out infinite;
+}
+
+/* Header Superior del Dashboard */
+.dashboard-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  margin-bottom: 2rem;
+  border-radius: 1rem;
+  position: relative;
+  z-index: 99;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.search-container-topbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Campana de Notificaciones */
+.notifications-bell-container {
+  position: relative;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notifications-bell-container:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.bell-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: var(--red);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+}
+
+/* Popover de Notificaciones */
+.notifications-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.75rem;
+  width: 320px;
+  border-radius: 1rem;
+  z-index: 100;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  animation: slideFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.notifications-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.notifications-header h4 {
+  font-size: 0.9rem;
+  margin: 0;
+  font-weight: 700;
+}
+
+.btn-clear-notifications {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-clear-notifications:hover {
+  text-decoration: underline;
+}
+
+.notifications-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.notification-item:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.notification-item.unread {
+  background: rgba(14, 165, 233, 0.05);
+}
+
+.notification-item.unread:hover {
+  background: rgba(14, 165, 233, 0.08);
+}
+
+.notification-icon-wrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notification-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-size: 0.825rem;
+  font-weight: 600;
+  margin: 0 0 0.2rem 0;
+  color: var(--text-main);
+}
+
+.notification-text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.notification-time {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  opacity: 0.6;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* Hamburguesa Menú Móvil */
+.burger-menu-btn {
+  display: none;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 0.6rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 101;
+}
+
+.burger-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Sidebar Overlay */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 98;
+}
+
+/* Pestañas (Tabs) del Predio Detalles */
+.terrain-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  overflow-x: auto;
+}
+
+.tab-btn {
+  padding: 0.75rem 1.25rem;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 0.5rem;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tab-btn.active {
+  color: var(--primary);
+  background: rgba(14, 165, 233, 0.1);
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+
+/* Estilos de la Ficha Detallada */
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.detail-value {
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.875rem;
+}
+
+/* Estilos del Mapa SVG Interactivo */
+.svg-map-container {
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  padding: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.map-svg {
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+}
+
+.map-lot {
+  fill: rgba(16, 185, 129, 0.15);
+  stroke: #10b981;
+  stroke-width: 3;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.map-lot:hover {
+  fill: rgba(16, 185, 129, 0.25);
+  stroke: #34d399;
+  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.4));
+}
+
+.map-node {
+  fill: #10b981;
+  stroke: white;
+  stroke-width: 2;
+  transition: transform 0.2s;
+  cursor: pointer;
+}
+
+.map-node:hover {
+  transform: scale(1.4);
+  fill: #34d399;
+}
+
+.map-water-channel {
+  fill: none;
+  stroke: #0ea5e9;
+  stroke-width: 4;
+  stroke-dasharray: 8 4;
+  animation: waterFlow 15s linear infinite;
+}
+
+@keyframes waterFlow {
+  to {
+    stroke-dashoffset: -120;
+  }
+}
+
+/* Perfil de Usuario */
+.profile-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1.5rem;
+}
+
+.profile-avatar-container {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(14, 165, 233, 0.1);
+  border: 2px solid var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 2rem;
+  font-weight: 700;
+  box-shadow: 0 0 20px rgba(14, 165, 233, 0.25);
+}
+
+/* Gráficos Estadísticos del Dashboard */
+.chart-container-dashboard {
+  background: rgba(15, 23, 42, 0.3);
+  border: 1px solid var(--border-color);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chart-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.chart-body-svg {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 180px;
+}
+
+/* ==================================================
+   MEDIA QUERIES (RESPONSIVE DESIGN)
+================================================== */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 240px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Layout Flex a Column */
+  .layout-container {
+    flex-direction: column;
+  }
+
+  /* Hamburguesa visible */
+  .burger-menu-btn {
+    display: flex;
+  }
+
+  /* Sidebar Drawer */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 99;
+    border-radius: 0;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.8);
+  }
+
+  .sidebar-overlay.visible {
+    display: block;
+  }
+
+  /* Contenido Principal sin Sidebar Fijo */
+  .main-content {
+    padding: 1.5rem 1rem;
+    height: auto;
+    overflow-y: visible;
+  }
+
+  /* Headers Responsivos */
+  .dashboard-header {
+    padding: 1.5rem;
+    gap: 1.25rem;
+  }
+
+  .header-greeting h1 {
+    font-size: 1.6rem;
+  }
+
+  /* Gráficas SVG y Grid Responsivo */
+  .modules-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-topbar {
+    padding: 0.75rem 1rem;
+  }
+
+  .search-container-topbar {
+    display: none; /* Ocultar buscador topbar en móvil para ahorrar espacio */
+  }
+
+  /* Ajustes de tablas en móvil */
+  .table-container {
+    margin: 0 -1rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-stats {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    width: 100%;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 1rem;
+  }
+
+  .stat-item {
+    border-left: none !important;
+    padding-left: 0 !important;
+  }
+
+  .dashboard-topbar {
+    margin-bottom: 1.5rem;
+  }
+
+  .notifications-popover {
+    width: 290px;
+    right: -60px; /* Desfasado para que quepa en la pantalla del móvil */
+  }
+}
+

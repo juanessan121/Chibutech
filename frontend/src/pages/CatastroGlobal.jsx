@@ -131,9 +131,10 @@ export default function CatastroGlobal() {
           <tbody>
             {terrenosFiltrados.map(t => (
               <tr key={t.id_terreno}
-                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }}
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s', cursor: 'pointer' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                onClick={() => navigate(`/dashboard/catastro/detalles/${t.id_terreno}`)}
               >
                 <td style={{ padding: '1rem' }}>
                   <p style={{ margin: 0, fontWeight: '600', color: 'var(--text-main)' }}>{t.propietario}</p>
@@ -162,6 +163,7 @@ export default function CatastroGlobal() {
                       href={`https://www.google.com/maps?q=${t.latitud},${t.longitud}`}
                       target="_blank" rel="noreferrer"
                       style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--primary)', fontSize: '0.8rem' }}
+                      onClick={e => e.stopPropagation()}
                     >
                       <MapPin size={14} /> Ver en Mapa
                     </a>
@@ -176,6 +178,7 @@ export default function CatastroGlobal() {
                       target="_blank" rel="noreferrer"
                       className="btn-secondary"
                       style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.7rem', fontSize: '0.78rem', textDecoration: 'none' }}
+                      onClick={e => e.stopPropagation()}
                     >
                       <ExternalLink size={14} /> Ver Planimetría
                     </a>

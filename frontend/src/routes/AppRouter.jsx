@@ -27,6 +27,8 @@ import Configuracion from '../pages/Configuracion';
 import Administracion from '../pages/Administracion';
 import CatastroGlobal from '../pages/CatastroGlobal';
 import TerrenosRegistro from '../pages/TerrenosRegistro';
+import PerfilUsuario from '../pages/PerfilUsuario';
+import TerrenoDetalles from '../pages/TerrenoDetalles';
 import useAuthStore from '../store/useAuthStore';
 
 // Un componente para proteger las rutas privadas
@@ -92,10 +94,16 @@ export default function AppRouter() {
           </Route>
 
           {/* Módulo de Catastro */}
-          <Route path="catastro" element={<PrivateRoute><CatastroGlobal /></PrivateRoute>} />
+          <Route path="catastro">
+            <Route index element={<PrivateRoute><CatastroGlobal /></PrivateRoute>} />
+            <Route path="detalles/:id" element={<PrivateRoute><TerrenoDetalles /></PrivateRoute>} />
+          </Route>
           
           {/* Módulo de Terrenos (Registro) */}
           <Route path="terrenos" element={<PrivateRoute><TerrenosRegistro /></PrivateRoute>} />
+
+          {/* Perfil de Usuario */}
+          <Route path="perfil" element={<PrivateRoute><PerfilUsuario /></PrivateRoute>} />
 
           {/* Módulo de Administración (solo Admin) */}
           <Route path="administracion">
