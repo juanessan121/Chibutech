@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { addUser } from '../services/userService';
-import { getZonas, getCondicionesEspeciales, getTiposContacto, getGeneros } from '../services/catalogoService';
+import { getZonas, getSectoresByZona, getCondicionesEspeciales, getTiposContacto, getGeneros } from '../services/catalogoService';
 import { UserPlus, ArrowLeft, PhoneCall, Users as UsersIcon, Plus, Trash2 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import CardSlider from '../components/CardSlider';
+import AutocompleteInput from '../components/AutocompleteInput';
 
 // Componente separado para optimizar los re-renders en el FieldArray (Principio SOLID / React Perf)
 const HijoFields = ({ control, index, register, generos }) => {
@@ -15,17 +16,11 @@ const HijoFields = ({ control, index, register, generos }) => {
     defaultValue: '1'
   });
 
-  const showDepCarrera = parseInt(depNivel) === 3;
-  const showDepMasterado = parseInt(depNivel) === 4;
+  const showDepSuperior = parseInt(depNivel) >= 3;
 
   const { fields: carrerasFields, append: appendCarrera, remove: removeCarrera } = useFieldArray({
     control,
     name: `dependientes.${index}.carreras`
-  });
-
-  const { fields: masteradosFields, append: appendMasterado, remove: removeMasterado } = useFieldArray({
-    control,
-    name: `dependientes.${index}.masterados`
   });
 
   return (
@@ -63,21 +58,34 @@ const HijoFields = ({ control, index, register, generos }) => {
             <option value="2">Secundaria</option>
             <option value="3">Tercer Nivel (Licenciatura/Ingeniería)</option>
             <option value="4">Cuarto Nivel (Maestría/Posgrado)</option>
+            <option value="5">Quinto Nivel (Doctorado)</option>
+            <option value="6">Pos Doctorado</option>
           </select>
         </div>
       </div>
 
-      {showDepCarrera && (
+      {showDepSuperior && (
         <div className="animate-fade-in" style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '0.5rem', border: '1px dashed var(--border-color)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <label className="input-label" style={{ margin: 0, fontSize: '0.75rem' }}>Carreras de Tercer Nivel</label>
+            <label className="input-label" style={{ margin: 0, fontSize: '0.75rem' }}>Títulos de Educación Superior</label>
             <button type="button" className="btn-secondary hover-scale" style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', gap: '0.3rem' }} onClick={() => appendCarrera({ nombre: '' })}>
-              <Plus size={14} /> Añadir Otra Carrera
+              <Plus size={14} /> Añadir Otro Título
             </button>
           </div>
           {carrerasFields.map((field, cIndex) => (
             <div key={field.id} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <input type="text" className="input-field" placeholder="Nombre de la carrera..." {...register(`dependientes.${index}.carreras.${cIndex}.nombre`, { required: true })} />
+              <Controller
+                control={control}
+                name={`dependientes.${index}.carreras.${cIndex}.nombre`}
+                rules={{ required: true }}
+                render={({ field: { onChange, value } }) => (
+                  <AutocompleteInput 
+                    placeholder="Buscar título..." 
+                    value={value} 
+                    onChange={onChange} 
+                  />
+                )}
+              />
               {carrerasFields.length > 1 && (
                 <button type="button" className="btn-icon text-red" onClick={() => removeCarrera(cIndex)}>
                   <Trash2 size={16} />
@@ -87,33 +95,7 @@ const HijoFields = ({ control, index, register, generos }) => {
           ))}
           {carrerasFields.length === 0 && (
             <button type="button" className="btn-secondary" style={{ width: '100%' }} onClick={() => appendCarrera({ nombre: '' })}>
-              <Plus size={14} /> Registrar Primera Carrera
-            </button>
-          )}
-        </div>
-      )}
-
-      {showDepMasterado && (
-        <div className="animate-fade-in" style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '0.5rem', border: '1px dashed var(--border-color)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <label className="input-label" style={{ margin: 0, fontSize: '0.75rem' }}>Títulos de Masterado</label>
-            <button type="button" className="btn-secondary hover-scale" style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', gap: '0.3rem' }} onClick={() => appendMasterado({ nombre: '' })}>
-              <Plus size={14} /> Añadir Otro Masterado
-            </button>
-          </div>
-          {masteradosFields.map((field, mIndex) => (
-            <div key={field.id} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <input type="text" className="input-field" placeholder="Título del masterado..." {...register(`dependientes.${index}.masterados.${mIndex}.nombre`, { required: true })} />
-              {masteradosFields.length > 1 && (
-                <button type="button" className="btn-icon text-red" onClick={() => removeMasterado(mIndex)}>
-                  <Trash2 size={16} />
-                </button>
-              )}
-            </div>
-          ))}
-          {masteradosFields.length === 0 && (
-            <button type="button" className="btn-secondary" style={{ width: '100%' }} onClick={() => appendMasterado({ nombre: '' })}>
-              <Plus size={14} /> Registrar Primer Masterado
+              <Plus size={14} /> Registrar Primer Título
             </button>
           )}
         </div>
@@ -129,6 +111,7 @@ export default function UsuariosAgregar() {
 
   // Estados para catálogos dinámicos
   const [zonas, setZonas] = useState([]);
+  const [sectores, setSectores] = useState([]);
   const [condiciones, setCondiciones] = useState([]);
   const [tiposContacto, setTiposContacto] = useState([]);
   const [generos, setGeneros] = useState([]);
@@ -153,21 +136,28 @@ export default function UsuariosAgregar() {
       dependientes: [],
       nivel_educativo_principal: '1',
       carreras_principal: [{ nombre: '' }],
-      masterados_principal: [{ nombre: '' }],
       numero_hijos: 0
     }
   });
 
+  const selectedZona = watch('id_zona');
+
+  useEffect(() => {
+    if (selectedZona) {
+      getSectoresByZona(selectedZona).then(setSectores).catch(() => setSectores([]));
+    } else {
+      setSectores([]);
+    }
+  }, [selectedZona]);
+
   const nivelEducativo = watch('nivel_educativo_principal');
-  const showTitularCarrera = parseInt(nivelEducativo) === 3;
-  const showTitularMasterado = parseInt(nivelEducativo) === 4;
+  const showTitularSuperior = parseInt(nivelEducativo) >= 3;
 
   const numeroHijos = watch('numero_hijos') || 0;
 
   const { fields: contactosFields } = useFieldArray({ control, name: "contactos" });
   const { fields: dependientesFields, append: appendDependiente, remove: removeDependiente } = useFieldArray({ control, name: "dependientes" });
   const { fields: titularCarrerasFields, append: appendTitularCarrera, remove: removeTitularCarrera } = useFieldArray({ control, name: "carreras_principal" });
-  const { fields: titularMasteradosFields, append: appendTitularMasterado, remove: removeTitularMasterado } = useFieldArray({ control, name: "masterados_principal" });
 
   useEffect(() => {
     const num = parseInt(numeroHijos) || 0;
@@ -258,7 +248,8 @@ export default function UsuariosAgregar() {
           <div className="form-grid">
             <div className="input-group">
               <label className="input-label">Cédula del Titular *</label>
-              <input type="text" className={`input-field ${errors.cedula ? 'error' : ''}`} placeholder="10 dígitos" {...register("cedula", { required: "Obligatorio", minLength: 10 })} />
+              <input type="text" className={`input-field ${errors.cedula ? 'error' : ''}`} placeholder="10 dígitos" {...register("cedula", { required: "Este campo es obligatorio", minLength: { value: 10, message: "Debe tener 10 dígitos" } })} />
+              {errors.cedula && <span style={{ color: '#f87171', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.cedula.message}</span>}
             </div>
             <div className="input-group">
               <label className="input-label">Fecha de Nacimiento</label>
@@ -266,18 +257,29 @@ export default function UsuariosAgregar() {
             </div>
             <div className="input-group">
               <label className="input-label">Nombres Completos *</label>
-              <input type="text" className="input-field" placeholder="Ej. Juan Carlos" {...register("nombres", { required: true })} />
+              <input type="text" className={`input-field ${errors.nombres ? 'error' : ''}`} placeholder="Ej. Juan Carlos" {...register("nombres", { required: "Este campo es obligatorio" })} />
+              {errors.nombres && <span style={{ color: '#f87171', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.nombres.message}</span>}
             </div>
             <div className="input-group">
               <label className="input-label">Apellidos Completos *</label>
-              <input type="text" className="input-field" placeholder="Ej. Pérez López" {...register("apellidos", { required: true })} />
+              <input type="text" className={`input-field ${errors.apellidos ? 'error' : ''}`} placeholder="Ej. Pérez López" {...register("apellidos", { required: "Este campo es obligatorio" })} />
+              {errors.apellidos && <span style={{ color: '#f87171', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.apellidos.message}</span>}
             </div>
-            <div className="input-group">
+            <div className="form-group">
               <label className="input-label">Zona</label>
               <select className="form-select" {...register("id_zona")}>
-                <option value="">-- Sin asignar --</option>
+                <option value="">Seleccione una Zona...</option>
                 {zonas.map(z => (
                   <option key={z.id_zona} value={z.id_zona}>{z.nombre_zona}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="input-label">Sector</label>
+              <select className="form-select" {...register("id_sector")} disabled={!selectedZona}>
+                <option value="">Seleccione un Sector...</option>
+                {sectores.map(s => (
+                  <option key={s.id_sector} value={s.id_sector}>{s.nombre_sector}</option>
                 ))}
               </select>
             </div>
@@ -299,21 +301,34 @@ export default function UsuariosAgregar() {
                 <option value="2">Secundaria</option>
                 <option value="3">Tercer Nivel (Licenciatura/Ingeniería)</option>
                 <option value="4">Cuarto Nivel (Maestría/Posgrado)</option>
+                <option value="5">Quinto Nivel (Doctorado)</option>
+                <option value="6">Pos Doctorado</option>
               </select>
             </div>
             
-            {showTitularCarrera && (
+            {showTitularSuperior && (
               <div className="animate-fade-in" style={{ gridColumn: '1 / -1', marginTop: '1rem', padding: '1.5rem', background: 'rgba(0,0,0,0.2)', borderRadius: '0.5rem', border: '1px dashed var(--border-color)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <label className="input-label" style={{ margin: 0 }}>Carreras de Tercer Nivel</label>
+                  <label className="input-label" style={{ margin: 0 }}>Títulos de Educación Superior</label>
                   <button type="button" className="btn-secondary hover-scale" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={() => appendTitularCarrera({ nombre: '' })}>
-                    <Plus size={16} /> Añadir Otra Carrera
+                    <Plus size={16} /> Añadir Otro Título
                   </button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {titularCarrerasFields.map((field, index) => (
                     <div key={field.id} style={{ display: 'flex', gap: '0.75rem' }}>
-                      <input type="text" className="input-field" placeholder="Nombre de la carrera..." {...register(`carreras_principal.${index}.nombre`, { required: true })} />
+                      <Controller
+                        control={control}
+                        name={`carreras_principal.${index}.nombre`}
+                        rules={{ required: true }}
+                        render={({ field: { onChange, value } }) => (
+                          <AutocompleteInput 
+                            placeholder="Buscar título..." 
+                            value={value} 
+                            onChange={onChange} 
+                          />
+                        )}
+                      />
                       {titularCarrerasFields.length > 1 && (
                         <button type="button" className="btn-icon text-red" onClick={() => removeTitularCarrera(index)}>
                           <Trash2 size={18} />
@@ -323,35 +338,7 @@ export default function UsuariosAgregar() {
                   ))}
                   {titularCarrerasFields.length === 0 && (
                     <button type="button" className="btn-secondary" style={{ width: '100%' }} onClick={() => appendTitularCarrera({ nombre: '' })}>
-                      <Plus size={16} /> Registrar Primera Carrera
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {showTitularMasterado && (
-              <div className="animate-fade-in" style={{ gridColumn: '1 / -1', marginTop: '1rem', padding: '1.5rem', background: 'rgba(0,0,0,0.2)', borderRadius: '0.5rem', border: '1px dashed var(--border-color)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <label className="input-label" style={{ margin: 0 }}>Títulos de Masterado</label>
-                  <button type="button" className="btn-secondary hover-scale" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={() => appendTitularMasterado({ nombre: '' })}>
-                    <Plus size={16} /> Añadir Otro Masterado
-                  </button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {titularMasteradosFields.map((field, index) => (
-                    <div key={field.id} style={{ display: 'flex', gap: '0.75rem' }}>
-                      <input type="text" className="input-field" placeholder="Especifique su masterado..." {...register(`masterados_principal.${index}.nombre`, { required: true })} />
-                      {titularMasteradosFields.length > 1 && (
-                        <button type="button" className="btn-icon text-red" onClick={() => removeTitularMasterado(index)}>
-                          <Trash2 size={18} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  {titularMasteradosFields.length === 0 && (
-                    <button type="button" className="btn-secondary" style={{ width: '100%' }} onClick={() => appendTitularMasterado({ nombre: '' })}>
-                      <Plus size={16} /> Registrar Primer Masterado
+                      <Plus size={16} /> Registrar Primer Título
                     </button>
                   )}
                 </div>
@@ -370,8 +357,9 @@ export default function UsuariosAgregar() {
               <div key={item.id} style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.05)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                   <div className="input-group">
-                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Número de Teléfono</label>
-                    <input type="text" className="input-field" placeholder="099..." {...register(`contactos.${index}.valor_contacto`, { required: true })} />
+                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Número de Teléfono *</label>
+                    <input type="text" className={`input-field ${errors.contactos?.[index]?.valor_contacto ? 'error' : ''}`} placeholder="099..." {...register(`contactos.${index}.valor_contacto`, { required: "Debe ingresar un número de teléfono" })} />
+                    {errors.contactos?.[index]?.valor_contacto && <span style={{ color: '#f87171', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.contactos[index].valor_contacto.message}</span>}
                   </div>
                   <div className="input-group">
                     <label className="input-label" style={{ fontSize: '0.7rem' }}>Operadora / Detalle</label>

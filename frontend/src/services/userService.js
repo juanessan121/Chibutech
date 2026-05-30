@@ -27,26 +27,13 @@ export const deleteUser = async (id) => {
 };
 
 export const addUser = async (userData) => {
-  // FUTURO: const res = await api.post('/users', userData); return res.data;
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      // Validación básica mock
-      if (mockUsersList.find(u => u.cedula === userData.cedula)) {
-        reject(new Error('La cédula ya está registrada en el sistema.'));
-        return;
-      }
-      
-      const newUser = {
-        id: Math.max(...mockUsersList.map(u => u.id)) + 1,
-        cedula: userData.cedula,
-        nombre: `${userData.nombres} ${userData.apellidos}`,
-        sector: userData.zona || 'Centro',
-        rol: userData.rol,
-        estado: 'Activo'
-      };
-      
-      mockUsersList.push(newUser);
-      resolve(newUser);
-    }, 800);
-  });
+  try {
+    const res = await api.post('/personas', userData);
+    return res.data;
+  } catch (error) {
+    if (error.response && error.response.data && error.response.data.message) {
+      throw new Error(error.response.data.message);
+    }
+    throw new Error('Error de conexión al guardar el usuario');
+  }
 };

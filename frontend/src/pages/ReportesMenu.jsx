@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Users, AlertCircle, BarChart3, Filter, CheckCircle2 } from 'lucide-react';
+import { FileText, Users, AlertCircle, BarChart3, Filter, CheckCircle2, XCircle } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { usePDF } from '../hooks/usePDF';
 import PDFDownloadButton from '../components/pdf/PDFDownloadButton';
@@ -38,6 +38,7 @@ const REPORTES = [
 
 export default function ReportesMenu() {
   const [activeReport, setActiveReport] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const { generarPadron, generarMorosos, generarBalance, isGenerating } = usePDF();
 
   // Estado local de filtros por tipo de reporte
@@ -69,6 +70,25 @@ export default function ReportesMenu() {
         id: toastId,
         description: err.message || 'Intenta nuevamente.',
       });
+    }
+  };
+
+  const handlePreview = async (e) => {
+    e.preventDefault();
+    const toastId = toast.loading('Generando vista previa...');
+    try {
+      let url = null;
+      if (activeReport === 'padron') {
+        url = await generarPadron(filtroPadron, 'preview');
+      } else if (activeReport === 'morosos') {
+        url = await generarMorosos({ montoMin: parseFloat(filtroMorosos.montoMin) || 0 }, 'preview');
+      } else if (activeReport === 'financiero') {
+        url = await generarBalance({ periodo: filtroFinanciero.periodo }, 'preview');
+      }
+      setPreviewUrl(url);
+      toast.success('Vista previa generada', { id: toastId });
+    } catch (err) {
+      toast.error('Error al generar vista previa', { id: toastId, description: err.message });
     }
   };
 
@@ -235,17 +255,39 @@ export default function ReportesMenu() {
                 type="button"
                 className="btn-secondary"
                 style={{ width: 'auto' }}
-                onClick={() => setActiveReport(null)}
+                onClick={() => { setActiveReport(null); setPreviewUrl(null); }}
               >
                 Cancelar
+              </button>
+
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ width: 'auto', background: 'rgba(14, 165, 233, 0.1)', color: 'var(--blue)', borderColor: 'var(--blue)' }}
+                onClick={handlePreview}
+                disabled={isGenerating}
+              >
+                Previsualizar
               </button>
 
               <PDFDownloadButton
                 onGenerate={handleGenerate}
                 isGenerating={isGenerating}
-                label={`Generar ${REPORTES.find(r => r.id === activeReport)?.title}`}
+                label={`Descargar ${REPORTES.find(r => r.id === activeReport)?.title}`}
               />
             </div>
+
+            {previewUrl && (
+              <div style={{ marginTop: '2rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', overflow: 'hidden' }} className="animate-fade-in">
+                <div style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1rem' }}>Vista Previa del Documento</h4>
+                  <button type="button" className="btn-icon" onClick={() => setPreviewUrl(null)} style={{ color: 'var(--text-muted)' }}>
+                    <XCircle size={20}/>
+                  </button>
+                </div>
+                <iframe src={previewUrl} style={{ width: '100%', height: '600px', border: 'none', display: 'block' }} title="Vista previa PDF" />
+              </div>
+            )}
           </form>
         </div>
       )}

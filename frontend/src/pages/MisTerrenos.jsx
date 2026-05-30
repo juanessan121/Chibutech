@@ -9,7 +9,8 @@ import BadgeEstado from '../components/ui/BadgeEstado';
 const misTerrenosMock = [
   {
     id_terreno: 1,
-    zona: 'Sector Centro',
+    zona: 'Zona Norte',
+    sector: 'Sector Centro',
     estado_construccion: 'Construida',
     area_m2: 350.5,
     latitud: -1.3281,
@@ -19,7 +20,8 @@ const misTerrenosMock = [
   },
   {
     id_terreno: 2,
-    zona: 'San Luis',
+    zona: 'Zona Sur',
+    sector: 'San Luis',
     estado_construccion: 'Lote Baldío',
     area_m2: 500.0,
     latitud: -1.3300,
@@ -41,7 +43,9 @@ export default function MisTerrenos() {
   // Filtrado de terrenos
   const terrenosFiltrados = useMemo(() => {
     return misTerrenosMock.filter(t => {
-      const matchTexto = t.zona.toLowerCase().includes(busqueda.toLowerCase());
+    const matchTexto = 
+      t.zona.toLowerCase().includes(busqueda.toLowerCase()) || 
+      t.sector.toLowerCase().includes(busqueda.toLowerCase());
       const matchEstado = filtroEstado === 'Todos' || t.estado_construccion === filtroEstado;
       return matchTexto && matchEstado;
     });
@@ -138,10 +142,11 @@ export default function MisTerrenos() {
                 <div key={t.id_terreno} className="glass-card hover-scale" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', borderTop: `4px solid ${t.estado_construccion === 'Construida' ? '#10b981' : t.estado_construccion === 'En Construcción' ? '#f59e0b' : '#94a3b8'}` }}>
                   
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-main)' }}>
-                      <Fence size={20} className="text-earth" /> 
-                      <span style={{ fontWeight: '600', fontSize: '1.1rem' }}>{t.zona}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-main)', marginBottom: '0.25rem' }}>
+                      <MapPin size={16} className="text-muted" /> 
+                      <span style={{ fontWeight: '600', fontSize: '1.1rem' }}>{t.sector}</span>
                     </div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginLeft: '1.4rem' }}>{t.zona}</div>
                     <BadgeEstado estado={t.estado_construccion} />
                   </div>
 

@@ -8,7 +8,8 @@ const terrenosMock = [
     id_terreno: 1,
     propietario: 'Carlos Ruiz Masaquiza',
     cedula: '1801112223',
-    zona: 'Sector Centro',
+    zona: 'Zona Norte',
+    sector: 'Sector Centro',
     estado_construccion: 'Construida',
     area_m2: 350.5,
     latitud: -1.3281,
@@ -19,7 +20,8 @@ const terrenosMock = [
     id_terreno: 2,
     propietario: 'Ana Luisa Toalombo',
     cedula: '1804445556',
-    zona: 'San Luis',
+    zona: 'Zona Sur',
+    sector: 'San Luis',
     estado_construccion: 'En Construcción',
     area_m2: 210.0,
     latitud: -1.3300,
@@ -30,7 +32,8 @@ const terrenosMock = [
     id_terreno: 3,
     propietario: 'José Luis Tixilema',
     cedula: '1803334445',
-    zona: 'San Francisco',
+    zona: 'Zona Este',
+    sector: 'San Francisco',
     estado_construccion: 'Lote Baldío',
     area_m2: 500.0,
     latitud: null,
@@ -41,7 +44,8 @@ const terrenosMock = [
     id_terreno: 4,
     propietario: 'María Rosario Chango',
     cedula: '1809990001',
-    zona: 'San Miguel',
+    zona: 'Zona Oeste',
+    sector: 'San Miguel',
     estado_construccion: 'Construida',
     area_m2: 180.75,
     latitud: -1.3260,
@@ -65,7 +69,8 @@ export default function CatastroGlobal() {
   const terrenosFiltrados = terrenosMock.filter(t =>
     t.propietario.toLowerCase().includes(busqueda.toLowerCase()) ||
     t.cedula.includes(busqueda) ||
-    t.zona.toLowerCase().includes(busqueda.toLowerCase())
+    t.zona.toLowerCase().includes(busqueda.toLowerCase()) ||
+    t.sector.toLowerCase().includes(busqueda.toLowerCase())
   );
 
   return (
@@ -130,7 +135,7 @@ export default function CatastroGlobal() {
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '720px' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
-              {['Propietario', 'Zona / Sector', 'Estado', 'Área (m²)', 'Coordenadas GPS', 'Planimetría'].map(h => (
+              {['Propietario', 'Zona', 'Sector', 'Estado', 'Área (m²)', 'Coordenadas GPS', 'Planimetría'].map(h => (
                 <th key={h} style={{ padding: '0.9rem 1rem', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: '700' }}>{h}</th>
               ))}
             </tr>
@@ -148,8 +153,12 @@ export default function CatastroGlobal() {
                   <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>C.I: {t.cedula}</p>
                 </td>
                 <td style={{ padding: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-main)' }}>
-                    <Fence size={14} className="text-muted" /> {t.zona}
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t.zona}</div>
+                </td>
+                <td style={{ padding: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Fence size={14} className="text-muted" /> 
+                    <div style={{ fontWeight: '500', color: 'var(--text-main)' }}>{t.sector}</div>
                   </div>
                 </td>
                 <td style={{ padding: '1rem' }}>

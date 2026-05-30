@@ -19,7 +19,7 @@ BEGIN
     INSERT INTO Auditoria (tabla_afectada, operacion, id_registro, datos_anteriores, datos_nuevos, id_usuario)
     VALUES ('Persona', 'INSERT', NEW.id_persona, NULL, JSON_OBJECT(
         'id_persona', NEW.id_persona, 'cedula', NEW.cedula, 'nombre', NEW.nombre, 'apellido', NEW.apellido,
-        'id_genero', NEW.id_genero, 'id_zona', NEW.id_zona, 'id_condicion_especial', NEW.id_condicion_especial, 'estado_vital', NEW.estado_vital
+        'id_genero', NEW.id_genero, 'id_sector', NEW.id_sector, 'id_condicion_especial', NEW.id_condicion_especial, 'estado_vital', NEW.estado_vital
     ), @id_usuario_actual);
 END$$
 
@@ -27,8 +27,8 @@ CREATE TRIGGER trg_persona_update AFTER UPDATE ON Persona FOR EACH ROW
 BEGIN
     INSERT INTO Auditoria (tabla_afectada, operacion, id_registro, datos_anteriores, datos_nuevos, id_usuario)
     VALUES ('Persona', 'UPDATE', NEW.id_persona,
-    JSON_OBJECT('cedula', OLD.cedula, 'nombre', OLD.nombre, 'apellido', OLD.apellido, 'id_genero', OLD.id_genero, 'id_zona', OLD.id_zona, 'estado_vital', OLD.estado_vital),
-    JSON_OBJECT('cedula', NEW.cedula, 'nombre', NEW.nombre, 'apellido', NEW.apellido, 'id_genero', NEW.id_genero, 'id_zona', NEW.id_zona, 'estado_vital', NEW.estado_vital), 
+    JSON_OBJECT('cedula', OLD.cedula, 'nombre', OLD.nombre, 'apellido', OLD.apellido, 'id_genero', OLD.id_genero, 'id_sector', OLD.id_sector, 'estado_vital', OLD.estado_vital),
+    JSON_OBJECT('cedula', NEW.cedula, 'nombre', NEW.nombre, 'apellido', NEW.apellido, 'id_genero', NEW.id_genero, 'id_sector', NEW.id_sector, 'estado_vital', NEW.estado_vital), 
     @id_usuario_actual);
 END$$
 

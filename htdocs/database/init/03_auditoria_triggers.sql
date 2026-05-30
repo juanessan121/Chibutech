@@ -33,14 +33,8 @@ AFTER INSERT ON Persona FOR EACH ROW
 BEGIN
     INSERT INTO Auditoria (tabla_afectada, operacion, id_registro, datos_anteriores, datos_nuevos, id_usuario)
     VALUES ('Persona', 'INSERT', NEW.id_persona, NULL, JSON_OBJECT(
-        'id_persona', NEW.id_persona,
-        'cedula', NEW.cedula,
-        'nombre', NEW.nombre,
-        'apellido', NEW.apellido,
-        'fecha_nacimiento', NEW.fecha_nacimiento,
-        'id_zona', NEW.id_zona,
-        'id_condicion_especial', NEW.id_condicion_especial,
-        'estado_vital', NEW.estado_vital
+        'id_persona', NEW.id_persona, 'cedula', NEW.cedula, 'nombre', NEW.nombre, 'apellido', NEW.apellido,
+        'id_genero', NEW.id_genero, 'id_sector', NEW.id_sector, 'id_condicion_especial', NEW.id_condicion_especial, 'estado_vital', NEW.estado_vital
     ), @id_usuario_actual);
 END$$
 
@@ -50,23 +44,11 @@ BEGIN
     INSERT INTO Auditoria (tabla_afectada, operacion, id_registro, datos_anteriores, datos_nuevos, id_usuario)
     VALUES ('Persona', 'UPDATE', NEW.id_persona,
     JSON_OBJECT(
-        'cedula', OLD.cedula,
-        'nombre', OLD.nombre,
-        'apellido', OLD.apellido,
-        'fecha_nacimiento', OLD.fecha_nacimiento,
-        'id_zona', OLD.id_zona,
-        'id_condicion_especial', OLD.id_condicion_especial,
-        'estado_vital', OLD.estado_vital,
-        'fecha_defuncion', OLD.fecha_defuncion
-    ),
-    JSON_OBJECT(
-        'cedula', NEW.cedula,
-        'nombre', NEW.nombre,
-        'apellido', NEW.apellido,
-        'fecha_nacimiento', NEW.fecha_nacimiento,
-        'id_zona', NEW.id_zona,
-        'id_condicion_especial', NEW.id_condicion_especial,
-        'estado_vital', NEW.estado_vital,
+        'id_persona', OLD.id_persona, 'cedula', OLD.cedula, 'nombre', OLD.nombre, 'apellido', OLD.apellido,
+        'id_genero', OLD.id_genero, 'id_sector', OLD.id_sector, 'id_condicion_especial', OLD.id_condicion_especial, 'estado_vital', OLD.estado_vital
+    ), JSON_OBJECT(
+        'id_persona', NEW.id_persona, 'cedula', NEW.cedula, 'nombre', NEW.nombre, 'apellido', NEW.apellido,
+        'id_genero', NEW.id_genero, 'id_sector', NEW.id_sector, 'id_condicion_especial', NEW.id_condicion_especial, 'estado_vital', NEW.estado_vital,
         'fecha_defuncion', NEW.fecha_defuncion
     ), @id_usuario_actual);
 END$$

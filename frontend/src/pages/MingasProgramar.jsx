@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CalendarPlus, ArrowLeft, Save, MapPin, DollarSign, Clock, Users, FileText, Tag, Navigation } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { getZonas, getActividadesMinga } from '../services/catalogoService';
+import { getAllSectores } from '../services/catalogoService';
 import { programarMinga } from '../services/mingaService';
 
 // Catálogo local de tipos de evento (refleja Catalogo_Tipo_Evento de la BD)
@@ -24,34 +24,25 @@ export default function MingasProgramar() {
     name: "asignaciones"
   });
 
-  const [zonas, setZonas] = useState([]);
-  const [actividades, setActividades] = useState([]);
+  const [sectores, setSectores] = useState([]);
+  const [modoSeleccion, setModoSeleccion] = useState('todas');
+  const [filtroZona, setFiltroZona] = useState('');
 
   useEffect(() => {
     // Cargar catálogos dinámicos
     Promise.all([
-      getZonas().catch(() => [
-        { id_zona: 1, nombre_zona: 'Sector Centro' }, 
-        { id_zona: 2, nombre_zona: 'San Luis' },
-        { id_zona: 3, nombre_zona: 'San Francisco' },
-        { id_zona: 4, nombre_zona: 'San Miguel' }
-      ]),
-      getActividadesMinga().catch(() => [
-        { id_actividad_minga: 1, descripcion_actividad: 'Limpieza de Acequias' },
-        { id_actividad_minga: 2, descripcion_actividad: 'Excavación de Zanjas' }
-      ])
-    ]).then(([z, a]) => {
-      setZonas(z);
-      setActividades(a);
-      // Inicializar las asignaciones con todas las zonas desmarcadas por defecto
+      getAllSectores()
+    ]).then(([s]) => {
+      setSectores(s);
+      // Inicializar las asignaciones con todos los sectores desmarcados por defecto
       if (asignacionesFields.length === 0) {
-        z.forEach(zona => {
+        s.forEach(sector => {
           append({
-            id_zona: zona.id_zona,
-            nombre_zona: zona.nombre_zona,
-            seleccionado: false,
-            id_actividad_minga: '',
-            valor_multa_grupo: ''
+            id_sector: sector.id_sector,
+            nombre_sector: sector.nombre_sector,
+            id_zona: sector.id_zona,
+            nombre_zona: sector.nombre_zona,
+            seleccionado: false
           });
         });
       }
@@ -61,10 +52,16 @@ export default function MingasProgramar() {
   const onSubmit = async (data) => {
     setIsSubmitting(true);
     try {
-      // Filtrar solo las zonas que fueron seleccionadas
-      const zonasSeleccionadas = data.asignaciones.filter(a => a.seleccionado);
+      // Filtrar solo las zonas que fueron seleccionadas o enviar todas si el modo es 'todas'
+      let zonasSeleccionadas = [];
+      if (modoSeleccion === 'todas') {
+        zonasSeleccionadas = data.asignaciones;
+      } else {
+        zonasSeleccionadas = data.asignaciones.filter(a => a.seleccionado);
+      }
+
       if (zonasSeleccionadas.length === 0) {
-        toast.error('Debe seleccionar al menos una zona para la minga');
+        toast.error('Debe seleccionar al menos un sector para la minga');
         setIsSubmitting(false);
         return;
       }
@@ -76,9 +73,7 @@ export default function MingasProgramar() {
         valor_multa_inasistencia: data.valor_multa_inasistencia,
         observacion_estado: data.observacion_estado,
         asignaciones: zonasSeleccionadas.map(a => ({
-          id_zona: a.id_zona,
-          id_actividad_minga: a.id_actividad_minga,
-          valor_multa_grupo: a.valor_multa_grupo || null
+          id_sector: a.id_sector
         }))
       };
 
@@ -210,28 +205,60 @@ export default function MingasProgramar() {
           <div className="form-grid full" style={{ marginTop: '1rem' }}>
             <div className="input-group">
               <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Users size={16} className="text-purple" /> Sectores y Actividades Asignadas
+                <Users size={16} className="text-purple" /> Sectores Asignados
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', background: 'var(--bg-color)', padding: '1.5rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
-                {asignacionesFields.map((item, idx) => (
-                  <div key={item.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', color: 'var(--text-main)', fontWeight: '600' }}>
-                      <input type="checkbox" {...register(`asignaciones.${idx}.seleccionado`)} style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }} />
-                      <input type="hidden" {...register(`asignaciones.${idx}.id_zona`)} />
-                      {item.nombre_zona}
-                    </label>
-                    <div style={{ paddingLeft: '1.75rem' }}>
-                      <select className="form-select" {...register(`asignaciones.${idx}.id_actividad_minga`)} style={{ fontSize: '0.8rem', padding: '0.4rem', marginBottom: '0.5rem' }}>
-                        <option value="">Seleccione actividad (Requerido)...</option>
-                        {actividades.map(act => (
-                          <option key={act.id_actividad_minga} value={act.id_actividad_minga}>{act.descripcion_actividad}</option>
-                        ))}
-                      </select>
-                      <input type="number" step="0.01" className="input-field" placeholder="Multa Específica Zona ($) Opcional" {...register(`asignaciones.${idx}.valor_multa_grupo`)} style={{ fontSize: '0.8rem', padding: '0.4rem' }} title="Sobrescribe la multa general si esta zona hace un trabajo más pesado." />
-                    </div>
-                  </div>
-                ))}
+              
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                <select 
+                  className="form-select" 
+                  value={modoSeleccion} 
+                  onChange={(e) => setModoSeleccion(e.target.value)}
+                  style={{ width: '200px' }}
+                >
+                  <option value="todas">Todos los sectores</option>
+                  <option value="escoger">Escoger sectores</option>
+                </select>
+
+                {modoSeleccion === 'escoger' && (
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    placeholder="Buscar por zona o sector..." 
+                    value={filtroZona}
+                    onChange={(e) => setFiltroZona(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                )}
               </div>
+
+              {modoSeleccion === 'escoger' ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', background: 'var(--bg-color)', padding: '1.5rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
+                  {asignacionesFields
+                    .map((item, idx) => ({ ...item, originalIndex: idx }))
+                    .filter(item => item.nombre_zona.toLowerCase().includes(filtroZona.toLowerCase()) || item.nombre_sector.toLowerCase().includes(filtroZona.toLowerCase()))
+                    .map((item) => (
+                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', color: 'var(--text-main)', fontWeight: '600', width: '100%' }}>
+                        <input type="checkbox" {...register(`asignaciones.${item.originalIndex}.seleccionado`)} style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }} />
+                        <input type="hidden" {...register(`asignaciones.${item.originalIndex}.id_sector`)} />
+                        <div>
+                          <div style={{ fontSize: '0.95rem' }}>{item.nombre_sector}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>{item.nombre_zona}</div>
+                        </div>
+                      </label>
+                    </div>
+                  ))}
+                  {asignacionesFields.filter(item => item.nombre_zona.toLowerCase().includes(filtroZona.toLowerCase()) || item.nombre_sector.toLowerCase().includes(filtroZona.toLowerCase())).length === 0 && (
+                    <p style={{ color: 'var(--text-muted)', margin: 0, gridColumn: '1 / -1', textAlign: 'center' }}>No se encontraron sectores que coincidan con la búsqueda.</p>
+                  )}
+                </div>
+              ) : (
+                <div style={{ padding: '1.5rem', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--green)', borderRadius: '0.5rem', border: '1px solid var(--green)' }}>
+                  <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}>
+                    <Users size={18} /> Se convocará a todos los sectores registrados en el sistema.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

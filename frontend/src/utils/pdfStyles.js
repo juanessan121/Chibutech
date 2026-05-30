@@ -15,28 +15,28 @@ export const INSTITUCION = {
 
 // ── PALETA DE COLORES ──────────────────────────────────────────────────────────
 export const COLORS = {
-  // Primarios
-  primary:      [14, 165, 233],   // #0ea5e9 — Azul principal
-  primaryDark:  [3, 105, 161],    // #0369a1 — Azul oscuro
-  primaryLight: [186, 230, 253],  // Azul claro (fondo header tabla)
+  // Corporativo / Minimalista
+  primary:      [30, 41, 59],     // Slate 800 - Principal oscuro
+  primaryDark:  [15, 23, 42],     // Slate 900 - Títulos
+  primaryLight: [241, 245, 249],  // Slate 100 - Fondos suaves
 
-  // Estado
-  success:  [16, 185, 129],  // #10b981 — Verde
-  warning:  [245, 158, 11],  // #f59e0b — Amarillo
-  danger:   [239, 68, 68],   // #ef4444 — Rojo
-  info:     [99, 102, 241],  // #6366f1 — Púrpura
+  // Estado (suavizados para un look empresarial)
+  success:  [15, 23, 42],    // Gris oscuro en lugar de verde vibrante
+  warning:  [71, 85, 105],   // Slate 600
+  danger:   [15, 23, 42],    // Gris oscuro en lugar de rojo
+  info:     [30, 41, 59],    // Slate 800
 
   // Grises / Neutros
-  dark:        [15, 23, 42],    // Fondo oscuro
-  mediumDark:  [30, 41, 59],    // Filas pares
-  medium:      [51, 65, 85],    // Bordes
-  muted:       [100, 116, 139], // Texto secundario
-  light:       [203, 213, 225], // Texto sobre fondo oscuro
+  dark:        [15, 23, 42],    
+  mediumDark:  [51, 65, 85],    
+  medium:      [148, 163, 184], 
+  muted:       [100, 116, 139], 
+  light:       [203, 213, 225], 
   white:       [255, 255, 255],
 
   // Filas tabla
-  rowEven: [248, 250, 252],    // Fila par (blanco suave)
-  rowOdd:  [241, 245, 249],    // Fila impar
+  rowEven: [255, 255, 255],    // Fila par
+  rowOdd:  [248, 250, 252],    // Fila impar
 };
 
 // ── TIPOGRAFÍA ─────────────────────────────────────────────────────────────────
@@ -62,24 +62,26 @@ export const LAYOUT = {
 // ── TABLA — CONFIGURACIÓN DEFAULT ─────────────────────────────────────────────
 export const TABLE_STYLES = {
   headStyles: {
-    fillColor:  COLORS.primaryDark,
-    textColor:  COLORS.white,
+    fillColor:  [241, 245, 249],  // Fondo gris muy claro
+    textColor:  [15, 23, 42],     // Texto casi negro
     fontStyle:  'bold',
-    fontSize:   9,
+    fontSize:   8,
     halign:     'left',
     cellPadding: 4,
+    lineColor: [203, 213, 225],
+    lineWidth: 0.1,
   },
   alternateRowStyles: {
-    fillColor: COLORS.rowOdd,
+    fillColor: [250, 250, 250],
   },
   bodyStyles: {
-    fontSize:    9,
-    textColor:   [30, 41, 59],
-    cellPadding: 3.5,
+    fontSize:    8,
+    textColor:   [51, 65, 85],
+    cellPadding: 4,
   },
   styles: {
     overflow:   'linebreak',
-    lineColor:  [203, 213, 225],
-    lineWidth:  0.2,
+    lineColor:  [226, 232, 240],
+    lineWidth:  0.1,
   },
 };

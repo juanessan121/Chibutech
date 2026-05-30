@@ -10,10 +10,10 @@ export default function CobrosVentanilla() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Mocks simulando la base de datos
-  const mockUsers = [
-    { id: 1, cedula: '1801234567', nombre: 'Juan Carlos Pérez', zona: 'Sector Centro', condicion: 'Ninguna' },
-    { id: 2, cedula: '1809876543', nombre: 'María Rosa Guamán', zona: 'San Luis', condicion: 'Tercera Edad' }
-  ];
+  const [usuariosMock] = useState([
+    { id: 1, cedula: '1801234567', nombre: 'Juan Carlos Pérez', zona: 'Zona Norte', sector: 'Sector Centro', condicion: 'Ninguna' },
+    { id: 2, cedula: '1809876543', nombre: 'María Rosa Guamán', zona: 'Zona Sur', sector: 'San Luis', condicion: 'Tercera Edad' }
+  ]);
 
   const mockDeudas = {
     1: [
@@ -32,7 +32,7 @@ export default function CobrosVentanilla() {
   const [deudasSeleccionadas, setDeudasSeleccionadas] = useState([]);
 
   const handleSearch = () => {
-    const found = mockUsers.find(u => u.cedula === searchTerm || u.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
+    const found = usuariosMock.find(u => u.cedula === searchTerm || u.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
     if (found) {
       setSelectedUser(found);
       setDeudasActuales(mockDeudas[found.id] || []);
@@ -118,8 +118,10 @@ export default function CobrosVentanilla() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><MapPin size={16}/> Sector:</span>
-                  <span style={{ fontWeight: '500' }}>{selectedUser.zona}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <MapPin size={16} /> Sector:
+                  </span>
+                  <span style={{ fontWeight: '500' }}>{selectedUser.sector} ({selectedUser.zona})</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><AlertTriangle size={16}/> Condición Especial:</span>

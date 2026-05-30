@@ -1349,9 +1349,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
-  margin-bottom: 2rem;
-  border-radius: 1rem;
+  padding: 0 0 1.5rem 0;
+  background: transparent;
   position: relative;
   z-index: 99;
 }
@@ -1360,6 +1359,7 @@ body {
   display: flex;
   align-items: center;
   gap: 1.25rem;
+  margin-left: auto;
 }
 
 .search-container-topbar {

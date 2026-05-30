@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardCheck, ArrowLeft, Search, Filter, Save, CheckCircle, XCircle, FileText } from 'lucide-react';
+import { ClipboardCheck, ArrowLeft, Search, Save, CheckCircle, XCircle, FileText, Lock } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 
 export default function MingasAsistencia() {
   const navigate = useNavigate();
   const [selectedMinga, setSelectedMinga] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isClosed, setIsClosed] = useState(false);
 
   // Simulando datos de la DB
   const mingasActivas = [
@@ -19,6 +20,7 @@ export default function MingasAsistencia() {
     { id: 102, cedula: '1809876543', nombre: 'María Rosa Guamán', sector: 'Centro', estado: 'Pendiente' },
     { id: 103, cedula: '1805556667', nombre: 'Luis Alberto Sisa', sector: 'San Francisco', estado: 'Pendiente' },
     { id: 104, cedula: '1804443332', nombre: 'Carmen Tixilema', sector: 'San Luis', estado: 'Pendiente' },
+    { id: 105, cedula: '1808889990', nombre: 'Pedro Chango', sector: 'Centro', estado: 'Faltó (Pagado)' },
   ];
 
   const [asistencia, setAsistencia] = useState(usuariosConvocados);
@@ -30,6 +32,13 @@ export default function MingasAsistencia() {
 
   const handleGuardarTodo = () => {
     toast.success('Listado de asistencia guardado correctamente en la base de datos.');
+  };
+
+  const handleCerrarRegistro = () => {
+    if (window.confirm("¿Está seguro de cerrar el registro? Una vez cerrado, no se podrán modificar las asistencias. Las inasistencias generarán multas irrevocables.")) {
+      setIsClosed(true);
+      toast.success('El registro de asistencia ha sido cerrado definitivamente.');
+    }
   };
 
   return (
@@ -55,7 +64,10 @@ export default function MingasAsistencia() {
           <select 
             className="form-select" 
             value={selectedMinga} 
-            onChange={(e) => setSelectedMinga(e.target.value)}
+            onChange={(e) => {
+              setSelectedMinga(e.target.value);
+              setIsClosed(false); // Reiniciamos el estado al cambiar de minga
+            }}
           >
             <option value="">-- Elija una Minga para pasar lista --</option>
             {mingasActivas.map(m => (
@@ -78,9 +90,15 @@ export default function MingasAsistencia() {
           </div>
         </div>
 
-        <button className="btn-primary" onClick={handleGuardarTodo} disabled={!selectedMinga} style={{ background: '#10b981', flex: '0 0 auto' }}>
-          <Save size={18} /> Guardar Lista Completa
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', flex: '0 0 auto' }}>
+          <button className="btn-primary" onClick={handleGuardarTodo} disabled={!selectedMinga || isClosed} style={{ background: '#10b981', opacity: (!selectedMinga || isClosed) ? 0.5 : 1 }}>
+            <Save size={18} /> Guardar Cambios
+          </button>
+          
+          <button className="btn-primary" onClick={handleCerrarRegistro} disabled={!selectedMinga || isClosed} style={{ background: '#ef4444', opacity: (!selectedMinga || isClosed) ? 0.5 : 1 }}>
+            <Lock size={18} /> Cerrar Registro
+          </button>
+        </div>
       </div>
 
       {/* Tabla de Asistencia (Solo visible si hay minga seleccionada) */}
@@ -103,34 +121,50 @@ export default function MingasAsistencia() {
                   <td style={{ fontWeight: '500', color: 'var(--text-main)' }}>{user.nombre}</td>
                   <td><span className="badge badge-directive">{user.sector}</span></td>
                   <td style={{ textAlign: 'center' }}>
-                    <span className={`badge ${user.estado === 'Presente' ? 'badge-admin' : user.estado === 'Faltó' ? 'badge-user' : user.estado === 'Justificado' ? 'badge-directive' : ''}`} style={{ background: user.estado === 'Pendiente' ? 'var(--border-color)' : '' }}>
+                    <span 
+                      className={`badge ${user.estado === 'Presente' ? 'badge-admin' : user.estado === 'Faltó' ? 'badge-user' : user.estado === 'Justificado' ? 'badge-directive' : user.estado === 'Faltó (Pagado)' ? 'badge-directive' : ''}`} 
+                      style={{ 
+                        background: user.estado === 'Pendiente' ? 'var(--border-color)' : user.estado === 'Faltó (Pagado)' ? 'var(--yellow)' : '',
+                        color: user.estado === 'Faltó (Pagado)' ? '#000' : ''
+                      }}
+                    >
                       {user.estado}
                     </span>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                      <button 
-                        title="Marcar Presente"
-                        onClick={() => handleMarcar(user.id, 'Presente')}
-                        style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid #10b981', borderRadius: '0.5rem', padding: '0.4rem', cursor: 'pointer', transition: 'all 0.2s' }}
-                      >
-                        <CheckCircle size={18} />
-                      </button>
-                      <button 
-                        title="Marcar Faltó (Genera Multa)"
-                        onClick={() => handleMarcar(user.id, 'Faltó')}
-                        style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '0.5rem', padding: '0.4rem', cursor: 'pointer', transition: 'all 0.2s' }}
-                      >
-                        <XCircle size={18} />
-                      </button>
-                      <button 
-                        title="Justificar Inasistencia"
-                        onClick={() => handleMarcar(user.id, 'Justificado')}
-                        style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid #f59e0b', borderRadius: '0.5rem', padding: '0.4rem', cursor: 'pointer', transition: 'all 0.2s' }}
-                      >
-                        <FileText size={18} />
-                      </button>
-                    </div>
+                    {(!isClosed && user.estado !== 'Faltó (Pagado)') ? (
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                        <button 
+                          title="Marcar Presente"
+                          onClick={() => handleMarcar(user.id, 'Presente')}
+                          style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid #10b981', borderRadius: '0.5rem', padding: '0.4rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                        >
+                          <CheckCircle size={18} />
+                        </button>
+                        <button 
+                          title="Marcar Faltó (Genera Multa)"
+                          onClick={() => handleMarcar(user.id, 'Faltó')}
+                          style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '0.5rem', padding: '0.4rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                        >
+                          <XCircle size={18} />
+                        </button>
+                        <button 
+                          title="Justificar Inasistencia"
+                          onClick={() => handleMarcar(user.id, 'Justificado')}
+                          style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid #f59e0b', borderRadius: '0.5rem', padding: '0.4rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                        >
+                          <FileText size={18} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: 'center', color: 'var(--text-muted)' }} title={user.estado === 'Faltó (Pagado)' ? 'Multa saldada, inasistencia inamovible' : 'Registro cerrado'}>
+                        {user.estado === 'Faltó (Pagado)' ? (
+                          <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Multa Cancelada</span>
+                        ) : (
+                          <Lock size={16} style={{ display: 'inline-block' }} />
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

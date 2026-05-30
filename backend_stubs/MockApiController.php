@@ -84,24 +84,36 @@ final class MockApiController extends Controller
         $perPage  = 15;
         $total    = 87;
 
-        $comuneros = collect(range(1, $perPage))->map(fn (int $i) => [
-            'id'                   => ($page - 1) * $perPage + $i,
-            'cedula'               => $this->faker->numerify('##########'),
-            'nombres'              => $this->faker->firstName(),
-            'apellidos'            => $this->faker->lastName() . ' MockApiController.php' . $this->faker->lastName(),
-            'fecha_nacimiento'     => $this->faker->date('Y-m-d', '-25 years'),
-            'sexo'                 => $this->faker->randomElement(['M', 'F']),
-            'estado_civil'         => $this->faker->randomElement(['soltero', 'casado', 'divorciado', 'viudo']),
-            'zona'                 => $this->faker->randomElement(['ZONA_NORTE', 'ZONA_SUR', 'ZONA_CENTRO']),
-            'total_cargas_familiares' => $this->faker->numberBetween(0, 5), // Accessor real en el modelo
-            'predio_principal'     => [
-                'id'          => $this->faker->unique()->numberBetween(100, 999),
-                'codigo'      => strtoupper($this->faker->bothify('PR-####')),
-                'planimetria' => round($this->faker->randomFloat(2, 50, 1500), 2),
-                'zona'        => $this->faker->randomElement(['ZONA_NORTE', 'ZONA_SUR', 'ZONA_CENTRO']),
-            ],
-            'created_at'           => $this->faker->dateTimeThisYear()->format('Y-m-d H:i:s'),
-        ]);
+        $zonasEstructura = [
+            ['zona' => 'ZONA NORTE', 'sectores' => ['San Luis', 'San Francisco']],
+            ['zona' => 'ZONA SUR', 'sectores' => ['Centro', 'La Merced']],
+            ['zona' => 'ZONA ESTE', 'sectores' => ['San Miguel', 'San Pedro']],
+        ];
+
+        $comuneros = collect(range(1, $perPage))->map(function (int $i) use ($page, $perPage, $zonasEstructura) {
+            $z = $this->faker->randomElement($zonasEstructura);
+            $pz = $this->faker->randomElement($zonasEstructura);
+            return [
+                'id'                   => ($page - 1) * $perPage + $i,
+                'cedula'               => $this->faker->numerify('##########'),
+                'nombres'              => $this->faker->firstName(),
+                'apellidos'            => $this->faker->lastName() . ' MockApiController.php' . $this->faker->lastName(),
+                'fecha_nacimiento'     => $this->faker->date('Y-m-d', '-25 years'),
+                'sexo'                 => $this->faker->randomElement(['M', 'F']),
+                'estado_civil'         => $this->faker->randomElement(['soltero', 'casado', 'divorciado', 'viudo']),
+                'zona'                 => $z['zona'],
+                'sector'               => $this->faker->randomElement($z['sectores']),
+                'total_cargas_familiares' => $this->faker->numberBetween(0, 5), // Accessor real en el modelo
+                'predio_principal'     => [
+                    'id'          => $this->faker->unique()->numberBetween(100, 999),
+                    'codigo'      => strtoupper($this->faker->bothify('PR-####')),
+                    'planimetria' => round($this->faker->randomFloat(2, 50, 1500), 2),
+                    'zona'        => $pz['zona'],
+                    'sector'      => $this->faker->randomElement($pz['sectores']),
+                ],
+                'created_at'           => $this->faker->dateTimeThisYear()->format('Y-m-d H:i:s'),
+            ];
+        });
 
         return response()->json([
             'status' => 'ok',
@@ -249,7 +261,8 @@ final class MockApiController extends Controller
                 'id'              => $id,
                 'codigo'          => strtoupper($this->faker->bothify('PR-####')),
                 'planimetria_m2'  => $planimetria,
-                'zona'            => 'ZONA_NORTE',
+                'zona'            => 'ZONA NORTE',
+                'sector'          => 'San Luis',
                 'uso_suelo'       => $this->faker->randomElement(['residencial', 'agricola', 'comercial']),
                 'tarifa_calculada' => [
                     'porcentaje_cobro' => $porcentajeCobro,

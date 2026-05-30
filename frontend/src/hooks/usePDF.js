@@ -30,7 +30,7 @@ const MOCK_MOROSOS = [
 const MOCK_BALANCE = {
   resumen: { ingresos: 2340.50, egresos: 890.00, saldo: 1450.50 },
   ingresos: [
-    { fecha: '2024-10-01', concepto: 'Cobro planilla mensual — 45 comuneros', monto: 1350.00 },
+    { fecha: '2024-10-01', concepto: 'Cobro planilla mensual - 45 comuneros', monto: 1350.00 },
     { fecha: '2024-10-05', concepto: 'Multas por inasistencia Minga #12',      monto: 450.00  },
     { fecha: '2024-10-12', concepto: 'Multas disciplinarias varios',           monto: 125.00  },
     { fecha: '2024-10-18', concepto: 'Cuota extraordinaria mantenimiento',     monto: 415.50  },
@@ -52,40 +52,40 @@ function dibujarHeader(doc, titulo, subtituloDoc = '') {
   const pageW = doc.internal.pageSize.getWidth();
 
   // Fondo del header
-  doc.setFillColor(...COLORS.primaryDark);
+  doc.setFillColor(...COLORS.primaryLight);
   doc.rect(0, 0, pageW, LAYOUT.headerHeight, 'F');
 
   // Línea de acento
-  doc.setFillColor(...COLORS.primary);
-  doc.rect(0, LAYOUT.headerHeight - 3, pageW, 3, 'F');
+  doc.setFillColor(...COLORS.primaryDark);
+  doc.rect(0, LAYOUT.headerHeight - 2, pageW, 2, 'F');
 
   // Nombre institución
   doc.setFont('helvetica', FONTS.title.style);
   doc.setFontSize(FONTS.title.size);
-  doc.setTextColor(...COLORS.white);
+  doc.setTextColor(...COLORS.primaryDark);
   doc.text(INSTITUCION.nombre, LAYOUT.marginLeft, 16);
 
   // Subtítulo sistema
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(...COLORS.light);
+  doc.setTextColor(...COLORS.mediumDark);
   doc.text(INSTITUCION.subtitulo, LAYOUT.marginLeft, 23);
 
   // Dirección
   doc.setFontSize(8);
-  doc.setTextColor(...COLORS.light);
+  doc.setTextColor(...COLORS.muted);
   doc.text(`${INSTITUCION.direccion} | ${INSTITUCION.telefono}`, LAYOUT.marginLeft, 30);
 
   // Tipo de documento (derecha)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.setTextColor(...COLORS.white);
-  doc.text(titulo, pageW - LAYOUT.marginRight, 16, { align: 'right' });
+  doc.setTextColor(...COLORS.primaryDark);
+  doc.text(titulo.toUpperCase(), pageW - LAYOUT.marginRight, 16, { align: 'right' });
 
   if (subtituloDoc) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.setTextColor(...COLORS.light);
+    doc.setTextColor(...COLORS.mediumDark);
     doc.text(subtituloDoc, pageW - LAYOUT.marginRight, 23, { align: 'right' });
   }
 
@@ -113,12 +113,55 @@ function dibujarFooter(doc) {
   }
 }
 
+/** Dibuja las líneas de firma al final del documento */
+function dibujarFirmas(doc, y) {
+  const pageH = doc.internal.pageSize.getHeight();
+  const pageW = doc.internal.pageSize.getWidth();
+  
+  if (y + 40 > pageH - 20) {
+    doc.addPage();
+    y = LAYOUT.headerHeight + 20;
+  } else {
+    y += 30;
+  }
+
+  doc.setDrawColor(...COLORS.dark);
+  doc.setLineWidth(0.4);
+  
+  const w = 45; 
+  const gap = (pageW - LAYOUT.marginLeft - LAYOUT.marginRight - (w * 3)) / 2;
+  
+  const x1 = LAYOUT.marginLeft;
+  const x2 = x1 + w + gap;
+  const x3 = x2 + w + gap;
+
+  doc.line(x1, y, x1 + w, y);
+  doc.line(x2, y, x2 + w, y);
+  doc.line(x3, y, x3 + w, y);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...COLORS.dark);
+  
+  doc.text('PRESIDENTE', x1 + w/2, y + 5, { align: 'center' });
+  doc.text('SECRETARIO', x2 + w/2, y + 5, { align: 'center' });
+  doc.text('TESORERO', x3 + w/2, y + 5, { align: 'center' });
+  
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...COLORS.muted);
+  doc.text('Luis Alberto Sisa', x1 + w/2, y + 10, { align: 'center' });
+  doc.text('José María Lliguin', x2 + w/2, y + 10, { align: 'center' });
+  doc.text('Carmen Toalombo', x3 + w/2, y + 10, { align: 'center' });
+}
+
 /** Dibujar bloque de info (clave: valor) en fila horizontal */
 function dibujarMetaBloque(doc, items, y) {
   const pageW = doc.internal.pageSize.getWidth();
   const colW = (pageW - LAYOUT.marginLeft - LAYOUT.marginRight) / items.length;
-  doc.setFillColor(...COLORS.rowEven);
-  doc.roundedRect(LAYOUT.marginLeft, y, pageW - LAYOUT.marginLeft - LAYOUT.marginRight, 14, 2, 2, 'F');
+  doc.setDrawColor(...COLORS.light);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(LAYOUT.marginLeft, y, pageW - LAYOUT.marginLeft - LAYOUT.marginRight, 14, 1, 1, 'S');
   items.forEach((item, idx) => {
     const x = LAYOUT.marginLeft + idx * colW + 4;
     doc.setFont('helvetica', 'bold');
@@ -141,7 +184,7 @@ export function usePDF() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   // ── 1. PADRÓN DE USUARIOS ──────────────────────────────────────────────────
-  const generarPadron = useCallback(async (filtros = {}) => {
+  const generarPadron = useCallback(async (filtros = {}, modo = 'download') => {
     setIsGenerating(true);
     try {
       // Filtrar mock data según filtros recibidos
@@ -198,7 +241,9 @@ export function usePDF() {
         didDrawPage: () => {},
       });
 
+      dibujarFirmas(doc, doc.lastAutoTable.finalY);
       dibujarFooter(doc);
+      if (modo === 'preview') return doc.output('bloburl');
       doc.save(`padron_usuarios_${new Date().toISOString().slice(0, 10)}.pdf`);
     } finally {
       setIsGenerating(false);
@@ -206,7 +251,7 @@ export function usePDF() {
   }, []);
 
   // ── 2. REPORTE DE MOROSIDAD ────────────────────────────────────────────────
-  const generarMorosos = useCallback(async (filtros = {}) => {
+  const generarMorosos = useCallback(async (filtros = {}, modo = 'download') => {
     setIsGenerating(true);
     try {
       let datos = [...MOCK_MOROSOS];
@@ -227,21 +272,21 @@ export function usePDF() {
 
       // ⚠️ Banner de alerta si hay deuda alta
       if (totalDeuda > 100) {
-        doc.setFillColor(...COLORS.danger.map(c => Math.round(c * 0.15 + 255 * 0.85)));
-        doc.setDrawColor(...COLORS.danger);
-        doc.setLineWidth(0.5);
-        doc.roundedRect(LAYOUT.marginLeft, y - 2, doc.internal.pageSize.getWidth() - LAYOUT.marginLeft - LAYOUT.marginRight, 10, 2, 2, 'FD');
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(100, 116, 139);
+        doc.setLineWidth(0.2);
+        doc.roundedRect(LAYOUT.marginLeft, y - 2, doc.internal.pageSize.getWidth() - LAYOUT.marginLeft - LAYOUT.marginRight, 10, 1, 1, 'FD');
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(...COLORS.danger);
-        doc.text(`⚠  Deuda total acumulada supera $100.00 — Requiere atención inmediata`, LAYOUT.marginLeft + 4, y + 5);
+        doc.setFontSize(8);
+        doc.setTextColor(51, 65, 85);
+        doc.text(`ATENCION: La deuda total acumulada supera los $100.00.`, LAYOUT.marginLeft + 4, y + 4);
         y += 14;
       }
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(FONTS.section.size);
-      doc.setTextColor(...COLORS.danger);
-      doc.text('Detalle de Deudas Pendientes', LAYOUT.marginLeft, y);
+      doc.setTextColor(...COLORS.primaryDark);
+      doc.text('DETALLE DE DEUDAS PENDIENTES', LAYOUT.marginLeft, y);
       y += 6;
 
       autoTable(doc, {
@@ -258,7 +303,6 @@ export function usePDF() {
           u.estado,
         ]),
         ...TABLE_STYLES,
-        headStyles: { ...TABLE_STYLES.headStyles, fillColor: [185, 28, 28] },
         columnStyles: {
           0: { cellWidth: 7,  halign: 'center' },
           1: { cellWidth: 25 },
@@ -271,14 +315,16 @@ export function usePDF() {
         },
         foot: [['', '', '', '', '', 'TOTAL', `$${totalDeuda.toFixed(2)}`, '']],
         footStyles: {
-          fillColor: COLORS.dark,
-          textColor: COLORS.white,
+          fillColor: COLORS.primaryLight,
+          textColor: COLORS.primaryDark,
           fontStyle: 'bold',
-          fontSize: 10,
+          fontSize: 9,
         },
       });
 
+      dibujarFirmas(doc, doc.lastAutoTable.finalY);
       dibujarFooter(doc);
+      if (modo === 'preview') return doc.output('bloburl');
       doc.save(`reporte_morosos_${new Date().toISOString().slice(0, 10)}.pdf`);
     } finally {
       setIsGenerating(false);
@@ -286,7 +332,7 @@ export function usePDF() {
   }, []);
 
   // ── 3. BALANCE FINANCIERO ──────────────────────────────────────────────────
-  const generarBalance = useCallback(async (filtros = {}) => {
+  const generarBalance = useCallback(async (filtros = {}, modo = 'download') => {
     setIsGenerating(true);
     try {
       const { resumen, ingresos, egresos } = MOCK_BALANCE;
@@ -301,43 +347,45 @@ export function usePDF() {
         { label: 'Total Ingresos', value: `$${resumen.ingresos.toFixed(2)}` },
         { label: 'Total Egresos',  value: `$${resumen.egresos.toFixed(2)}`  },
         { label: 'Saldo Actual',   value: `$${resumen.saldo.toFixed(2)}`    },
-        { label: 'Estado Caja',    value: resumen.saldo > 0 ? 'Positivo ✓' : 'Déficit ✗' },
+        { label: 'Estado Caja',    value: resumen.saldo > 0 ? 'POSITIVO' : 'DEFICIT' },
       ], LAYOUT.headerHeight + 5);
 
       // ── Cuadro de resumen visual ──
       const boxW = (pageW - LAYOUT.marginLeft - LAYOUT.marginRight - 8) / 3;
 
+      // Estilo de cuadros minimalistas
+      doc.setDrawColor(...COLORS.light);
+      doc.setLineWidth(0.2);
+
       // Ingresos
-      doc.setFillColor(220, 252, 231);
-      doc.roundedRect(LAYOUT.marginLeft, y, boxW, 22, 3, 3, 'F');
+      doc.roundedRect(LAYOUT.marginLeft, y, boxW, 20, 1, 1, 'S');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...COLORS.muted);
       doc.text('INGRESOS TOTALES', LAYOUT.marginLeft + 4, y + 6);
-      doc.setFontSize(14); doc.setTextColor(...COLORS.success);
-      doc.text(`$${resumen.ingresos.toFixed(2)}`, LAYOUT.marginLeft + 4, y + 17);
+      doc.setFontSize(12); doc.setTextColor(...COLORS.primaryDark);
+      doc.text(`$${resumen.ingresos.toFixed(2)}`, LAYOUT.marginLeft + 4, y + 15);
 
       // Egresos
-      doc.setFillColor(254, 226, 226);
-      doc.roundedRect(LAYOUT.marginLeft + boxW + 4, y, boxW, 22, 3, 3, 'F');
+      doc.roundedRect(LAYOUT.marginLeft + boxW + 4, y, boxW, 20, 1, 1, 'S');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...COLORS.muted);
       doc.text('EGRESOS TOTALES', LAYOUT.marginLeft + boxW + 8, y + 6);
-      doc.setFontSize(14); doc.setTextColor(...COLORS.danger);
-      doc.text(`$${resumen.egresos.toFixed(2)}`, LAYOUT.marginLeft + boxW + 8, y + 17);
+      doc.setFontSize(12); doc.setTextColor(...COLORS.primaryDark);
+      doc.text(`$${resumen.egresos.toFixed(2)}`, LAYOUT.marginLeft + boxW + 8, y + 15);
 
       // Saldo
-      doc.setFillColor(219, 234, 254);
-      doc.roundedRect(LAYOUT.marginLeft + (boxW + 4) * 2, y, boxW, 22, 3, 3, 'F');
+      doc.setFillColor(...COLORS.primaryLight);
+      doc.roundedRect(LAYOUT.marginLeft + (boxW + 4) * 2, y, boxW, 20, 1, 1, 'FD');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...COLORS.muted);
       doc.text('SALDO NETO', LAYOUT.marginLeft + (boxW + 4) * 2 + 4, y + 6);
-      doc.setFontSize(14); doc.setTextColor(...COLORS.primaryDark);
-      doc.text(`$${resumen.saldo.toFixed(2)}`, LAYOUT.marginLeft + (boxW + 4) * 2 + 4, y + 17);
+      doc.setFontSize(12); doc.setTextColor(...COLORS.primaryDark);
+      doc.text(`$${resumen.saldo.toFixed(2)}`, LAYOUT.marginLeft + (boxW + 4) * 2 + 4, y + 15);
 
       y += 28;
 
       // ── Tabla de Ingresos ──
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(FONTS.section.size);
-      doc.setTextColor(...COLORS.success);
-      doc.text('▸ Detalle de Ingresos', LAYOUT.marginLeft, y);
+      doc.setTextColor(...COLORS.primaryDark);
+      doc.text('DETALLE DE INGRESOS', LAYOUT.marginLeft, y);
       y += 5;
 
       autoTable(doc, {
@@ -345,14 +393,13 @@ export function usePDF() {
         head: [['Fecha', 'Concepto', 'Monto']],
         body: ingresos.map(i => [i.fecha, i.concepto, `$${i.monto.toFixed(2)}`]),
         ...TABLE_STYLES,
-        headStyles: { ...TABLE_STYLES.headStyles, fillColor: [5, 150, 105] },
         columnStyles: {
           0: { cellWidth: 28 },
           1: { cellWidth: 'auto' },
           2: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
         },
         foot: [['', 'SUBTOTAL INGRESOS', `$${resumen.ingresos.toFixed(2)}`]],
-        footStyles: { fillColor: [6, 78, 59], textColor: [255,255,255], fontStyle: 'bold', fontSize: 9 },
+        footStyles: { fillColor: COLORS.primaryLight, textColor: COLORS.primaryDark, fontStyle: 'bold', fontSize: 9 },
       });
 
       y = doc.lastAutoTable.finalY + 8;
@@ -360,8 +407,8 @@ export function usePDF() {
       // ── Tabla de Egresos ──
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(FONTS.section.size);
-      doc.setTextColor(...COLORS.danger);
-      doc.text('▸ Detalle de Egresos', LAYOUT.marginLeft, y);
+      doc.setTextColor(...COLORS.primaryDark);
+      doc.text('DETALLE DE EGRESOS', LAYOUT.marginLeft, y);
       y += 5;
 
       autoTable(doc, {
@@ -369,27 +416,29 @@ export function usePDF() {
         head: [['Fecha', 'Concepto', 'Monto']],
         body: egresos.map(e => [e.fecha, e.concepto, `$${e.monto.toFixed(2)}`]),
         ...TABLE_STYLES,
-        headStyles: { ...TABLE_STYLES.headStyles, fillColor: [185, 28, 28] },
         columnStyles: {
           0: { cellWidth: 28 },
           1: { cellWidth: 'auto' },
           2: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
         },
         foot: [['', 'SUBTOTAL EGRESOS', `$${resumen.egresos.toFixed(2)}`]],
-        footStyles: { fillColor: [127, 29, 29], textColor: [255,255,255], fontStyle: 'bold', fontSize: 9 },
+        footStyles: { fillColor: COLORS.primaryLight, textColor: COLORS.primaryDark, fontStyle: 'bold', fontSize: 9 },
       });
 
       // ── Saldo final ──
       const finalY = doc.lastAutoTable.finalY + 5;
-      doc.setFillColor(...COLORS.primaryDark);
-      doc.roundedRect(LAYOUT.marginLeft, finalY, pageW - LAYOUT.marginLeft - LAYOUT.marginRight, 14, 3, 3, 'F');
+      doc.setDrawColor(...COLORS.medium);
+      doc.setLineWidth(0.3);
+      doc.rect(LAYOUT.marginLeft, finalY, pageW - LAYOUT.marginLeft - LAYOUT.marginRight, 10);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.setTextColor(...COLORS.white);
-      doc.text('SALDO NETO DE CAJA:', LAYOUT.marginLeft + 5, finalY + 9);
-      doc.text(`$${resumen.saldo.toFixed(2)}`, pageW - LAYOUT.marginRight - 5, finalY + 9, { align: 'right' });
+      doc.setFontSize(10);
+      doc.setTextColor(...COLORS.primaryDark);
+      doc.text('SALDO NETO DE CAJA:', LAYOUT.marginLeft + 5, finalY + 7);
+      doc.text(`$${resumen.saldo.toFixed(2)}`, pageW - LAYOUT.marginRight - 5, finalY + 7, { align: 'right' });
 
+      dibujarFirmas(doc, finalY + 14);
       dibujarFooter(doc);
+      if (modo === 'preview') return doc.output('bloburl');
       doc.save(`balance_financiero_${new Date().toISOString().slice(0, 10)}.pdf`);
     } finally {
       setIsGenerating(false);

@@ -1,36 +1,62 @@
 import React, { useState } from 'react';
-import { MapPin, Save, ArrowLeft, CheckCircle } from 'lucide-react';
+import { MapPin, Save, ArrowLeft, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { toast } from 'sonner';
 import CoordinateCapture from '../components/CoordinateCapture';
-import PdfUpload from '../components/PdfUpload';
+import PersonaAutocompleteInput from '../components/PersonaAutocompleteInput';
 import useAuthStore from '../store/useAuthStore';
+import api from '../services/axiosConfig';
 
 export default function TerrenosRegistro() {
   const navigate = useNavigate();
-  const { register, handleSubmit, formState: { errors } } = useForm();
-  const [step, setStep] = useState(1);
-  const [terrenoData, setTerrenoData] = useState(null);
+  const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
+    defaultValues: {
+      dueno: null,
+      terrenos: [
+        { clave_catastral: '', area: '', estado_terreno: '', latitud: '', longitud: '' }
+      ]
+    }
+  });
 
-  // Obtener usuario actual (por defecto asumimos que un usuario no autenticado en dev se comporta como comunero o rol 1)
+  const { fields, append, remove } = useFieldArray({ control, name: "terrenos" });
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const user = useAuthStore(state => state.user);
   const isComunero = !user || user?.id_rol === 1;
   const backRoute = isComunero ? '/dashboard/mis-terrenos' : '/dashboard/catastro';
   const backText = isComunero ? 'Volver a Mis Terrenos' : 'Volver a Catastro';
 
-  const onSubmitStep1 = (data) => {
-    console.log("Datos del terreno (Fase 1):", data);
-    setTerrenoData(data);
-    toast.success('Datos del terreno guardados correctamente. Continúe con la ubicación y documentos.');
-    setStep(2);
-  };
+  const onSubmit = async (data) => {
+    if (!data.dueno || !data.dueno.id_persona) {
+      toast.error('Debe seleccionar un dueño válido (Comunero) antes de guardar.');
+      return;
+    }
+    
+    if (data.terrenos.length === 0) {
+      toast.error('Debe agregar al menos un terreno.');
+      return;
+    }
 
-  const handleFinalize = () => {
-    toast.success('¡Registro completado con éxito!');
-    setTimeout(() => {
-      navigate(backRoute);
-    }, 1500);
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        id_persona: data.dueno.id_persona,
+        terrenos: data.terrenos
+      };
+
+      const res = await api.post('/terrenos', payload);
+      if (res.data.status === 'success') {
+        toast.success(res.data.message || '¡Terrenos registrados con éxito!');
+        setTimeout(() => navigate(backRoute), 1500);
+      }
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Error de conexión al guardar los terrenos';
+      toast.error(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -41,104 +67,120 @@ export default function TerrenosRegistro() {
             <ArrowLeft size={18} /> {backText}
           </button>
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <MapPin className="text-earth" /> Registro de Terrenos
+            <MapPin className="text-earth" /> Registro Múltiple de Terrenos
           </h1>
-          <p className="text-muted">Formulario base para la inscripción de un nuevo predio.</p>
+          <p className="text-muted">Asigne predios directamente a un comunero.</p>
         </div>
       </div>
 
-      <div className="glass-card" style={{ padding: '2.5rem', maxWidth: '800px', margin: '0 auto' }}>
-        <h3 className="text-primary" style={{ fontSize: '1.25rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
-          Información del Terreno
-        </h3>
-        
-        <form onSubmit={handleSubmit(onSubmitStep1)}>
-          <div className="form-grid">
-            {/* Clave catastral */}
-            <div className="input-group">
-              <label className="input-label">Clave Catastral / No. Identificación *</label>
-              <input 
-                type="text" 
-                className={`input-field ${errors.clave_catastral ? 'error' : ''}`} 
-                placeholder="Ej. 180101..." 
-                disabled={step === 2}
-                {...register("clave_catastral", { required: "Este campo es requerido" })} 
-              />
-              {errors.clave_catastral && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '-0.25rem' }}>{errors.clave_catastral.message}</span>}
-            </div>
-
-            {/* Área */}
-            <div className="input-group">
-              <label className="input-label">Área *</label>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <input 
-                  type="number" 
-                  step="0.01"
-                  className={`input-field ${errors.area ? 'error' : ''}`} 
-                  placeholder="0.00" 
-                  disabled={step === 2}
-                  style={{ paddingRight: '3rem' }}
-                  {...register("area", { required: "El área es requerida", valueAsNumber: true, min: { value: 0.01, message: "El área debe ser mayor a 0" } })} 
+      <div className="glass-card" style={{ padding: '2.5rem', maxWidth: '900px', margin: '0 auto' }}>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          
+          {/* SECCIÓN DUEÑO */}
+          <h3 className="text-primary" style={{ fontSize: '1.25rem', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
+            1. Asignación de Titular (Dueño)
+          </h3>
+          <div className="input-group" style={{ marginBottom: '2rem' }}>
+            <label className="input-label">Buscar Comunero (Cédula o Apellido) *</label>
+            <Controller
+              name="dueno"
+              control={control}
+              rules={{ required: "Debe seleccionar un dueño" }}
+              render={({ field }) => (
+                <PersonaAutocompleteInput 
+                  value={field.value} 
+                  onChange={field.onChange} 
+                  placeholder="Ej. 180... o Pacari..." 
                 />
-                <span style={{ 
-                  position: 'absolute', 
-                  right: '1rem', 
-                  color: 'var(--text-muted)',
-                  fontWeight: '600',
-                  pointerEvents: 'none'
-                }}>
-                  m²
-                </span>
-              </div>
-              {errors.area && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '-0.25rem' }}>{errors.area.message}</span>}
-            </div>
-
-            {/* Estado del Terreno */}
-            <div className="input-group">
-              <label className="input-label">Estado del Terreno *</label>
-              <select 
-                className={`form-select ${errors.estado_terreno ? 'error' : ''}`} 
-                disabled={step === 2}
-                {...register("estado_terreno", { required: "Seleccione un estado" })}
-              >
-                <option value="">-- Seleccione el estado --</option>
-                <option value="Sembrio">Sembrío</option>
-                <option value="Construccion">Construcción</option>
-                <option value="Abandonado">Abandonado</option>
-              </select>
-              {errors.estado_terreno && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '-0.25rem' }}>{errors.estado_terreno.message}</span>}
-            </div>
+              )}
+            />
+            {errors.dueno && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{errors.dueno.message}</span>}
           </div>
 
-          {step === 1 && (
-            <div style={{ marginTop: '2rem' }}>
-              <button type="button" onClick={handleSubmit(onSubmitStep1)} className="btn-primary">
-                <Save size={18} /> Guardar Terreno
-              </button>
+          {/* SECCIÓN TERRENOS MÚLTIPLES */}
+          <h3 className="text-primary" style={{ fontSize: '1.25rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
+            2. Lista de Terrenos
+          </h3>
+
+          {fields.map((item, index) => (
+            <div key={item.id} className="glass-card" style={{ padding: '1.5rem', marginBottom: '2rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h4 style={{ color: '#f8fafc', margin: 0 }}>Terreno #{index + 1}</h4>
+                {fields.length > 1 && (
+                  <button type="button" onClick={() => remove(index)} className="btn-secondary" style={{ padding: '0.4rem 0.8rem', color: '#ef4444' }}>
+                    <Trash2 size={16} /> Eliminar
+                  </button>
+                )}
+              </div>
+
+              <div className="form-grid" style={{ marginBottom: '1.5rem' }}>
+                <div className="input-group">
+                  <label className="input-label">Clave Catastral *</label>
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    placeholder="Ej. 1801..." 
+                    {...register(`terrenos.${index}.clave_catastral`, { required: "Requerido" })} 
+                  />
+                  {errors.terrenos?.[index]?.clave_catastral && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>Requerido</span>}
+                </div>
+
+                <div className="input-group">
+                  <label className="input-label">Área (m²) *</label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    className="input-field" 
+                    placeholder="0.00" 
+                    {...register(`terrenos.${index}.area`, { required: "Requerido", min: 0.01 })} 
+                  />
+                  {errors.terrenos?.[index]?.area && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>Valor inválido</span>}
+                </div>
+
+                <div className="input-group">
+                  <label className="input-label">Estado *</label>
+                  <select 
+                    className="form-select" 
+                    {...register(`terrenos.${index}.estado_terreno`, { required: "Requerido" })}
+                  >
+                    <option value="">Seleccione...</option>
+                    <option value="Sembrio">Sembrío</option>
+                    <option value="Construccion">Construcción</option>
+                    <option value="Abandonado">Abandonado</option>
+                  </select>
+                  {errors.terrenos?.[index]?.estado_terreno && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>Requerido</span>}
+                </div>
+              </div>
+
+              {/* Mapa de este terreno */}
+              <CoordinateCapture 
+                initialLat={watch(`terrenos.${index}.latitud`)}
+                initialLon={watch(`terrenos.${index}.longitud`)}
+                onCapture={(coords) => {
+                  setValue(`terrenos.${index}.latitud`, coords.lat, { shouldValidate: true });
+                  setValue(`terrenos.${index}.longitud`, coords.lon, { shouldValidate: true });
+                }}
+              />
+
             </div>
-          )}
+          ))}
+
+          <button 
+            type="button" 
+            onClick={() => append({ clave_catastral: '', area: '', estado_terreno: '', latitud: '', longitud: '' })}
+            className="btn-secondary" 
+            style={{ width: '100%', display: 'flex', justifyContent: 'center', marginBottom: '3rem', borderStyle: 'dashed' }}
+          >
+            <Plus size={18} /> Añadir Otro Terreno al Mismo Dueño
+          </button>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button type="submit" className="btn-primary" disabled={isSubmitting} style={{ padding: '1rem 2.5rem', fontSize: '1.1rem' }}>
+              {isSubmitting ? 'Guardando...' : <><Save size={20} /> Finalizar Registro Integral</>}
+            </button>
+          </div>
         </form>
 
-        {step === 2 && (
-          <div className="animate-fade-in" style={{ marginTop: '2.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '2rem' }}>
-            <h3 className="text-primary" style={{ fontSize: '1.25rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
-              Ubicación y Documentos Adicionales
-            </h3>
-            
-            <CoordinateCapture onCapture={(coords) => console.log('Coordenadas capturadas:', coords)} />
-            
-            <PdfUpload onFileSelect={(file) => console.log('PDF seleccionado:', file.name)} />
-
-            <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-              <button type="button" className="btn-secondary" onClick={() => setStep(1)}>
-                Volver
-              </button>
-              <button type="button" className="btn-primary" onClick={handleFinalize} style={{ width: 'auto', padding: '1rem 2rem' }}>
-                <CheckCircle size={18} /> Finalizar Registro
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

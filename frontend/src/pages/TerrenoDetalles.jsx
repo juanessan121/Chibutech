@@ -10,7 +10,8 @@ const terrenosMock = [
     id_terreno: 1,
     propietario: 'Carlos Ruiz Masaquiza',
     cedula: '1801112223',
-    zona: 'Sector Centro',
+    zona: 'Zona Norte',
+    sector: 'Sector Centro',
     estado_construccion: 'Construida',
     area_m2: 350.5,
     latitud: -1.3281,
@@ -24,7 +25,8 @@ const terrenosMock = [
     id_terreno: 2,
     propietario: 'Ana Luisa Toalombo',
     cedula: '1804445556',
-    zona: 'San Luis',
+    zona: 'Zona Sur',
+    sector: 'San Luis',
     estado_construccion: 'En Construcción',
     area_m2: 210.0,
     latitud: -1.3300,
@@ -38,7 +40,8 @@ const terrenosMock = [
     id_terreno: 3,
     propietario: 'José Luis Tixilema',
     cedula: '1803334445',
-    zona: 'San Francisco',
+    zona: 'Zona Este',
+    sector: 'San Francisco',
     estado_construccion: 'Lote Baldío',
     area_m2: 500.0,
     latitud: -1.3255,
@@ -322,9 +325,11 @@ export default function TerrenoDetalles() {
                   <span className="detail-label">Cédula</span>
                   <span className="detail-value">{terreno.cedula}</span>
                 </div>
-                <div className="detail-row">
-                  <span className="detail-label">Sector Geográfico</span>
-                  <span className="detail-value">{terreno.zona}</span>
+                <div className="detail-item">
+                  <span className="detail-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <MapPin size={16} /> Sector (Zona)
+                  </span>
+                  <span className="detail-value">{terreno.sector} ({terreno.zona})</span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">Estado de Construcción</span>

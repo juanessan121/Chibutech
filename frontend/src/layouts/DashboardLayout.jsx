@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
 import { Droplets, LogOut, LayoutDashboard, Users, FileText, Settings, ShieldAlert, UserCircle, Droplet, Award, Map, MapPin, Menu, Bell, Search, User, X } from 'lucide-react';
@@ -20,7 +20,25 @@ export default function DashboardLayout() {
     { id: 3, title: 'Multa Generada', text: 'Inasistencia a minga de mantenimiento. Total: $15.00.', time: 'Ayer', unread: false, type: 'multa' }
   ]);
 
+  const notificationsRef = useRef(null);
+
   const unreadCount = notifications.filter(n => n.unread).length;
+
+  // Cerrar notificaciones al cambiar de página
+  useEffect(() => {
+    setShowNotifications(false);
+  }, [location.pathname]);
+
+  // Cerrar notificaciones al hacer clic fuera del contenedor
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -108,30 +126,31 @@ export default function DashboardLayout() {
 
       {/* Contenido Principal */}
       <main className="main-content">
-        {/* Cabecera superior global con barra de búsqueda, notificaciones y hamburguesa */}
-        <div className="dashboard-topbar glass-card">
+        {/* Cabecera superior global con notificaciones y perfil */}
+        <div className="dashboard-topbar">
           <button className="burger-menu-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
-          <div className="search-container-topbar">
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <Search size={16} style={{ position: 'absolute', left: '0.75rem', color: 'var(--text-muted)' }} />
-              <input 
-                type="text" 
-                className="input-field" 
-                placeholder="Buscar predios, actas..." 
-                style={{ paddingLeft: '2.25rem', paddingTop: '0.5rem', paddingBottom: '0.5rem', minWidth: '240px', fontSize: '0.875rem' }} 
-              />
-            </div>
-          </div>
+
 
           <div className="topbar-actions">
             {/* Campana de Notificaciones */}
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative' }} ref={notificationsRef}>
               <div 
                 className={`notifications-bell-container ${unreadCount > 0 ? 'bell-animate' : ''}`}
-                onClick={() => setShowNotifications(!showNotifications)}
+                onClick={() => {
+                  const isOpening = !showNotifications;
+                  setShowNotifications(isOpening);
+                  
+                  // Auto-marcar como leído si se está abriendo
+                  if (isOpening && unreadCount > 0) {
+                    // Opcional: Pequeño delay para que el usuario alcance a ver que se abrieron y luego desaparezca el contador
+                    setTimeout(() => {
+                      setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+                    }, 500);
+                  }
+                }}
               >
                 <Bell size={18} />
                 {unreadCount > 0 && <span className="bell-badge">{unreadCount}</span>}
@@ -141,16 +160,6 @@ export default function DashboardLayout() {
                 <div className="notifications-popover glass-card">
                   <div className="notifications-header">
                     <h4>Notificaciones</h4>
-                    {unreadCount > 0 && (
-                      <button 
-                        className="btn-clear-notifications" 
-                        onClick={() => {
-                          setNotifications(notifications.map(n => ({ ...n, unread: false })));
-                        }}
-                      >
-                        Marcar leídas
-                      </button>
-                    )}
                   </div>
                   <div className="notifications-list">
                     {notifications.map(n => (

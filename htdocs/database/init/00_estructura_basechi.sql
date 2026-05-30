@@ -18,6 +18,14 @@ CREATE TABLE Zona (
     descripcion TEXT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE Sector (
+    id_sector INT AUTO_INCREMENT PRIMARY KEY,
+    id_zona INT NOT NULL,
+    nombre_sector VARCHAR(100) NOT NULL UNIQUE,
+    descripcion TEXT,
+    CONSTRAINT fk_sector_zona FOREIGN KEY (id_zona) REFERENCES Zona(id_zona) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE Catalogo_Cargo_Directivo (
     id_cargo_directivo INT AUTO_INCREMENT PRIMARY KEY,
     nombre_cargo VARCHAR(100) NOT NULL UNIQUE, 
@@ -109,13 +117,15 @@ CREATE TABLE Persona (
     fecha_nacimiento DATE,
     id_zona INT NULL,
     
-    id_representante_familia INT NULL COMMENT 'Apunta al ID del tutor si es dependiente',
+    id_genero INT NULL,
+    id_sector INT NULL,
+    id_representante_familia INT NULL,
     id_condicion_especial INT NOT NULL DEFAULT 1,
-    
-    estado_vital ENUM('Vivo', 'Fallecido') DEFAULT 'Vivo' COMMENT 'Único ENUM válido por ser biológico e inmutable',
+    estado_vital ENUM('Vivo', 'Fallecido') DEFAULT 'Vivo',
     fecha_defuncion DATE NULL,
 
-    CONSTRAINT fk_persona_zona FOREIGN KEY (id_zona) REFERENCES Zona(id_zona) ON DELETE SET NULL,
+    CONSTRAINT fk_persona_genero FOREIGN KEY (id_genero) REFERENCES Catalogo_Genero(id_genero) ON DELETE RESTRICT,
+    CONSTRAINT fk_persona_sector FOREIGN KEY (id_sector) REFERENCES Sector(id_sector) ON DELETE SET NULL,
     CONSTRAINT fk_persona_tutor FOREIGN KEY (id_representante_familia) REFERENCES Persona(id_persona) ON DELETE SET NULL,
     CONSTRAINT fk_persona_condicion FOREIGN KEY (id_condicion_especial) REFERENCES Catalogo_Condicion_Especial(id_condicion) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -219,7 +229,6 @@ CREATE TABLE Minga (
     lugar_encuentro VARCHAR(150) NOT NULL,
     id_estado_minga INT NOT NULL,
     
-    -- Campos agregados para jerarquía de precios e imprevistos
     valor_multa_inasistencia DECIMAL(8,2) NOT NULL DEFAULT 0.00 COMMENT 'Multa base para esta minga',
     observacion_estado TEXT NULL COMMENT 'Motivo de cancelación o suspensión',
     
@@ -228,18 +237,15 @@ CREATE TABLE Minga (
     CONSTRAINT fk_minga_estado FOREIGN KEY (id_estado_minga) REFERENCES Catalogo_Estado_Minga(id_estado_minga) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE Asignacion_Zona_Minga (
-    id_asignacion_zona INT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE Asignacion_Sector_Minga (
+    id_asignacion_sector INT AUTO_INCREMENT PRIMARY KEY,
     id_minga INT NOT NULL,
-    id_zona INT NOT NULL,
+    id_sector INT NOT NULL,
     id_actividad INT NOT NULL,
-    
-    -- Campo agregado para sobrescribir la multa por zona/grupo
-    valor_multa_grupo DECIMAL(8,2) NULL COMMENT 'Sobrescribe la multa general si el grupo tiene un trabajo más/menos pesado',
-    
-    CONSTRAINT fk_asig_zona_minga FOREIGN KEY (id_minga) REFERENCES Minga(id_minga) ON DELETE CASCADE,
-    CONSTRAINT fk_asig_zona_lugar FOREIGN KEY (id_zona) REFERENCES Zona(id_zona) ON DELETE CASCADE,
-    CONSTRAINT fk_asig_zona_actividad FOREIGN KEY (id_actividad) REFERENCES Catalogo_Actividad_Minga(id_actividad) ON DELETE RESTRICT
+    valor_multa_grupo DECIMAL(8,2) NULL,
+    CONSTRAINT fk_asig_sector_minga FOREIGN KEY (id_minga) REFERENCES Minga(id_minga) ON DELETE CASCADE,
+    CONSTRAINT fk_asig_sector_lugar FOREIGN KEY (id_sector) REFERENCES Sector(id_sector) ON DELETE CASCADE,
+    CONSTRAINT fk_asig_sector_actividad FOREIGN KEY (id_actividad) REFERENCES Catalogo_Actividad_Minga(id_actividad) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE Asistencia_Minga (
