@@ -114,9 +114,16 @@ export default function DashboardLayout() {
         : item.subItems.some(sub => location.pathname === sub.path || location.pathname.startsWith(sub.path + '/'));
     });
     
-    // Solo actualizamos si el menú activo cambia para no forzar renders innecesarios
-    if (activeItem && openMenu !== activeItem.name) {
-      setOpenMenu(activeItem.name);
+    // Si la ruta pertenece a un padre, asegurarse de que ese padre esté abierto
+    if (activeItem) {
+      if (openMenu !== activeItem.name) {
+        setOpenMenu(activeItem.name);
+      }
+    } else {
+      // Si la ruta es una vista sin submenú (ej. Panel Principal), cerramos cualquier acordeón abierto
+      if (openMenu !== '') {
+        setOpenMenu('');
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
@@ -152,10 +159,13 @@ export default function DashboardLayout() {
             if (item.subItems) {
               const isOpen = openMenu === item.name;
               
-              // Determinar si la opción padre debe estar activa basado en los activePaths o en los subItems
-              const isParentActive = item.activePaths 
+              // Determinar si la ruta actual pertenece a este padre
+              const isRouteActive = item.activePaths 
                 ? item.activePaths.some(p => location.pathname === p || location.pathname.startsWith(p + '/'))
                 : item.subItems.some(sub => location.pathname === sub.path || location.pathname.startsWith(sub.path + '/'));
+
+              // El bloque padre se resalta si está expandido, O si es la ruta actual y no hay otro menú abierto
+              const isParentActive = isOpen || (isRouteActive && openMenu === '');
 
               return (
                 <div key={item.name} className="sidebar-accordion">
@@ -170,88 +180,102 @@ export default function DashboardLayout() {
                     </div>
                     <span style={{ transform: isOpen ? 'rotate(90deg)' : 'none', transition: '0.2s' }}>▶</span>
                   </button>
-                  {isOpen && (
-                    <div className="sidebar-subitems" style={{ paddingLeft: '2.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
-                      {item.subItems.map(subItem => {
-                        const isSubActive = location.pathname === subItem.path;
-                        return (
-                          <button 
-                            key={subItem.path}
-                            className={`sidebar-sublink ${isSubActive ? 'active' : ''}`}
-                            onMouseEnter={(e) => {
-                              if (!isSubActive) {
-                                e.currentTarget.style.color = 'var(--text-main)';
-                                e.currentTarget.style.transform = 'translateX(4px)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!isSubActive) {
-                                e.currentTarget.style.color = '#94a3b8';
-                                e.currentTarget.style.transform = 'translateX(0)';
-                              }
-                            }}
-                            onClick={() => {
-                              navigate(subItem.path);
-                              setIsSidebarOpen(false);
-                            }}
-                            style={{ 
-                              background: isSubActive ? 'rgba(14, 165, 233, 0.08)' : 'transparent', 
-                              border: 'none', 
-                              color: isSubActive ? 'var(--primary-light)' : '#94a3b8', 
-                              fontWeight: isSubActive ? '600' : 'normal',
-                              textAlign: 'left', 
-                              cursor: 'pointer', 
-                              fontSize: '0.9rem', 
-                              padding: '0.4rem 0.6rem',
-                              borderRadius: '0.4rem',
-                              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                              position: 'relative',
-                              display: 'flex',
-                              alignItems: 'center',
-                              transform: isSubActive ? 'translateX(4px)' : 'translateX(0)'
-                            }}
-                          >
-                            {/* Indicador activo sutil para el submenú (punto luminoso) */}
-                            {isSubActive ? (
-                              <div style={{
-                                width: '5px',
-                                height: '5px',
-                                backgroundColor: 'var(--primary-light)',
-                                borderRadius: '50%',
-                                marginRight: '8px',
-                                boxShadow: '0 0 6px var(--primary-light)'
-                              }} />
-                            ) : (
-                              <div style={{
-                                width: '5px',
-                                height: '5px',
-                                backgroundColor: 'transparent',
-                                borderRadius: '50%',
-                                marginRight: '8px',
-                                transition: 'background-color 0.2s'
-                              }} />
-                            )}
-                            {subItem.name}
-                          </button>
-                        )
-                      })}
+                  <div 
+                    style={{ 
+                      display: 'grid', 
+                      gridTemplateRows: isOpen ? '1fr' : '0fr',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      opacity: isOpen ? 1 : 0
+                    }}
+                  >
+                    <div style={{ overflow: 'hidden' }}>
+                      <div className="sidebar-subitems" style={{ paddingLeft: '2.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem', paddingBottom: '0.5rem' }}>
+                        {item.subItems.map(subItem => {
+                          const isSubActive = location.pathname === subItem.path;
+                          return (
+                            <button 
+                              key={subItem.path}
+                              className={`sidebar-sublink ${isSubActive ? 'active' : ''}`}
+                              tabIndex={isOpen ? 0 : -1}
+                              onMouseEnter={(e) => {
+                                if (!isSubActive) {
+                                  e.currentTarget.style.color = 'var(--text-main)';
+                                  e.currentTarget.style.transform = 'translateX(4px)';
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isSubActive) {
+                                  e.currentTarget.style.color = '#94a3b8';
+                                  e.currentTarget.style.transform = 'translateX(0)';
+                                }
+                              }}
+                              onClick={() => {
+                                navigate(subItem.path);
+                                setIsSidebarOpen(false);
+                              }}
+                              style={{ 
+                                background: isSubActive ? 'rgba(14, 165, 233, 0.08)' : 'transparent', 
+                                border: 'none', 
+                                color: isSubActive ? 'var(--primary)' : '#94a3b8', 
+                                fontWeight: isSubActive ? '600' : 'normal',
+                                textAlign: 'left', 
+                                cursor: 'pointer', 
+                                fontSize: '0.9rem', 
+                                padding: '0.4rem 0.6rem',
+                                borderRadius: '0.4rem',
+                                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                                position: 'relative',
+                                display: 'flex',
+                                alignItems: 'center',
+                                transform: isSubActive ? 'translateX(4px)' : 'translateX(0)'
+                              }}
+                            >
+                              {/* Indicador activo sutil para el submenú (punto luminoso) */}
+                              {isSubActive ? (
+                                <div style={{
+                                  width: '5px',
+                                  height: '5px',
+                                  backgroundColor: 'var(--primary)',
+                                  borderRadius: '50%',
+                                  marginRight: '8px',
+                                  boxShadow: '0 0 6px var(--primary)'
+                                }} />
+                              ) : (
+                                <div style={{
+                                  width: '5px',
+                                  height: '5px',
+                                  backgroundColor: 'transparent',
+                                  borderRadius: '50%',
+                                  marginRight: '8px',
+                                  transition: 'background-color 0.2s'
+                                }} />
+                              )}
+                              {subItem.name}
+                            </button>
+                          )
+                        })}
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             }
 
             // Para elementos sin submenú (ej. Panel Principal, Reportes)
-            // Se usa coincidencia exacta para la raíz (/dashboard) y startsWith para el resto para que submódulos sigan marcando el padre.
-            const isActive = item.path === '/dashboard' 
+            // Se usa coincidencia exacta para la raíz (/dashboard) y startsWith para el resto.
+            const isRouteActive = item.path === '/dashboard' 
               ? location.pathname === '/dashboard' 
               : location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+              
+            // Solo resaltamos la opción individual si no hay ningún menú colapsable acaparando la atención
+            const isActive = isRouteActive && openMenu === '';
               
             return (
               <button 
                 key={item.path}
                 className={`sidebar-link ${isActive ? 'active' : ''}`}
                 onClick={() => {
+                  setOpenMenu('');
                   navigate(item.path);
                   setIsSidebarOpen(false);
                 }}
