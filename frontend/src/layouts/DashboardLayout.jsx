@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
-import { Droplets, LogOut, LayoutDashboard, Users, FileText, Settings, ShieldAlert, UserCircle, Droplet, Award, Map, MapPin, Menu, Bell, Search, User, X } from 'lucide-react';
+import { Droplets, LogOut, LayoutDashboard, Users, FileText, Settings, ShieldAlert, UserCircle, Droplet, Award, Map, MapPin, Menu, Bell, Search, User, X, CheckCircle, ChevronRight } from 'lucide-react';
 import { usePermissions } from '../hooks/usePermissions';
 import { Toaster } from 'sonner';
 import bgLayout from '../assets/bg_layout.png';
@@ -23,7 +23,8 @@ export default function DashboardLayout() {
 
   const notificationsRef = useRef(null);
 
-  const unreadCount = notifications.filter(n => n.unread).length;
+  const multasNotifications = notifications.filter(n => n.type === 'multa');
+  const unreadCount = multasNotifications.filter(n => n.unread).length;
 
   // Cerrar notificaciones al cambiar de página
   useEffect(() => {
@@ -244,31 +245,118 @@ export default function DashboardLayout() {
                   <div className="notifications-header">
                     <h4>Notificaciones</h4>
                   </div>
-                  <div className="notifications-list">
-                    {notifications.map(n => (
-                      <div 
-                        key={n.id} 
-                        className={`notification-item ${n.unread ? 'unread' : ''}`}
-                        onClick={() => {
-                          setNotifications(notifications.map(item => item.id === n.id ? { ...item, unread: false } : item));
-                        }}
-                      >
-                        <div 
-                          className="notification-icon-wrapper" 
-                          style={{ 
-                            background: n.type === 'minga' ? 'rgba(16, 185, 129, 0.15)' : n.type === 'pago' ? 'rgba(14, 165, 233, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                            color: n.type === 'minga' ? 'var(--green)' : n.type === 'pago' ? 'var(--blue)' : 'var(--red)'
-                          }}
-                        >
-                          <Droplet size={14} />
-                        </div>
-                        <div className="notification-item-content">
-                          <p className="notification-title">{n.title}</p>
-                          <p className="notification-text">{n.text}</p>
-                          <span className="notification-time">{n.time}</span>
+                  <div className="notifications-list" style={{ padding: '0.5rem' }}>
+                    {multasNotifications.length === 0 ? (
+                      <div style={{ 
+                        padding: '2.5rem 1rem', 
+                        textAlign: 'center', 
+                        color: '#94a3b8', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
+                        gap: '0.8rem',
+                        backgroundColor: 'rgba(241, 245, 249, 0.03)',
+                        borderRadius: '0.75rem',
+                        margin: '0.5rem'
+                      }}>
+                        <CheckCircle size={32} style={{ color: 'var(--green)', opacity: 0.8 }} />
+                        <div>
+                          <p style={{ margin: 0, fontWeight: '600', color: 'var(--text-main)', fontSize: '0.95rem' }}>¡Todo al día!</p>
+                          <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>No hay multas pendientes</p>
                         </div>
                       </div>
-                    ))}
+                    ) : (
+                      multasNotifications.map(n => (
+                        <div 
+                          key={n.id} 
+                          className={`notification-item ${n.unread ? 'unread' : ''}`}
+                          style={{ 
+                            cursor: 'pointer', 
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)', 
+                            backgroundColor: n.unread ? 'rgba(239, 68, 68, 0.04)' : 'transparent',
+                            borderRadius: '0.75rem',
+                            margin: '0.25rem 0.5rem',
+                            padding: '0.85rem',
+                            border: '1px solid transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            position: 'relative',
+                            overflow: 'hidden'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
+                            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            const chevron = e.currentTarget.querySelector('.chevron-icon');
+                            if (chevron) {
+                              chevron.style.transform = 'translateX(4px)';
+                              chevron.style.opacity = '1';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = n.unread ? 'rgba(239, 68, 68, 0.04)' : 'transparent';
+                            e.currentTarget.style.borderColor = 'transparent';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            const chevron = e.currentTarget.querySelector('.chevron-icon');
+                            if (chevron) {
+                              chevron.style.transform = 'translateX(0)';
+                              chevron.style.opacity = '0.5';
+                            }
+                          }}
+                          onClick={() => {
+                            setNotifications(notifications.map(item => item.id === n.id ? { ...item, unread: false } : item));
+                            setShowNotifications(false);
+                            
+                            // Redirección inteligente basada en los permisos del usuario
+                            // utilizando el identificador de la multa (n.id)
+                            if (hasPermission('gestionar_multas')) {
+                              navigate(`/dashboard/cobros/ventanilla?multaId=${n.id}`, { state: { multaId: n.id } });
+                            } else {
+                              navigate(`/dashboard/mis-deudas?multaId=${n.id}`, { state: { multaId: n.id } });
+                            }
+                          }}
+                        >
+                          {n.unread && (
+                            <div style={{
+                              position: 'absolute',
+                              left: 0,
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              width: '4px',
+                              height: '40%',
+                              backgroundColor: 'var(--red)',
+                              borderRadius: '0 4px 4px 0'
+                            }} />
+                          )}
+                          <div 
+                            className="notification-icon-wrapper" 
+                            style={{ 
+                              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.05) 100%)',
+                              color: 'var(--red)',
+                              boxShadow: '0 4px 10px rgba(239, 68, 68, 0.1)',
+                              border: '1px solid rgba(239, 68, 68, 0.1)'
+                            }}
+                          >
+                            <ShieldAlert size={16} strokeWidth={2.5} />
+                          </div>
+                          <div className="notification-item-content" style={{ flex: 1 }}>
+                            <p className="notification-title" style={{ fontSize: '0.9rem', fontWeight: n.unread ? '700' : '600' }}>{n.title}</p>
+                            <p className="notification-text" style={{ fontSize: '0.8rem', lineHeight: '1.4' }}>{n.text}</p>
+                            <span className="notification-time" style={{ fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>{n.time}</span>
+                          </div>
+                          <ChevronRight 
+                            className="chevron-icon"
+                            size={18} 
+                            style={{ 
+                              color: 'var(--text-muted)', 
+                              opacity: 0.5, 
+                              transition: 'all 0.2s ease',
+                              marginLeft: '0.5rem'
+                            }} 
+                          />
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               )}
