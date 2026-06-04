@@ -46,6 +46,14 @@ CREATE TABLE Catalogo_Tipo_Contacto (
 INSERT INTO Catalogo_Tipo_Contacto (nombre_tipo) VALUES 
 ('Celular'), ('Teléfono Fijo'), ('Correo Electrónico'), ('WhatsApp');
 
+CREATE TABLE Catalogo_Operadora (
+    id_operadora INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_operadora VARCHAR(50) NOT NULL UNIQUE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO Catalogo_Operadora (nombre_operadora) VALUES 
+('Claro'), ('Movistar'), ('Tuenti'), ('CNT');
+
 CREATE TABLE Catalogo_Estado_Construccion (
     id_estado_construccion INT AUTO_INCREMENT PRIMARY KEY,
     nombre_estado VARCHAR(50) NOT NULL UNIQUE
@@ -127,14 +135,23 @@ CREATE TABLE Persona (
     id_genero INT NULL,
     id_sector INT NULL,
     id_representante_familia INT NULL,
-    id_condicion_especial INT NOT NULL DEFAULT 1,
     estado_vital ENUM('Vivo', 'Fallecido') DEFAULT 'Vivo',
     fecha_defuncion DATE NULL,
 
     CONSTRAINT fk_persona_genero FOREIGN KEY (id_genero) REFERENCES Catalogo_Genero(id_genero) ON DELETE RESTRICT,
     CONSTRAINT fk_persona_sector FOREIGN KEY (id_sector) REFERENCES Sector(id_sector) ON DELETE SET NULL,
-    CONSTRAINT fk_persona_tutor FOREIGN KEY (id_representante_familia) REFERENCES Persona(id_persona) ON DELETE SET NULL,
-    CONSTRAINT fk_persona_condicion FOREIGN KEY (id_condicion_especial) REFERENCES Catalogo_Condicion_Especial(id_condicion) ON DELETE RESTRICT
+    CONSTRAINT fk_persona_tutor FOREIGN KEY (id_representante_familia) REFERENCES Persona(id_persona) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE Condicion_Persona (
+    id_condicion_persona INT AUTO_INCREMENT PRIMARY KEY,
+    id_persona INT NOT NULL,
+    id_condicion INT NOT NULL,
+    porcentaje_discapacidad DECIMAL(5,2) NULL,
+    codigo_carnet VARCHAR(50) NULL,
+    observacion TEXT NULL,
+    CONSTRAINT fk_cp_persona FOREIGN KEY (id_persona) REFERENCES Persona(id_persona) ON DELETE CASCADE,
+    CONSTRAINT fk_cp_condicion FOREIGN KEY (id_condicion) REFERENCES Catalogo_Condicion_Especial(id_condicion) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE Miembro_Directiva (
@@ -179,11 +196,11 @@ CREATE TABLE Contacto_Persona (
     id_persona INT NOT NULL,
     id_tipo_contacto INT NOT NULL, 
     valor_contacto VARCHAR(150) NOT NULL,
-    referencia_propietario VARCHAR(100) NULL COMMENT 'Ej: Hijo, Esposa (NULL si es del titular)',
-    operadora_o_detalle VARCHAR(50) NULL,
+    id_operadora INT NULL,
     es_principal BOOLEAN DEFAULT FALSE,
     CONSTRAINT fk_contacto_persona FOREIGN KEY (id_persona) REFERENCES Persona(id_persona) ON DELETE CASCADE,
-    CONSTRAINT fk_contacto_tipo FOREIGN KEY (id_tipo_contacto) REFERENCES Catalogo_Tipo_Contacto(id_tipo_contacto) ON DELETE RESTRICT
+    CONSTRAINT fk_contacto_tipo FOREIGN KEY (id_tipo_contacto) REFERENCES Catalogo_Tipo_Contacto(id_tipo_contacto) ON DELETE RESTRICT,
+    CONSTRAINT fk_contacto_operadora FOREIGN KEY (id_operadora) REFERENCES Catalogo_Operadora(id_operadora) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
@@ -376,3 +393,16 @@ CREATE INDEX idx_aud_tabla     ON Auditoria(tabla_afectada);
 CREATE INDEX idx_aud_fecha     ON Auditoria(fecha_hora);
 CREATE INDEX idx_aud_usuario   ON Auditoria(id_usuario);
 CREATE INDEX idx_aud_operacion ON Auditoria(operacion);
+
+-- -----------------------------------------------------
+-- TABLA: Copropietarios de Terreno
+-- Permite asignar varios comuneros como copropietarios
+-- de un mismo predio catastral.
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS Copropietario_Terreno (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    id_terreno  INT NOT NULL,
+    id_persona  INT NOT NULL,
+    CONSTRAINT fk_coprop_terreno FOREIGN KEY (id_terreno) REFERENCES Terreno(id_terreno) ON DELETE CASCADE,
+    CONSTRAINT fk_coprop_persona FOREIGN KEY (id_persona)  REFERENCES Persona(id_persona)  ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -7,7 +7,17 @@ export const programarMinga = async (mingaData) => {
 
 export const getMingas = async () => {
   const { data } = await axios.get('/mingas');
-  return data;
+  return data.data;
+};
+
+export const getMingasActivas = async () => {
+  const { data } = await axios.get('/mingas/activas');
+  return data.data;
+};
+
+export const getConvocados = async (idMinga) => {
+  const { data } = await axios.get(`/mingas/${idMinga}/convocados`);
+  return data.data;
 };
 
 export const registrarAsistencia = async (idMinga, asistenciaData) => {

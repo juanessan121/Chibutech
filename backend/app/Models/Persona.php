@@ -31,4 +31,14 @@ class Persona extends Model
     {
         return $this->hasMany(PerfilEducativoPersona::class, 'id_persona', 'id_persona');
     }
+
+    public function condiciones()
+    {
+        return $this->hasMany(CondicionPersona::class, 'id_persona', 'id_persona')->with('condicion');
+    }
+
+    public function genero()
+    {
+        return $this->belongsTo(CatalogoGenero::class, 'id_genero', 'id_genero');
+    }
 }

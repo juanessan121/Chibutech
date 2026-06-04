@@ -19,7 +19,7 @@ BEGIN
     INSERT INTO Auditoria (tabla_afectada, operacion, id_registro, datos_anteriores, datos_nuevos, id_usuario)
     VALUES ('Persona', 'INSERT', NEW.id_persona, NULL, JSON_OBJECT(
         'id_persona', NEW.id_persona, 'cedula', NEW.cedula, 'nombre', NEW.nombre, 'apellido', NEW.apellido,
-        'id_genero', NEW.id_genero, 'id_sector', NEW.id_sector, 'id_condicion_especial', NEW.id_condicion_especial, 'estado_vital', NEW.estado_vital
+        'id_genero', NEW.id_genero, 'id_sector', NEW.id_sector, 'estado_vital', NEW.estado_vital
     ), @id_usuario_actual);
 END$$
 
@@ -36,7 +36,7 @@ CREATE TRIGGER trg_persona_delete BEFORE DELETE ON Persona FOR EACH ROW
 BEGIN
     INSERT INTO Auditoria (tabla_afectada, operacion, id_registro, datos_anteriores, datos_nuevos, id_usuario)
     VALUES ('Persona', 'DELETE', OLD.id_persona, JSON_OBJECT(
-        'id_persona', OLD.id_persona, 'cedula', OLD.cedula, 'nombre', OLD.nombre, 'id_zona', OLD.id_zona
+        'id_persona', OLD.id_persona, 'cedula', OLD.cedula, 'nombre', OLD.nombre, 'id_sector', OLD.id_sector
     ), NULL, @id_usuario_actual);
 END$$
 

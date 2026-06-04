@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ArrowLeft, User, MapPin, DollarSign, Printer, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
+import { getUsers } from '../services/userService';
+import { getDeudasPendientes, procesarPago } from '../services/cobroService';
 
 export default function CobrosVentanilla() {
   const navigate = useNavigate();
@@ -9,34 +11,35 @@ export default function CobrosVentanilla() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Mocks simulando la base de datos
-  const [usuariosMock] = useState([
-    { id: 1, cedula: '1801234567', nombre: 'Juan Carlos Pérez', zona: 'Zona Norte', sector: 'Sector Centro', condicion: 'Ninguna' },
-    { id: 2, cedula: '1809876543', nombre: 'María Rosa Guamán', zona: 'Zona Sur', sector: 'San Luis', condicion: 'Tercera Edad' }
-  ]);
-
-  const mockDeudas = {
-    1: [
-      { id_multa: 101, motivo: 'Inasistencia a Minga (Limpieza Acequias)', fecha_emision: '2025-10-15', monto: 10.00, tipo: 'Multa' },
-      { id_multa: 102, motivo: 'Daño a tubería principal', fecha_emision: '2025-11-20', monto: 25.50, tipo: 'Multa' },
-      { id_multa: 201, motivo: 'Planilla de Agua - Enero 2026', fecha_emision: '2026-01-01', monto: 5.00, tipo: 'Planilla' }
-    ],
-    2: [
-      { id_multa: 103, motivo: 'Inasistencia a Minga (Mantenimiento)', fecha_emision: '2026-02-10', monto: 15.00, tipo: 'Multa' },
-      { id_multa: 202, motivo: 'Planilla de Agua - Enero 2026', fecha_emision: '2026-01-01', monto: 5.00, tipo: 'Planilla' },
-      { id_multa: 203, motivo: 'Planilla de Agua - Febrero 2026', fecha_emision: '2026-02-01', monto: 5.00, tipo: 'Planilla' }
-    ]
-  };
-
+  const [usuariosDB, setUsuariosDB] = useState([]);
   const [deudasActuales, setDeudasActuales] = useState([]);
   const [deudasSeleccionadas, setDeudasSeleccionadas] = useState([]);
+  const [comprobantePago, setComprobantePago] = useState('');
 
-  const handleSearch = () => {
-    const found = usuariosMock.find(u => u.cedula === searchTerm || u.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
+  useEffect(() => {
+    const cargarUsuarios = async () => {
+      try {
+        const users = await getUsers();
+        setUsuariosDB(users);
+      } catch (error) {
+        toast.error('Error al cargar la base de agricultores');
+      }
+    };
+    cargarUsuarios();
+  }, []);
+
+  const handleSearch = async () => {
+    const found = usuariosDB.find(u => u.cedula === searchTerm || (u.nombre + ' ' + u.apellido).toLowerCase().includes(searchTerm.toLowerCase()));
     if (found) {
       setSelectedUser(found);
-      setDeudasActuales(mockDeudas[found.id] || []);
-      setDeudasSeleccionadas([]); // Limpiar selección previa
+      setDeudasSeleccionadas([]); 
+      try {
+        const deudas = await getDeudasPendientes(found.id_persona);
+        setDeudasActuales(deudas || []);
+      } catch (error) {
+        toast.error('Error al cargar las deudas pendientes.');
+        setDeudasActuales([]);
+      }
     } else {
       toast.error('No se encontró al agricultor en el padrón.');
       setSelectedUser(null);
@@ -44,27 +47,39 @@ export default function CobrosVentanilla() {
     }
   };
 
-  const toggleDeuda = (id_multa) => {
+  const toggleDeuda = (deuda) => {
     setDeudasSeleccionadas(prev => 
-      prev.includes(id_multa) ? prev.filter(id => id !== id_multa) : [...prev, id_multa]
+      prev.some(d => d.id_deuda === deuda.id_deuda) ? prev.filter(d => d.id_deuda !== deuda.id_deuda) : [...prev, deuda]
     );
   };
 
-  const totalAPagar = deudasActuales
-    .filter(d => deudasSeleccionadas.includes(d.id_multa))
-    .reduce((sum, d) => sum + d.monto, 0);
+  const totalAPagar = deudasSeleccionadas.reduce((sum, d) => sum + d.monto, 0);
 
-  const handleProcesarPago = () => {
+  const handleProcesarPago = async () => {
     if (deudasSeleccionadas.length === 0) return;
     
     setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      toast.success('Pago procesado correctamente. Generando recibo...');
-      // Simulamos que desaparecen las deudas pagadas
-      setDeudasActuales(prev => prev.filter(d => !deudasSeleccionadas.includes(d.id_multa)));
+    try {
+      const multas = deudasSeleccionadas.filter(d => d.tipo === 'Multa').map(d => d.id_multa);
+      const planillas = deudasSeleccionadas.filter(d => d.tipo === 'Planilla').map(d => d.id_planilla);
+      
+      await procesarPago({
+        comprobante: comprobantePago,
+        multas,
+        planillas
+      });
+      
+      toast.success('Pago procesado correctamente.');
+      // Refrescar deudas
+      const deudasActualizadas = await getDeudasPendientes(selectedUser.id_persona);
+      setDeudasActuales(deudasActualizadas || []);
       setDeudasSeleccionadas([]);
-    }, 1500);
+      setComprobantePago('');
+    } catch (error) {
+      toast.error('Error al procesar el pago.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -112,7 +127,7 @@ export default function CobrosVentanilla() {
                   <User size={24} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.2rem' }}>{selectedUser.nombre}</h3>
+                  <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.2rem' }}>{selectedUser.nombre} {selectedUser.apellido}</h3>
                   <span className="text-muted" style={{ fontSize: '0.9rem' }}>C.I: {selectedUser.cedula}</span>
                 </div>
               </div>
@@ -121,12 +136,12 @@ export default function CobrosVentanilla() {
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <MapPin size={16} /> Sector:
                   </span>
-                  <span style={{ fontWeight: '500' }}>{selectedUser.sector} ({selectedUser.zona})</span>
+                  <span style={{ fontWeight: '500' }}>{selectedUser.sector || 'No asignado'}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><AlertTriangle size={16}/> Condición Especial:</span>
-                  <span style={{ fontWeight: '500', color: selectedUser.condicion !== 'Ninguna' ? 'var(--yellow)' : 'var(--text-main)' }}>
-                    {selectedUser.condicion}
+                  <span className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><AlertTriangle size={16}/> Condición:</span>
+                  <span style={{ fontWeight: '500', color: selectedUser.condicion !== 'Ninguna' && selectedUser.condicion ? 'var(--yellow)' : 'var(--text-main)' }}>
+                    {selectedUser.condicion || 'Ninguna'}
                   </span>
                 </div>
               </div>
@@ -153,22 +168,24 @@ export default function CobrosVentanilla() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
-              {deudasActuales.map(deuda => (
+              {deudasActuales.map(deuda => {
+                const isSelected = deudasSeleccionadas.some(d => d.id_deuda === deuda.id_deuda);
+                return (
                 <div 
-                  key={deuda.id_multa}
-                  onClick={() => toggleDeuda(deuda.id_multa)}
+                  key={deuda.id_deuda}
+                  onClick={() => toggleDeuda(deuda)}
                   style={{ 
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
                     padding: '1rem', borderRadius: '0.75rem', cursor: 'pointer',
-                    border: deudasSeleccionadas.includes(deuda.id_multa) ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                    background: deudasSeleccionadas.includes(deuda.id_multa) ? 'rgba(14, 165, 233, 0.1)' : 'rgba(0,0,0,0.2)',
+                    border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                    background: isSelected ? 'rgba(14, 165, 233, 0.1)' : 'rgba(0,0,0,0.2)',
                     transition: 'all 0.2s'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <input 
                       type="checkbox" 
-                      checked={deudasSeleccionadas.includes(deuda.id_multa)} 
+                      checked={isSelected} 
                       readOnly
                       style={{ width: '20px', height: '20px', accentColor: 'var(--primary)', cursor: 'pointer' }}
                     />
@@ -185,7 +202,7 @@ export default function CobrosVentanilla() {
                     ${deuda.monto.toFixed(2)}
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
 
@@ -206,6 +223,8 @@ export default function CobrosVentanilla() {
                 className="input-field"
                 placeholder="Ej. REC-2026-001"
                 style={{ padding: '0.6rem 1rem', fontSize: '0.9rem' }}
+                value={comprobantePago}
+                onChange={(e) => setComprobantePago(e.target.value)}
               />
             </div>
             

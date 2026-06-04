@@ -19,7 +19,7 @@ export default function MingasProgramar() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { register, control, handleSubmit, formState: { errors } } = useForm();
   
-  const { fields: asignacionesFields, append, remove } = useFieldArray({
+  const { fields: asignacionesFields, replace } = useFieldArray({
     control,
     name: "asignaciones"
   });
@@ -35,19 +35,16 @@ export default function MingasProgramar() {
     ]).then(([s]) => {
       setSectores(s);
       // Inicializar las asignaciones con todos los sectores desmarcados por defecto
-      if (asignacionesFields.length === 0) {
-        s.forEach(sector => {
-          append({
-            id_sector: sector.id_sector,
-            nombre_sector: sector.nombre_sector,
-            id_zona: sector.id_zona,
-            nombre_zona: sector.nombre_zona,
-            seleccionado: false
-          });
-        });
-      }
+      // Usamos replace en lugar de append para evitar duplicaciones en el StrictMode de React
+      replace(s.map(sector => ({
+        id_sector: sector.id_sector,
+        nombre_sector: sector.nombre_sector,
+        id_zona: sector.id_zona,
+        nombre_zona: sector.nombre_zona,
+        seleccionado: false
+      })));
     });
-  }, [append, asignacionesFields.length]);
+  }, [replace]);
 
   const onSubmit = async (data) => {
     setIsSubmitting(true);
@@ -67,6 +64,7 @@ export default function MingasProgramar() {
       }
 
       const payload = {
+        id_tipo_evento: data.id_tipo_evento,
         fecha_hora_programada: data.fecha_hora_programada,
         lugar_encuentro: data.lugar_encuentro,
         motivo_minga: data.motivo_minga,
@@ -161,20 +159,6 @@ export default function MingasProgramar() {
             </div>
           </div>
 
-          <div className="form-grid">
-            <div className="input-group">
-              <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Navigation size={14} className="text-muted" /> Latitud GPS (Opcional)
-              </label>
-              <input type="number" step="any" className="input-field" placeholder="Ej. -1.3281" {...register('latitud')} />
-            </div>
-            <div className="input-group">
-              <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Navigation size={14} className="text-muted" /> Longitud GPS (Opcional)
-              </label>
-              <input type="number" step="any" className="input-field" placeholder="Ej. -78.5528" {...register('longitud')} />
-            </div>
-          </div>
 
           <div className="form-grid">
             <div className="input-group">

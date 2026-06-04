@@ -1,58 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Map, Search, ExternalLink, Building2, Fence, MapPin, Plus } from 'lucide-react';
+import { Map, Search, ExternalLink, Building2, Fence, MapPin, Plus, Edit2, Check, X } from 'lucide-react';
+import { getTerrenos, updateEstadoTerreno } from '../services/terrenoService';
+import { toast } from 'sonner';
 
-// Simulación de datos: tabla Terreno JOIN Persona JOIN Zona JOIN Catalogo_Estado_Construccion
-const terrenosMock = [
-  {
-    id_terreno: 1,
-    propietario: 'Carlos Ruiz Masaquiza',
-    cedula: '1801112223',
-    zona: 'Zona Norte',
-    sector: 'Sector Centro',
-    estado_construccion: 'Construida',
-    area_m2: 350.5,
-    latitud: -1.3281,
-    longitud: -78.5528,
-    url_planimetria: 'https://drive.google.com/file/d/abc123',
-  },
-  {
-    id_terreno: 2,
-    propietario: 'Ana Luisa Toalombo',
-    cedula: '1804445556',
-    zona: 'Zona Sur',
-    sector: 'San Luis',
-    estado_construccion: 'En Construcción',
-    area_m2: 210.0,
-    latitud: -1.3300,
-    longitud: -78.5510,
-    url_planimetria: null,
-  },
-  {
-    id_terreno: 3,
-    propietario: 'José Luis Tixilema',
-    cedula: '1803334445',
-    zona: 'Zona Este',
-    sector: 'San Francisco',
-    estado_construccion: 'Lote Baldío',
-    area_m2: 500.0,
-    latitud: null,
-    longitud: null,
-    url_planimetria: null,
-  },
-  {
-    id_terreno: 4,
-    propietario: 'María Rosario Chango',
-    cedula: '1809990001',
-    zona: 'Zona Oeste',
-    sector: 'San Miguel',
-    estado_construccion: 'Construida',
-    area_m2: 180.75,
-    latitud: -1.3260,
-    longitud: -78.5545,
-    url_planimetria: 'https://drive.google.com/file/d/xyz789',
-  },
-];
+
 
 const estadoColor = {
   'Construida':       '#10b981',
@@ -65,12 +17,41 @@ const estadoColor = {
 export default function CatastroGlobal() {
   const navigate = useNavigate();
   const [busqueda, setBusqueda] = useState('');
+  const [terrenos, setTerrenos] = useState([]);
+  const [editandoId, setEditandoId] = useState(null);
+  const [nuevoEstado, setNuevoEstado] = useState('');
 
-  const terrenosFiltrados = terrenosMock.filter(t =>
-    t.propietario.toLowerCase().includes(busqueda.toLowerCase()) ||
-    t.cedula.includes(busqueda) ||
-    t.zona.toLowerCase().includes(busqueda.toLowerCase()) ||
-    t.sector.toLowerCase().includes(busqueda.toLowerCase())
+  const cargarDatos = async () => {
+    try {
+      const data = await getTerrenos();
+      setTerrenos(data || []);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const handleGuardarEstado = async (id_terreno) => {
+    try {
+      const mapVal = {'Lote Baldío': 1, 'En Planificación': 2, 'En Construcción': 3, 'Construida': 4};
+      const idEstado = mapVal[nuevoEstado] || 1;
+      await updateEstadoTerreno(id_terreno, idEstado);
+      toast.success('Estado actualizado');
+      setEditandoId(null);
+      cargarDatos();
+    } catch (e) {
+      toast.error('Error al actualizar estado');
+    }
+  };
+
+  const terrenosFiltrados = terrenos.filter(t =>
+    t.propietario?.toLowerCase().includes(busqueda.toLowerCase()) ||
+    t.cedula?.includes(busqueda) ||
+    t.zona?.toLowerCase().includes(busqueda.toLowerCase()) ||
+    t.sector?.toLowerCase().includes(busqueda.toLowerCase())
   );
 
   return (
@@ -103,7 +84,7 @@ export default function CatastroGlobal() {
           {/* Tarjetas resumen */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', flex: 1 }}>
             {Object.entries(
-              terrenosMock.reduce((acc, t) => {
+              terrenos.reduce((acc, t) => {
                 acc[t.estado_construccion] = (acc[t.estado_construccion] || 0) + 1;
                 return acc;
               }, {})
@@ -162,51 +143,51 @@ export default function CatastroGlobal() {
                   </div>
                 </td>
                 <td style={{ padding: '1rem' }}>
-                  <span style={{
-                    padding: '0.3rem 0.75rem', borderRadius: '1rem', fontSize: '0.78rem', fontWeight: 'bold',
-                    background: `${estadoColor[t.estado_construccion] || '#64748b'}20`,
-                    color: estadoColor[t.estado_construccion] || '#64748b', whiteSpace: 'nowrap'
-                  }}>
-                    {t.estado_construccion}
-                  </span>
+                  {editandoId === t.id_terreno ? (
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <select className="input-field" style={{ padding: '0.2rem' }} defaultValue={t.estado_construccion} onChange={e => setNuevoEstado(e.target.value)}>
+                        {Object.keys(estadoColor).map(e => <option key={e} value={e}>{e}</option>)}
+                      </select>
+                      <button onClick={() => handleGuardarEstado(t.id_terreno)} style={{ color: '#10b981' }}><Check size={18} /></button>
+                      <button onClick={() => setEditandoId(null)} style={{ color: '#ef4444' }}><X size={18} /></button>
+                    </div>
+                  ) : (
+                    <span style={{
+                      padding: '0.3rem 0.75rem', borderRadius: '1rem', fontSize: '0.78rem', fontWeight: 'bold',
+                      background: `${estadoColor[t.estado_construccion] || '#64748b'}20`,
+                      color: estadoColor[t.estado_construccion] || '#64748b', whiteSpace: 'nowrap'
+                    }}>
+                      {t.estado_construccion}
+                    </span>
+                  )}
                 </td>
                 <td style={{ padding: '1rem', color: 'var(--text-main)', fontWeight: '500' }}>
-                  {t.area_m2.toLocaleString('es-EC', { minimumFractionDigits: 2 })} m²
+                  {Number(t.area_m2).toLocaleString('es-EC', { minimumFractionDigits: 2 })} m²
                 </td>
                 <td style={{ padding: '1rem' }}>
                   {t.latitud ? (
-                    <a
-                      href={`https://www.google.com/maps?q=${t.latitud},${t.longitud}`}
-                      target="_blank" rel="noreferrer"
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--primary)', fontSize: '0.8rem' }}
-                      onClick={e => e.stopPropagation()}
-                    >
+                    <a href={`https://www.google.com/maps?q=${t.latitud},${t.longitud}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--primary)', fontSize: '0.8rem' }}>
                       <MapPin size={14} /> Ver en Mapa
                     </a>
-                  ) : (
-                    <span className="text-muted" style={{ fontSize: '0.8rem' }}>Sin coordenadas</span>
-                  )}
+                  ) : <span className="text-muted" style={{ fontSize: '0.8rem' }}>Sin coordenadas</span>}
                 </td>
                 <td style={{ padding: '1rem' }}>
                   {t.url_planimetria ? (
-                    <a
-                      href={t.url_planimetria}
-                      target="_blank" rel="noreferrer"
-                      className="btn-secondary"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.7rem', fontSize: '0.78rem', textDecoration: 'none' }}
-                      onClick={e => e.stopPropagation()}
-                    >
+                    <a href={t.url_planimetria} target="_blank" rel="noreferrer" className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.7rem', fontSize: '0.78rem', textDecoration: 'none' }}>
                       <ExternalLink size={14} /> Ver Planimetría
                     </a>
-                  ) : (
-                    <span className="text-muted" style={{ fontSize: '0.78rem' }}>Sin archivo</span>
-                  )}
+                  ) : <span className="text-muted" style={{ fontSize: '0.78rem' }}>Sin archivo</span>}
+                </td>
+                <td style={{ padding: '1rem' }}>
+                  <button onClick={() => { setEditandoId(t.id_terreno); setNuevoEstado(t.estado_construccion); }} className="text-muted hover:text-primary">
+                    <Edit2 size={18} />
+                  </button>
                 </td>
               </tr>
             ))}
             {terrenosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                <td colSpan={8} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                   No se encontraron predios para tu búsqueda.
                 </td>
               </tr>

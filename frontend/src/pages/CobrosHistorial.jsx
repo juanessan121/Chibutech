@@ -1,18 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart3, ArrowLeft, ArrowUpRight, ArrowDownRight, Search, FileText, Wallet } from 'lucide-react';
+import { getHistorialCaja } from '../services/cobroService';
 
 export default function CobrosHistorial() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Simulación de la tabla Caja_Comunitaria
-  const transacciones = [
-    { id: 1, fecha: '2026-05-18', tipo: 'Ingreso', concepto: 'Multa Inasistencia Minga - Juan Pérez', monto: 10.00, comprobante: 'REC-001' },
-    { id: 2, fecha: '2026-05-18', tipo: 'Egreso', concepto: 'Compra de pegamento PVC', monto: 4.50, comprobante: 'FAC-889' },
-    { id: 3, fecha: '2026-05-19', tipo: 'Ingreso', concepto: 'Multa Daño Tubería - María Guamán', monto: 25.00, comprobante: 'REC-002' },
-    { id: 4, fecha: '2026-05-19', tipo: 'Ingreso', concepto: 'Multa Inasistencia Minga - Luis Sisa', monto: 15.00, comprobante: 'REC-003' },
-  ];
+  const [transacciones, setTransacciones] = useState([]);
+
+  useEffect(() => {
+    const fetchHistorial = async () => {
+      try {
+        const data = await getHistorialCaja();
+        setTransacciones(data || []);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchHistorial();
+  }, []);
 
   const filtradas = transacciones.filter(t => 
     t.concepto.toLowerCase().includes(searchTerm.toLowerCase()) || 

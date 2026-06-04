@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wallet, ArrowLeft, DollarSign, FileText, Save } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
+import { registrarEgreso } from '../services/cobroService';
 
 export default function CobrosEgreso() {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ export default function CobrosEgreso() {
   const [monto, setMonto] = useState('');
   const [comprobante, setComprobante] = useState('');
 
-  const handleRegistrarEgreso = (e) => {
+  const handleRegistrarEgreso = async (e) => {
     e.preventDefault();
     if (!concepto || !monto) {
       toast.error('El concepto y el monto son obligatorios.');
@@ -19,11 +20,19 @@ export default function CobrosEgreso() {
     }
     
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      await registrarEgreso({
+        concepto,
+        monto,
+        comprobante
+      });
       toast.success('Gasto registrado correctamente en el Arqueo de Caja.');
       setTimeout(() => navigate('/dashboard/cobros'), 2000);
-    }, 1500);
+    } catch (error) {
+      toast.error('Error al registrar el gasto.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

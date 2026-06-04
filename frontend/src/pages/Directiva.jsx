@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Shield, UserCheck, Star, Award, User, UserPlus } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import axios from '../services/axiosConfig';
 
 // Componentes Iconos auxiliares definidos antes del componente para evitar referencias antes de su declaración
 const FileTextIcon = ({size}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>;
@@ -19,23 +20,40 @@ export default function Directiva() {
   const queryParams = new URLSearchParams(location.search);
   const periodoHistorial = queryParams.get('periodo');
 
-  // Simulación de la tabla Miembro_Directiva
-  const miembrosDirectiva = periodoHistorial 
-    ? [ // MOCKS PARA HISTORIAL PASADO
-        { id: 1, cargo: 'Presidente', nombre: 'Luis Alberto Sisa', cedula: '1801112223', icono: Award, color: '#f59e0b' },
-        { id: 2, cargo: 'Vicepresidente', nombre: 'Manuel Toalombo', cedula: '1804445556', icono: Star, color: '#0ea5e9' },
-        { id: 3, cargo: 'Secretario', nombre: 'Pedro Masaquiza', cedula: '1807778889', icono: FileTextIcon, color: '#8b5cf6' },
-        { id: 4, cargo: 'Tesorero', nombre: 'Rosa Chango', cedula: '1809990001', icono: DollarSignIcon, color: '#10b981' },
-      ]
-    : [ // MOCKS ACTUALES
-        { id: 1, cargo: 'Presidente', nombre: 'Carlos Ruiz', cedula: '1801112223', fecha_inicio: '2026-01-01', icono: Award, color: '#f59e0b' },
-        { id: 2, cargo: 'Vicepresidente', nombre: 'Ana Luisa Toalombo', cedula: '1804445556', fecha_inicio: '2026-01-01', icono: Star, color: '#0ea5e9' },
-        { id: 3, cargo: 'Secretario', nombre: 'Luis Fernando Masaquiza', cedula: '1807778889', fecha_inicio: '2026-01-01', icono: FileTextIcon, color: '#8b5cf6' },
-        { id: 4, cargo: 'Tesorero', nombre: 'María Rosario Chango', cedula: '1809990001', fecha_inicio: '2026-01-01', icono: DollarSignIcon, color: '#10b981' },
-        { id: 5, cargo: 'Vocal Principal 1', nombre: 'José Luis Tixilema', cedula: '1803334445', fecha_inicio: '2026-01-01', icono: UserCheck, color: '#64748b' },
-        { id: 6, cargo: 'Vocal Principal 2', nombre: 'Carmen Yucailla', cedula: '1802223334', fecha_inicio: '2026-01-01', icono: UserCheck, color: '#64748b' },
-        { id: 7, cargo: 'Vocal Principal 3', nombre: 'Pedro Llagua', cedula: '1805556667', fecha_inicio: '2026-01-01', icono: UserCheck, color: '#64748b' },
-      ];
+  const [miembrosDirectiva, setMiembrosDirectiva] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDirectiva = async () => {
+      setLoading(true);
+      try {
+        const url = periodoHistorial ? `/directiva/historial?periodo=${periodoHistorial}` : '/directiva/actual';
+        const res = await axios.get(url);
+        
+        // Mapear los iconos y colores según el cargo
+        const mapeados = res.data.data.map(m => {
+          let icono = UserCheck;
+          let color = '#64748b';
+          
+          if (m.cargo.includes('Presidente')) { icono = Award; color = '#f59e0b'; }
+          else if (m.cargo.includes('Vicepresidente')) { icono = Star; color = '#0ea5e9'; }
+          else if (m.cargo.includes('Secretario')) { icono = FileTextIcon; color = '#8b5cf6'; }
+          else if (m.cargo.includes('Tesorero')) { icono = DollarSignIcon; color = '#10b981'; }
+
+          return { ...m, icono, color };
+        });
+
+        setMiembrosDirectiva(mapeados);
+      } catch (error) {
+        console.error("Error al obtener la directiva:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDirectiva();
+  }, [periodoHistorial]);
+
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Cargando directiva...</div>;
 
   return (
     <div className="animate-fade-in pb-10">

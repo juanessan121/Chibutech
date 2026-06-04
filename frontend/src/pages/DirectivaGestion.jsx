@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, ArrowLeft, Plus, History, UserPlus, Save, Search, FileText, Calendar } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
+import axios from '../services/axiosConfig';
+import PersonaAutocompleteInput from '../components/PersonaAutocompleteInput';
 
 // Catálogo fijo que refleja la tabla Catalogo_Cargo_Directivo de la BD
 const CARGOS_DIRECTIVA = [
@@ -21,20 +23,63 @@ export default function DirectivaGestion() {
   const [activeTab, setActiveTab] = useState('nuevo'); // 'nuevo' o 'historial'
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Mocks simulando la tabla Miembro_Directiva
-  const historialPeriodos = [
-    { periodo: '2024 - 2025', presidente: 'Luis Alberto Sisa', estado: 'Finalizado' },
-    { periodo: '2022 - 2023', presidente: 'María Rosario Chango', estado: 'Finalizado' }
-  ];
+  const [cargosSeleccionados, setCargosSeleccionados] = useState({});
+  const [formData, setFormData] = useState({
+    fecha_inicio: new Date().toISOString().split('T')[0],
+    fecha_fin: '',
+    resolucion: ''
+  });
 
-  const handleGuardarDirectiva = (e) => {
+  const [historialPeriodos, setHistorialPeriodos] = useState([]);
+
+  useEffect(() => {
+    if (activeTab === 'historial') {
+      axios.get('/directiva/historial').then(res => {
+        // Agrupar por periodo
+        const data = res.data.data || [];
+        const agrupado = data.reduce((acc, curr) => {
+            const y = curr.fecha_inicio.substring(0, 4);
+            if (!acc[y]) acc[y] = { periodo: y, presidente: '-', resolucion: curr.resolucion_nombramiento, estado: 'Finalizado' };
+            if (curr.cargo === 'Presidente') acc[y].presidente = curr.nombre;
+            return acc;
+        }, {});
+        setHistorialPeriodos(Object.values(agrupado).sort((a,b) => b.periodo - a.periodo));
+      }).catch(err => console.error("Error cargando historial:", err));
+    }
+  }, [activeTab]);
+
+  const handleCargoChange = (id_cargo_directivo, id_persona) => {
+    setCargosSeleccionados(prev => ({ ...prev, [id_cargo_directivo]: id_persona }));
+  };
+
+  const handleGuardarDirectiva = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setTimeout(() => {
+    
+    // Transformar el estado a array esperado
+    const payloadCargos = Object.entries(cargosSeleccionados).map(([id_cargo, id_persona]) => ({
+      id_cargo_directivo: parseInt(id_cargo),
+      id_persona
+    })).filter(c => c.id_persona); // solo los que hayan asignado a alguien
+
+    if (payloadCargos.length === 0) {
+      toast.error('Debe asignar al menos a una persona a un cargo directivo.');
       setIsSubmitting(false);
-      toast.success('Nueva Directiva registrada. La anterior ha pasado al historial automáticamente.');
-      setTimeout(() => navigate('/dashboard/directiva'), 2000);
-    }, 1500);
+      return;
+    }
+
+    try {
+      await axios.post('/directiva', {
+        ...formData,
+        cargos: payloadCargos
+      });
+      toast.success('Nueva Directiva registrada exitosamente.');
+      setTimeout(() => navigate('/dashboard/directiva'), 1500);
+    } catch (err) {
+      console.error(err);
+      toast.error('Ocurrió un error al registrar la directiva.');
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -84,13 +129,24 @@ export default function DirectivaGestion() {
                 <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Calendar size={14} className="text-blue" /> Fecha Inicio de Funciones *
                 </label>
-                <input type="date" className="input-field" required />
+                <input 
+                  type="date" 
+                  className="input-field" 
+                  required 
+                  value={formData.fecha_inicio}
+                  onChange={e => setFormData({...formData, fecha_inicio: e.target.value})}
+                />
               </div>
               <div className="input-group">
                 <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Calendar size={14} className="text-muted" /> Fecha Fin de Periodo (Proyectada)
                 </label>
-                <input type="date" className="input-field" />
+                <input 
+                  type="date" 
+                  className="input-field" 
+                  value={formData.fecha_fin}
+                  onChange={e => setFormData({...formData, fecha_fin: e.target.value})}
+                />
               </div>
             </div>
 
@@ -104,6 +160,8 @@ export default function DirectivaGestion() {
                   className="input-field"
                   placeholder="Ej. RES-2026-001 o Acta No. 45 del Ministerio de Inclusión"
                   required
+                  value={formData.resolucion}
+                  onChange={e => setFormData({...formData, resolucion: e.target.value})}
                 />
                 <span className="text-muted" style={{ fontSize: '0.75rem' }}>Corresponde al campo <code>resolucion_nombramiento</code> de la tabla Miembro_Directiva.</span>
               </div>
@@ -117,11 +175,11 @@ export default function DirectivaGestion() {
                 {CARGOS_DIRECTIVA.map((cargo, idx) => (
                   <div key={idx} style={{ display: 'grid', gridTemplateColumns: '170px 1fr', alignItems: 'center', gap: '1rem' }}>
                     <label style={{ color: 'var(--yellow)', fontWeight: 'bold', fontSize: '0.9rem' }}>{cargo.nombre}</label>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <input type="text" className="input-field" placeholder="Buscar por Cédula o Apellido..." style={{ flex: 1 }} />
-                      <button type="button" className="btn-secondary" style={{ padding: '0 1rem', width: 'auto' }} title="Buscar Agricultor">
-                        <Search size={18} />
-                      </button>
+                    <div style={{ flex: 1 }}>
+                      <PersonaAutocompleteInput
+                        onSelect={(id_persona) => handleCargoChange(cargo.id, id_persona)}
+                        placeholder="Buscar por Cédula o Apellido..."
+                      />
                     </div>
                   </div>
                 ))}

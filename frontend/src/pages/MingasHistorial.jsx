@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { History, ArrowLeft, Search, Calendar, FileText, Download, Users } from 'lucide-react';
+import { getMingas } from '../services/mingaService';
 
 export default function MingasHistorial() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('Todos');
+  const [historialMingas, setHistorialMingas] = useState([]);
 
-  // Datos simulados (Mapeando a la tabla Minga y Catalogo_Estado_Minga)
-  const historialMingas = [
-    { id: 1, fecha: '2025-10-15', motivo: 'Limpieza de tanques de reserva', lugar: 'Loma Central', estado: 'Finalizada', asistentes: 120, faltos: 15, multa: 10.00 },
-    { id: 2, fecha: '2025-11-02', motivo: 'Mantenimiento de tuberías San Luis', lugar: 'Quebrada San Luis', estado: 'Finalizada', asistentes: 85, faltos: 5, multa: 15.00 },
-    { id: 3, fecha: '2025-12-20', motivo: 'Minga General de Fin de Año', lugar: 'Coliseo', estado: 'Suspendida', asistentes: 0, faltos: 0, multa: 20.00, obs: 'Lluvia extrema' },
-    { id: 4, fecha: '2026-02-10', motivo: 'Apertura de nueva zanja', lugar: 'Sector Norte', estado: 'Finalizada', asistentes: 95, faltos: 12, multa: 10.00 },
-  ];
+  useEffect(() => {
+    getMingas().then(data => {
+      setHistorialMingas(data);
+    });
+  }, []);
 
   const filtrados = historialMingas.filter(m => {
     const matchSearch = m.motivo.toLowerCase().includes(searchTerm.toLowerCase()) || m.fecha.includes(searchTerm);

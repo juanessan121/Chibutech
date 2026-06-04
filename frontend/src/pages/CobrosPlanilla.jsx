@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Droplets, ArrowLeft, Calendar, DollarSign, Check, Users, FileText } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
+import { generarPlanillas } from '../services/cobroService';
 
 export default function CobrosPlanilla() {
   const navigate = useNavigate();
-  const [tipoEmision, setTipoEmision] = useState('masiva'); // masiva | individual
+  const [tipoEmision, setTipoEmision] = useState('individual'); // Siempre individual ahora
   const [formData, setFormData] = useState({
     mes_correspondiente: new Date().getMonth() + 1,
     anio: new Date().getFullYear(),
@@ -18,10 +19,21 @@ export default function CobrosPlanilla() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleGenerar = (e) => {
+  const handleGenerar = async (e) => {
     e.preventDefault();
-    // Simulate generation
-    toast.success(`Planilla${tipoEmision === 'masiva' ? 's' : ''} de agua generada${tipoEmision === 'masiva' ? 's' : ''} correctamente.`);
+    try {
+      await generarPlanillas({
+        ...formData,
+        tipo_emision: tipoEmision
+      });
+      toast.success(`Planilla${tipoEmision === 'masiva' ? 's' : ''} de agua generada${tipoEmision === 'masiva' ? 's' : ''} correctamente.`);
+      // Resetear para individual
+      if(tipoEmision === 'individual') {
+        setFormData(prev => ({...prev, id_terreno: ''}));
+      }
+    } catch(error) {
+      toast.error('Error al generar las planillas');
+    }
   };
 
   return (
@@ -40,24 +52,7 @@ export default function CobrosPlanilla() {
       </div>
 
       <div className="glass-card" style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-          <button 
-            type="button"
-            className={tipoEmision === 'masiva' ? "btn-primary" : "btn-secondary"} 
-            onClick={() => setTipoEmision('masiva')}
-            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-          >
-            <Users size={18} /> Emisión Masiva (Todo el Padrón)
-          </button>
-          <button 
-            type="button"
-            className={tipoEmision === 'individual' ? "btn-primary" : "btn-secondary"} 
-            onClick={() => setTipoEmision('individual')}
-            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-          >
-            <FileText size={18} /> Emisión Individual
-          </button>
-        </div>
+
 
         <form onSubmit={handleGenerar} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
@@ -90,16 +85,14 @@ export default function CobrosPlanilla() {
               <label className="input-label">Fecha de Emisión</label>
               <input type="date" className="input-field" name="fecha_emision" value={formData.fecha_emision} onChange={handleChange} required />
             </div>
-            {tipoEmision === 'individual' && (
-              <div className="input-group">
-                <label className="input-label">ID Terreno / Medidor (Requerido)</label>
-                <input type="text" className="input-field" name="id_terreno" value={formData.id_terreno} onChange={handleChange} placeholder="Ej: TER-1001" required={tipoEmision === 'individual'} />
-              </div>
-            )}
+            <div className="input-group">
+              <label className="input-label">ID Terreno / Medidor (Requerido)</label>
+              <input type="text" className="input-field" name="id_terreno" value={formData.id_terreno} onChange={handleChange} placeholder="Ej: 15" required />
+            </div>
           </div>
 
           <button type="submit" className="btn-primary" style={{ marginTop: '1rem' }}>
-            <Check size={20} /> Generar {tipoEmision === 'masiva' ? 'Planillas Masivas' : 'Planilla Individual'}
+            <Check size={20} /> Generar Planilla Individual
           </button>
         </form>
       </div>

@@ -21,23 +21,7 @@ export default function UsuariosMenu() {
 
       <div className="modules-grid">
         
-        {/* TARJETA 1: BUSCAR */}
-        <div 
-          className="glass-card module-card hover-glow cursor-pointer" 
-          onClick={() => navigate('/dashboard/usuarios/buscar')}
-        >
-          <div className="module-banner bg-gradient-blue" style={{ backgroundImage: `url(${bgBuscarUsuario})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.8 }}></div>
-          <div className="module-content">
-            <div className="module-icon bg-blue"><Search size={28} /></div>
-            <h3>Buscar Usuario</h3>
-            <p>Busca un usuario específico ingresando su número de cédula, nombre o apellido.</p>
-            <button className="btn-module text-blue">
-              Abrir Búsqueda <ArrowRight size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* TARJETA 2: PADRÓN GENERAL */}
+        {/* TARJETA 1: PADRÓN GENERAL Y BÚSQUEDA */}
         <div 
           className="glass-card module-card hover-glow cursor-pointer"
           onClick={() => navigate('/dashboard/usuarios/padron')}
@@ -45,10 +29,10 @@ export default function UsuariosMenu() {
           <div className="module-banner bg-gradient-purple" style={{ backgroundImage: `url(${bgPadronGeneral})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.8 }}></div>
           <div className="module-content">
             <div className="module-icon bg-purple"><Users size={28} /></div>
-            <h3>Padrón General</h3>
-            <p>Muestra de manera general a todos los usuarios, directiva y agricultores registrados.</p>
+            <h3>Padrón General y Búsqueda</h3>
+            <p>Busca usuarios específicos o revisa el listado completo de la directiva y comuneros registrados.</p>
             <button className="btn-module text-purple">
-              Ver Padrón <ArrowRight size={16} />
+              Abrir Padrón <ArrowRight size={16} />
             </button>
           </div>
         </div>

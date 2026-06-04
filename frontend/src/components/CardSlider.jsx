@@ -15,12 +15,9 @@ export default function CardSlider({ children, steps, currentStep, onNext, onPre
       </div>
 
       <div className="slider-viewport">
-        <div 
-          className="slider-track" 
-          style={{ transform: `translateX(-${(currentStep - 1) * 100}%)` }}
-        >
+        <div className="slider-track">
           {React.Children.map(children, (child, idx) => (
-            <div className="slider-slide" key={idx}>
+            <div className={`slider-slide ${currentStep === idx + 1 ? 'active' : ''}`} key={idx}>
               {child}
             </div>
           ))}

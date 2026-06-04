@@ -30,9 +30,15 @@ export default function PersonaAutocompleteInput({ value, onChange, placeholder 
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setIsOpen(false);
+      // Ignoramos si el click es dentro del input
+      if (wrapperRef.current && wrapperRef.current.contains(event.target)) {
+        return;
       }
+      // Ignoramos si el click es en la lista flotante del portal
+      if (event.target.closest('[data-autocomplete-portal]')) {
+        return;
+      }
+      setIsOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -83,7 +89,9 @@ export default function PersonaAutocompleteInput({ value, onChange, placeholder 
       )}
       
       {isOpen && results.length > 0 && rect && createPortal(
-        <ul style={{
+        <ul 
+          data-autocomplete-portal="true"
+          style={{
           position: 'fixed',
           top: rect.bottom + 4,
           left: rect.left,
@@ -114,7 +122,8 @@ export default function PersonaAutocompleteInput({ value, onChange, placeholder 
               }}
               onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-              onClick={() => {
+              onMouseDown={(e) => {
+                e.preventDefault(); // Evita que se dispare eventos de pérdida de foco si los hay
                 setQuery(`${item.nombre} ${item.apellido}`);
                 setIsOpen(false);
                 onChange(item); // Retornar objeto completo al form

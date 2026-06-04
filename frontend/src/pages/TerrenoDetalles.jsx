@@ -1,96 +1,76 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Map, ArrowLeft, Calendar, FileText, Info, Compass, HelpCircle, FileDown, Droplet } from 'lucide-react';
+import { Map, MapPin, ArrowLeft, Calendar, FileText, Info, Compass, HelpCircle, FileDown, Droplet, Edit2, ArrowRightLeft, X } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import useAuthStore from '../store/useAuthStore';
 
-// Simulación de datos (debe coincidir con CatastroGlobal.jsx)
-const terrenosMock = [
-  {
-    id_terreno: 1,
-    propietario: 'Carlos Ruiz Masaquiza',
-    cedula: '1801112223',
-    zona: 'Zona Norte',
-    sector: 'Sector Centro',
-    estado_construccion: 'Construida',
-    area_m2: 350.5,
-    latitud: -1.3281,
-    longitud: -78.5528,
-    clave_catastral: '18-01-01-045-001',
-    caudal_ls: 2.5,
-    acequia: 'Acequia Principal Alta',
-    turno: 'Viernes 14:00 - 16:30',
-  },
-  {
-    id_terreno: 2,
-    propietario: 'Ana Luisa Toalombo',
-    cedula: '1804445556',
-    zona: 'Zona Sur',
-    sector: 'San Luis',
-    estado_construccion: 'En Construcción',
-    area_m2: 210.0,
-    latitud: -1.3300,
-    longitud: -78.5510,
-    clave_catastral: '18-01-03-012-005',
-    caudal_ls: 1.8,
-    acequia: 'Acequia Alta Bajas Riberas',
-    turno: 'Lunes 08:00 - 10:00',
-  },
-  {
-    id_terreno: 3,
-    propietario: 'José Luis Tixilema',
-    cedula: '1803334445',
-    zona: 'Zona Este',
-    sector: 'San Francisco',
-    estado_construccion: 'Lote Baldío',
-    area_m2: 500.0,
-    latitud: -1.3255,
-    longitud: -78.5489,
-    clave_catastral: '18-01-05-099-011',
-    caudal_ls: 3.0,
-    acequia: 'Acequia Baja San Francisco',
-    turno: 'Miércoles 10:00 - 13:00',
-  },
-  {
-    id_terreno: 4,
-    propietario: 'María Rosario Chango',
-    cedula: '1809990001',
-    zona: 'San Miguel',
-    estado_construccion: 'Construida',
-    area_m2: 180.75,
-    latitud: -1.3260,
-    longitud: -78.5545,
-    clave_catastral: '18-01-02-033-022',
-    caudal_ls: 1.5,
-    acequia: 'Ramal San Miguel Acequia Principal',
-    turno: 'Jueves 16:00 - 18:00',
-  },
-];
+import { getTerrenoById, traspasarDominio } from '../services/terrenoService';
+import { toast } from 'sonner';
+import PersonaAutocompleteInput from '../components/PersonaAutocompleteInput';
 
 export default function TerrenoDetalles() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('ficha');
-  const { user } = useAuthStore();
+  const user = useAuthStore(state => state.user);
   const isUsuarioBase = user?.rol === 'Usuario Regular' || user?.rol === 'Usuario';
 
-  // Buscar el terreno por ID
-  const terreno = terrenosMock.find((t) => t.id_terreno === parseInt(id)) || terrenosMock[0];
+  const [terreno, setTerreno] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [modalTraspaso, setModalTraspaso] = useState(false);
+  const [nuevoDueno, setNuevoDueno] = useState(null);
+  const [motivoTraspaso, setMotivoTraspaso] = useState('');
+
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const data = await getTerrenoById(id);
+        setTerreno(data);
+      } catch(e) {
+        toast.error('Error al cargar predio');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetch();
+  }, [id]);
 
   // Estado del mapa interactivo
   const [hoveredNode, setHoveredNode] = useState(null);
   const [selectedElement, setSelectedElement] = useState('Polígono del Terreno');
 
-  // Polígono SVG basado en coordenadas simuladas
+  // Polígono SVG basado en coordenadas simuladas o reales
+  const baseLat = parseFloat(terreno?.latitud) || -1.3281;
+  const baseLng = parseFloat(terreno?.longitud) || -78.5528;
   const nodes = [
-    { id: 'A', name: 'Vértice Norte', x: 250, y: 50, lat: (terreno.latitud || -1.3281) + 0.0005, lng: (terreno.longitud || -78.5528) + 0.0003 },
-    { id: 'B', name: 'Vértice Este', x: 380, y: 150, lat: (terreno.latitud || -1.3281) + 0.0002, lng: (terreno.longitud || -78.5528) + 0.0007 },
-    { id: 'C', name: 'Vértice Sur', x: 300, y: 280, lat: (terreno.latitud || -1.3281) - 0.0004, lng: (terreno.longitud || -78.5528) + 0.0004 },
-    { id: 'D', name: 'Vértice Oeste', x: 120, y: 220, lat: (terreno.latitud || -1.3281) - 0.0001, lng: (terreno.longitud || -78.5528) - 0.0006 },
+    { id: 'A', name: 'Vértice Norte', x: 250, y: 50,  lat: baseLat + 0.0005, lng: baseLng + 0.0003 },
+    { id: 'B', name: 'Vértice Este',  x: 380, y: 150, lat: baseLat + 0.0002, lng: baseLng + 0.0007 },
+    { id: 'C', name: 'Vértice Sur',   x: 300, y: 280, lat: baseLat - 0.0004, lng: baseLng + 0.0004 },
+    { id: 'D', name: 'Vértice Oeste', x: 120, y: 220, lat: baseLat - 0.0001, lng: baseLng - 0.0006 },
   ];
+
 
   // Concatenar puntos para el polygon SVG
   const polygonPoints = nodes.map(n => `${n.x},${n.y}`).join(' ');
+
+  const handleTraspaso = async () => {
+    if (!nuevoDueno || !nuevoDueno.id_persona) return toast.error('Seleccione el nuevo dueño');
+    if (!motivoTraspaso) return toast.error('Ingrese el motivo (Documento legal)');
+    try {
+      await traspasarDominio(id, nuevoDueno.id_persona, motivoTraspaso);
+      toast.success('Traspaso de dominio ejecutado con éxito');
+      setModalTraspaso(false);
+      setLoading(true);
+      const data = await getTerrenoById(id);
+      setTerreno(data);
+      setLoading(false);
+    } catch(e) {
+      toast.error(e.response?.data?.message || 'Error en el traspaso');
+    }
+  };
+
+  if (loading) return <div style={{padding: '3rem', textAlign: 'center', color: 'var(--text-main)'}}>Cargando información del predio...</div>;
+  if (!terreno) return <div style={{padding: '3rem', textAlign: 'center', color: 'var(--red)'}}>No se encontró el terreno</div>;
 
   // Descarga del Certificado de Derechos de Agua con jsPDF
   const handleDownloadPDF = () => {
@@ -270,13 +250,33 @@ export default function TerrenoDetalles() {
             </h1>
             <p className="text-muted">Propietario titular: {terreno.propietario}</p>
           </div>
-          <button 
-            className="btn-primary" 
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: 'auto', padding: '0.75rem 1.5rem' }}
-            onClick={handleDownloadPDF}
-          >
-            <FileDown size={18} /> Descargar Ficha PDF
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {!isUsuarioBase && (
+              <>
+                <button 
+                  className="btn-secondary" 
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+                  onClick={() => navigate(`/dashboard/catastro/editar/${id}`)}
+                >
+                  <Edit2 size={18} /> Editar Predio
+                </button>
+                <button 
+                  className="btn-secondary" 
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem', borderColor: 'var(--yellow)', color: 'var(--yellow)' }}
+                  onClick={() => setModalTraspaso(true)}
+                >
+                  <ArrowRightLeft size={18} /> Traspaso Dominio
+                </button>
+              </>
+            )}
+            <button 
+              className="btn-primary" 
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem' }}
+              onClick={handleDownloadPDF}
+            >
+              <FileDown size={18} /> Descargar PDF
+            </button>
+          </div>
         </div>
       </div>
 
@@ -298,7 +298,7 @@ export default function TerrenoDetalles() {
           className={`tab-btn ${activeTab === 'turno' ? 'active' : ''}`}
           onClick={() => setActiveTab('turno')}
         >
-          <Calendar size={16} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> Turnos y Riego
+          <Calendar size={16} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> Cuota Mensual
         </button>
       </div>
 
@@ -478,64 +478,119 @@ export default function TerrenoDetalles() {
           </div>
         )}
 
-        {/* TAB 3: TURNOS Y RIEGO */}
-        {activeTab === 'turno' && (
+        {/* TAB 3: CUOTA DE PAGO */}
+        {activeTab === 'turno' && (() => {
+          const areaMz = parseFloat(terreno.area_m2) || 0;
+          const fracciones = Math.ceil(areaMz / 1000);
+          const cuotaMensual = fracciones * 5;
+          const cuotaAnual = cuotaMensual * 12;
+          return (
           <div className="animate-fade-in">
-            <h3 style={{ margin: '0 0 1.25rem 0', color: 'var(--primary)', fontSize: '1.15rem' }}>
-              Derechos de Concesión y Cronograma de Riego
+            <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)', fontSize: '1.15rem' }}>
+              Cuota de Pago por Predio
             </h3>
             <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              Historial del canal asignado y el turno de agua asignado legalmente a este predio.
+              Calculado en base al área catastrada. Cada 1000 m² o fracción corresponde a <strong style={{ color: 'var(--text-main)' }}>$5.00 / mes</strong>.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.5rem' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="glass-card" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <Droplet size={24} className="text-blue" />
-                  <div>
-                    <h5 style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Caudal Máximo</h5>
-                    <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 'bold' }}>{terreno.caudal_ls} Litros/segundo</p>
-                  </div>
-                </div>
-
-                <div className="glass-card" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <Calendar size={24} className="text-yellow" />
-                  <div>
-                    <h5 style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Turno Vigente</h5>
-                    <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 'bold' }}>{terreno.turno}</p>
-                  </div>
-                </div>
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(14,165,233,0.12) 0%, rgba(16,185,129,0.08) 100%)',
+              border: '1px solid rgba(14,165,233,0.25)',
+              borderRadius: '1rem',
+              padding: '1.5rem',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '1.5rem'
+            }}>
+              <div>
+                <p style={{ margin: '0 0 0.4rem 0', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Área del Predio</p>
+                <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                  {areaMz.toLocaleString('es-EC')} m²
+                </p>
               </div>
 
-              <div className="table-container" style={{ background: 'rgba(255,255,255,0.01)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
-                      <th style={{ padding: '0.75rem', textAlign: 'left', color: 'var(--primary)' }}>Ramal de Acequia</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'left', color: 'var(--primary)' }}>Día de Riego</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'left', color: 'var(--primary)' }}>Horario Asignado</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'center', color: 'var(--primary)' }}>Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '0.75rem' }}>{terreno.acequia}</td>
-                      <td style={{ padding: '0.75rem' }}>{terreno.turno.split(' ')[0]}</td>
-                      <td style={{ padding: '0.75rem' }}>{terreno.turno.substring(terreno.turno.indexOf(' ') + 1)}</td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                        <span className="badge" style={{ background: 'rgba(16,185,129,0.1)', color: 'var(--green)', fontSize: '0.75rem', padding: '0.15rem 0.5rem' }}>
-                          Vigente
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div style={{ borderLeft: '1px solid rgba(255,255,255,0.08)', paddingLeft: '1.5rem' }}>
+                <p style={{ margin: '0 0 0.4rem 0', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Fracciones de 1000 m²</p>
+                <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                  {fracciones} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>× $5.00</span>
+                </p>
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
+                  Cada 1000 m² o fracción = $5/mes
+                </p>
+              </div>
+
+              <div style={{ borderLeft: '1px solid rgba(255,255,255,0.08)', paddingLeft: '1.5rem' }}>
+                <p style={{ margin: '0 0 0.4rem 0', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cuota Mensual</p>
+                <p style={{ margin: 0, fontSize: '2rem', fontWeight: '800', color: 'var(--green)' }}>
+                  ${cuotaMensual.toFixed(2)}
+                </p>
+              </div>
+
+              <div style={{ borderLeft: '1px solid rgba(255,255,255,0.08)', paddingLeft: '1.5rem' }}>
+                <p style={{ margin: '0 0 0.4rem 0', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cuota Anual Estimada</p>
+                <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: '700', color: '#f59e0b' }}>
+                  ${cuotaAnual.toFixed(2)}
+                </p>
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>12 meses</p>
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
+
+
 
       </div>
+
+      {/* MODAL TRASPASO DE DOMINIO */}
+      {modalTraspaso && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '500px', padding: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ margin: 0, color: 'var(--yellow)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ArrowRightLeft size={20} /> Traspaso de Dominio
+              </h2>
+              <button onClick={() => setModalTraspaso(false)} style={{ color: 'var(--text-muted)' }}><X size={20} /></button>
+            </div>
+            
+            <div className="alert-warning" style={{ background: 'rgba(245,158,11,0.1)', color: 'var(--yellow)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
+              <strong>Atención:</strong> Esta acción transferirá legalmente el terreno ({terreno.clave_catastral}) a otra persona. Las deudas anteriores quedarán con el dueño actual ({terreno.propietario}).
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label className="input-label">Buscar Nuevo Propietario *</label>
+              <PersonaAutocompleteInput 
+                onSelect={(persona) => setNuevoDueno(persona)} 
+                placeholder="Busca por cédula o apellido..." 
+              />
+              {nuevoDueno && (
+                <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem', fontSize: '0.85rem' }}>
+                  <strong>Seleccionado:</strong> {nuevoDueno.nombre} {nuevoDueno.apellido} (C.I: {nuevoDueno.cedula})
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label className="input-label">Motivo o Documento de Respaldo *</label>
+              <textarea 
+                className="input-field" 
+                placeholder="Ej: Contrato de compra-venta No. 12345, notariado..."
+                value={motivoTraspaso}
+                onChange={e => setMotivoTraspaso(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button className="btn-secondary" onClick={() => setModalTraspaso(false)}>Cancelar</button>
+              <button className="btn-primary" style={{ background: 'var(--yellow)', color: '#000' }} onClick={handleTraspaso}>Confirmar Traspaso</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

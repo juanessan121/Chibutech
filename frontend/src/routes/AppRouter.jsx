@@ -26,8 +26,10 @@ import DirectivaGestion from '../pages/DirectivaGestion';
 import Bitacora from '../pages/Bitacora';
 import Configuracion from '../pages/Configuracion';
 import Administracion from '../pages/Administracion';
+import CatastrosMenu from '../pages/CatastrosMenu';
 import CatastroGlobal from '../pages/CatastroGlobal';
 import TerrenosRegistro from '../pages/TerrenosRegistro';
+import TerrenosEdicion from '../pages/TerrenosEdicion';
 import PerfilUsuario from '../pages/PerfilUsuario';
 import TerrenoDetalles from '../pages/TerrenoDetalles';
 import useAuthStore from '../store/useAuthStore';
@@ -62,6 +64,7 @@ export default function AppRouter() {
             <Route path="buscar" element={<PrivateRoute><UsuariosBuscar /></PrivateRoute>} />
             <Route path="padron" element={<PrivateRoute><UsuariosPadron /></PrivateRoute>} />
             <Route path="agregar" element={<PrivateRoute><UsuariosAgregar /></PrivateRoute>} />
+            <Route path="editar/:id" element={<PrivateRoute><UsuariosAgregar /></PrivateRoute>} />
           </Route>
 
           {/* Módulo de Mingas */}
@@ -97,8 +100,10 @@ export default function AppRouter() {
 
           {/* Módulo de Catastro */}
           <Route path="catastro">
-            <Route index element={<PrivateRoute><CatastroGlobal /></PrivateRoute>} />
+            <Route index element={<PrivateRoute><CatastrosMenu /></PrivateRoute>} />
+            <Route path="generales" element={<PrivateRoute><CatastroGlobal /></PrivateRoute>} />
             <Route path="detalles/:id" element={<PrivateRoute><TerrenoDetalles /></PrivateRoute>} />
+            <Route path="editar/:id" element={<PrivateRoute><TerrenosEdicion /></PrivateRoute>} />
           </Route>
           
           {/* Módulo de Terrenos (Registro) */}

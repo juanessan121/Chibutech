@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardCheck, ArrowLeft, Search, Save, CheckCircle, XCircle, FileText, Lock } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
+import { getMingasActivas, getConvocados, registrarAsistencia } from '../services/mingaService';
 
 export default function MingasAsistencia() {
   const navigate = useNavigate();
@@ -9,35 +10,44 @@ export default function MingasAsistencia() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isClosed, setIsClosed] = useState(false);
 
-  // Simulando datos de la DB
-  const mingasActivas = [
-    { id: 1, fecha: '2026-05-25', motivo: 'Limpieza de Acequias' },
-    { id: 2, fecha: '2026-06-10', motivo: 'Reparación de Tubería Principal' }
-  ];
+  const [mingasActivas, setMingasActivas] = useState([]);
+  const [asistencia, setAsistencia] = useState([]);
 
-  const usuariosConvocados = [
-    { id: 101, cedula: '1801234567', nombre: 'Juan Carlos Pérez', sector: 'San Luis', estado: 'Pendiente' },
-    { id: 102, cedula: '1809876543', nombre: 'María Rosa Guamán', sector: 'Centro', estado: 'Pendiente' },
-    { id: 103, cedula: '1805556667', nombre: 'Luis Alberto Sisa', sector: 'San Francisco', estado: 'Pendiente' },
-    { id: 104, cedula: '1804443332', nombre: 'Carmen Tixilema', sector: 'San Luis', estado: 'Pendiente' },
-    { id: 105, cedula: '1808889990', nombre: 'Pedro Chango', sector: 'Centro', estado: 'Faltó (Pagado)' },
-  ];
+  useEffect(() => {
+    getMingasActivas().then(setMingasActivas);
+  }, []);
 
-  const [asistencia, setAsistencia] = useState(usuariosConvocados);
+  useEffect(() => {
+    if (selectedMinga) {
+      getConvocados(selectedMinga).then(setAsistencia);
+    } else {
+      setAsistencia([]);
+    }
+  }, [selectedMinga]);
 
   const handleMarcar = (id, nuevoEstado) => {
     setAsistencia(prev => prev.map(u => u.id === id ? { ...u, estado: nuevoEstado } : u));
     toast(`Asistencia actualizada a: ${nuevoEstado}`);
   };
 
-  const handleGuardarTodo = () => {
-    toast.success('Listado de asistencia guardado correctamente en la base de datos.');
+  const handleGuardarTodo = async () => {
+    try {
+      await registrarAsistencia(selectedMinga, { asistencias: asistencia, cerrar_registro: false });
+      toast.success('Listado de asistencia guardado correctamente en la base de datos.');
+    } catch (e) {
+      toast.error('Error al guardar asistencia');
+    }
   };
 
-  const handleCerrarRegistro = () => {
+  const handleCerrarRegistro = async () => {
     if (window.confirm("¿Está seguro de cerrar el registro? Una vez cerrado, no se podrán modificar las asistencias. Las inasistencias generarán multas irrevocables.")) {
-      setIsClosed(true);
-      toast.success('El registro de asistencia ha sido cerrado definitivamente.');
+      try {
+        await registrarAsistencia(selectedMinga, { asistencias: asistencia, cerrar_registro: true });
+        setIsClosed(true);
+        toast.success('El registro de asistencia ha sido cerrado definitivamente.');
+      } catch (e) {
+        toast.error('Error al cerrar el registro');
+      }
     }
   };
 
@@ -71,7 +81,7 @@ export default function MingasAsistencia() {
           >
             <option value="">-- Elija una Minga para pasar lista --</option>
             {mingasActivas.map(m => (
-              <option key={m.id} value={m.id}>{m.fecha} - {m.motivo}</option>
+              <option key={m.id_minga} value={m.id_minga}>{m.fecha_programada} - {m.motivo_general}</option>
             ))}
           </select>
         </div>

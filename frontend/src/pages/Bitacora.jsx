@@ -1,12 +1,24 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldAlert, User, Clock, FileText } from 'lucide-react';
+import axios from '../services/axiosConfig';
 
 export default function Bitacora() {
-  const mockAuditoria = [
-    { id: 1, usuario: 'Administrador Principal', tabla: 'Persona', accion: 'INSERT', fecha: '2026-05-20 17:45:00' },
-    { id: 2, usuario: 'Presidente', tabla: 'Minga', accion: 'UPDATE', fecha: '2026-05-20 16:30:22' },
-    { id: 3, usuario: 'Administrador Principal', tabla: 'Terreno', accion: 'DELETE', fecha: '2026-05-19 09:15:10' }
-  ];
+  const [auditoria, setAuditoria] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAuditoria = async () => {
+      try {
+        const res = await axios.get('/auditoria');
+        setAuditoria(res.data.data);
+      } catch (error) {
+        console.error("Error al obtener auditoría:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAuditoria();
+  }, []);
 
   return (
     <div className="animate-fade-in pb-10">
@@ -31,7 +43,11 @@ export default function Bitacora() {
             </tr>
           </thead>
           <tbody>
-            {mockAuditoria.map(log => (
+            {loading ? (
+              <tr><td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>Cargando bitácora...</td></tr>
+            ) : auditoria.length === 0 ? (
+              <tr><td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>No hay registros de auditoría.</td></tr>
+            ) : auditoria.map(log => (
               <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <td style={{ padding: '1rem', color: 'var(--text-main)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -57,7 +73,7 @@ export default function Bitacora() {
                   </span>
                 </td>
                 <td style={{ padding: '1rem', textAlign: 'center' }}>
-                  <button className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} title="Ver payload JSON de cambios">
+                  <button className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} title="Ver payload JSON de cambios" onClick={() => alert(JSON.stringify({anterior: log.datos_anteriores, nuevo: log.datos_nuevos}))}>
                     <FileText size={16} /> Ver Cambios
                   </button>
                 </td>

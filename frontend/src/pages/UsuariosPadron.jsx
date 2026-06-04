@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { getUsers, deleteUser } from '../services/userService';
-import { Users, Trash2, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
+import { Users, Trash2, CheckCircle, XCircle, ArrowLeft, Search, Edit2 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
 export default function UsuariosPadron() {
   const [users, setUsers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -41,7 +42,7 @@ export default function UsuariosPadron() {
     <div className="animate-fade-in">
       <Toaster richColors />
       
-      <div className="page-header" style={{ marginBottom: '1.5rem' }}>
+      <div className="page-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <button className="btn-back" onClick={() => navigate('/dashboard/usuarios')} style={{ marginBottom: '1rem' }}>
             <ArrowLeft size={18} /> Volver al Menú
@@ -49,9 +50,21 @@ export default function UsuariosPadron() {
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Users className="text-purple" /> Padrón General
           </h1>
-          <p className="text-muted">Listado completo de todos los miembros registrados.</p>
+          <p className="text-muted">Listado completo y búsqueda de miembros registrados.</p>
         </div>
-        <span className="badge" style={{ margin: 0 }}>Total: {users.length}</span>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div className="search-bar" style={{ position: 'relative', width: '250px' }}>
+            <Search size={18} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input 
+              type="text" 
+              placeholder="Buscar por cédula o nombre..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: '100%', padding: '0.5rem 1rem 0.5rem 2.2rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)' }}
+            />
+          </div>
+          <span className="badge" style={{ margin: 0 }}>Total: {users.length}</span>
+        </div>
       </div>
 
       <div className="glass-card table-container">
@@ -76,7 +89,12 @@ export default function UsuariosPadron() {
                 </tr>
               </thead>
               <tbody>
-                {users.map(user => (
+                {users
+                  .filter(u => 
+                    u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    u.cedula.includes(searchTerm)
+                  )
+                  .map(user => (
                   <tr key={user.id}>
                     <td className="fw-500">{user.cedula}</td>
                     <td>{user.nombre}</td>
@@ -94,7 +112,8 @@ export default function UsuariosPadron() {
                       )}
                     </td>
                     <td className="actions-cell">
-                      <button className="btn-icon text-red" onClick={() => handleDelete(user.id)}><Trash2 size={16} /></button>
+                      <button className="btn-icon text-blue" onClick={() => navigate(`/dashboard/usuarios/editar/${user.id}`)} title="Editar Usuario"><Edit2 size={16} /></button>
+                      <button className="btn-icon text-red" onClick={() => handleDelete(user.id)} title="Eliminar Usuario"><Trash2 size={16} /></button>
                     </td>
                   </tr>
                 ))}

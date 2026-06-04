@@ -141,7 +141,10 @@ export default function AutocompleteInput({ value, onChange, placeholder }) {
               }}
               onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-              onClick={() => {
+              onMouseDown={(e) => {
+                // Usamos onMouseDown en vez de onClick porque al usar createPortal, 
+                // el mousedown en el documento se dispara antes y cierra la lista
+                e.preventDefault(); 
                 setQuery(item.nombre);
                 setIsOpen(false);
                 onChange(item.nombre); // Reportar seleccion final a React Hook Form

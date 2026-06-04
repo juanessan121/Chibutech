@@ -3,45 +3,12 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { INSTITUCION, COLORS, FONTS, LAYOUT, TABLE_STYLES } from '../utils/pdfStyles';
 
-// ──────────────────────────────────────────────────────────────────────────────
-// MOCK DATA (Reemplazar con llamadas reales a la API cuando esté disponible)
-// ──────────────────────────────────────────────────────────────────────────────
-const MOCK_PADRON = [
-  { cedula: '1801234567', nombre: 'Juan Pérez Masaquiza',      sector: 'Centro',        rol: 'Comunero',   estado: 'Activo',     terreno: 'Lote #12' },
-  { cedula: '1809876543', nombre: 'María Ainaguano Lliguin',   sector: 'San Luis',      rol: 'Directiva',  estado: 'Activo',     terreno: 'Lote #07' },
-  { cedula: '1804567890', nombre: 'Pedro Jerez Chimborazo',    sector: 'Centro',        rol: 'Comunero',   estado: 'Suspendido', terreno: 'Lote #34' },
-  { cedula: '1801112223', nombre: 'Carmen Lliguin Toalombo',   sector: 'San Francisco', rol: 'Comunero',   estado: 'Activo',     terreno: 'Lote #45' },
-  { cedula: '1803334445', nombre: 'Luis Toalombo Punina',      sector: 'San Luis',      rol: 'Comunero',   estado: 'Activo',     terreno: 'Lote #22' },
-  { cedula: '1805556667', nombre: 'Rosa Punina Masaquiza',     sector: 'Centro',        rol: 'Comunero',   estado: 'Activo',     terreno: 'Lote #18' },
-  { cedula: '1807778889', nombre: 'Antonio Chimbo Jerez',      sector: 'San Francisco', rol: 'Comunero',   estado: 'Activo',     terreno: 'Lote #56' },
-  { cedula: '1802223334', nombre: 'Elena Masaquiza Amanta',    sector: 'San Luis',      rol: 'Directiva',  estado: 'Activo',     terreno: 'Lote #03' },
-  { cedula: '1806667778', nombre: 'Carlos Amanta Quillupangui',sector: 'Centro',        rol: 'Comunero',   estado: 'Inactivo',   terreno: 'Lote #29' },
-  { cedula: '1804445556', nombre: 'Josefa Quillupangui Tisalema',sector:'San Francisco',rol: 'Comunero',   estado: 'Activo',     terreno: 'Lote #61' },
-];
+import axios from '../services/axiosConfig';
 
-const MOCK_MOROSOS = [
-  { cedula: '1801234567', nombre: 'Juan Pérez Masaquiza',     sector: 'Centro',        concepto: 'Inasistencia Minga',    monto: 15.00, fecha_vence: '2024-10-30', estado: 'En Mora' },
-  { cedula: '1804567890', nombre: 'Pedro Jerez Chimborazo',   sector: 'Centro',        concepto: 'Deuda por Servicio',    monto: 45.50, fecha_vence: '2024-09-15', estado: 'Vencido' },
-  { cedula: '1806667778', nombre: 'Carlos Amanta Quillupangui',sector:'Centro',         concepto: 'Multa Disciplinaria',   monto: 25.00, fecha_vence: '2024-11-05', estado: 'Pendiente' },
-  { cedula: '1807778889', nombre: 'Antonio Chimbo Jerez',     sector: 'San Francisco', concepto: 'Inasistencia Minga',    monto: 15.00, fecha_vence: '2024-10-28', estado: 'En Mora' },
-  { cedula: '1801112223', nombre: 'Carmen Lliguin Toalombo',  sector: 'San Francisco', concepto: 'Deuda por Servicio',    monto: 32.80, fecha_vence: '2024-10-01', estado: 'Vencido' },
-];
+// ──────────────────────────────────────────────────────────────────────────────
+// API DATA FETCHERS
+// ──────────────────────────────────────────────────────────────────────────────
 
-const MOCK_BALANCE = {
-  resumen: { ingresos: 2340.50, egresos: 890.00, saldo: 1450.50 },
-  ingresos: [
-    { fecha: '2024-10-01', concepto: 'Cobro planilla mensual - 45 comuneros', monto: 1350.00 },
-    { fecha: '2024-10-05', concepto: 'Multas por inasistencia Minga #12',      monto: 450.00  },
-    { fecha: '2024-10-12', concepto: 'Multas disciplinarias varios',           monto: 125.00  },
-    { fecha: '2024-10-18', concepto: 'Cuota extraordinaria mantenimiento',     monto: 415.50  },
-  ],
-  egresos: [
-    { fecha: '2024-10-03', concepto: 'Compra materiales limpieza acequia',     monto: 245.00 },
-    { fecha: '2024-10-08', concepto: 'Mantenimiento motor bomba principal',    monto: 380.00 },
-    { fecha: '2024-10-15', concepto: 'Refrigerios asamblea general',           monto: 120.00 },
-    { fecha: '2024-10-22', concepto: 'Pago asistente administrativo parcial',  monto: 145.00 },
-  ],
-};
 
 // ──────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -187,8 +154,11 @@ export function usePDF() {
   const generarPadron = useCallback(async (filtros = {}, modo = 'download') => {
     setIsGenerating(true);
     try {
-      // Filtrar mock data según filtros recibidos
-      let datos = [...MOCK_PADRON];
+      // 1. Obtener datos reales de la API
+      const { data: response } = await axios.get('/reportes/padron');
+      let datos = response.data;
+
+      // 2. Aplicar filtros
       if (filtros.sector && filtros.sector !== 'todos') {
         const sectorMap = { '1': 'Centro', '2': 'San Luis', '3': 'San Francisco' };
         datos = datos.filter(u => u.sector === sectorMap[filtros.sector]);
@@ -199,9 +169,9 @@ export function usePDF() {
 
       // Meta info
       let y = dibujarMetaBloque(doc, [
-        { label: 'Total Comuneros', value: datos.length },
-        { label: 'Activos',         value: datos.filter(u => u.estado === 'Activo').length },
-        { label: 'Suspendidos',     value: datos.filter(u => u.estado === 'Suspendido').length },
+        { label: 'Total Registros', value: datos.length },
+        { label: 'Vivos',           value: datos.filter(u => u.estado === 'Vivo').length },
+        { label: 'Fallecidos',      value: datos.filter(u => u.estado === 'Fallecido').length },
         { label: 'Sector Filtrado', value: filtros.sector === 'todos' || !filtros.sector ? 'Todos' : filtros.sector },
       ], LAYOUT.headerHeight + 5);
 
@@ -209,14 +179,14 @@ export function usePDF() {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(FONTS.section.size);
       doc.setTextColor(...COLORS.primaryDark);
-      doc.text('Lista de Comuneros Registrados', LAYOUT.marginLeft, y);
+      doc.text('Lista de Propietarios y Terrenos', LAYOUT.marginLeft, y);
       y += 6;
 
       // Tabla
       autoTable(doc, {
         startY: y,
-        head: [['#', 'Cédula', 'Nombre Completo', 'Sector', 'Rol', 'Terreno', 'Estado']],
-        body: datos.map((u, i) => [i + 1, u.cedula, u.nombre, u.sector, u.rol, u.terreno, u.estado]),
+        head: [['#', 'Cédula', 'Nombre Completo', 'Sector', 'Clave Catastral', 'Área (m²)', 'Estado']],
+        body: datos.map((u, i) => [i + 1, u.cedula, u.nombre, u.sector, u.clave_catastral || 'S/C', u.area_m2, u.estado]),
         ...TABLE_STYLES,
         columnStyles: {
           0: { cellWidth: 8,  halign: 'center' },
@@ -231,9 +201,8 @@ export function usePDF() {
             didParseCell: (data) => {
               if (data.section === 'body') {
                 const estado = data.cell.raw;
-                if (estado === 'Activo')     data.cell.styles.textColor = COLORS.success;
-                if (estado === 'Suspendido') data.cell.styles.textColor = COLORS.danger;
-                if (estado === 'Inactivo')   data.cell.styles.textColor = COLORS.muted;
+                if (estado === 'Vivo')      data.cell.styles.textColor = COLORS.success;
+                if (estado === 'Fallecido') data.cell.styles.textColor = COLORS.danger;
               }
             }
           },
@@ -254,11 +223,13 @@ export function usePDF() {
   const generarMorosos = useCallback(async (filtros = {}, modo = 'download') => {
     setIsGenerating(true);
     try {
-      let datos = [...MOCK_MOROSOS];
+      const { data: response } = await axios.get('/reportes/morosos');
+      let datos = response.data;
+      
       const montoMin = parseFloat(filtros.montoMin) || 0;
       if (montoMin > 0) datos = datos.filter(u => u.monto >= montoMin);
 
-      const totalDeuda = datos.reduce((acc, u) => acc + u.monto, 0);
+      const totalDeuda = datos.reduce((acc, u) => acc + parseFloat(u.monto), 0);
 
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       dibujarHeader(doc, 'REPORTE DE MOROSIDAD', `Período: ${new Date().toLocaleDateString('es-EC', { month: 'long', year: 'numeric' })}`);
@@ -335,13 +306,15 @@ export function usePDF() {
   const generarBalance = useCallback(async (filtros = {}, modo = 'download') => {
     setIsGenerating(true);
     try {
-      const { resumen, ingresos, egresos } = MOCK_BALANCE;
+      const periodo = filtros.periodo || 'este_mes';
+      const { data: response } = await axios.get(`/reportes/balance?periodo=${periodo}`);
+      const { resumen, ingresos, egresos } = response.data;
 
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pageW = doc.internal.pageSize.getWidth();
-      const periodo = filtros.periodo || 'Octubre 2024';
+      const periodoTexto = periodo === 'este_mes' ? 'Mes Actual' : periodo;
 
-      dibujarHeader(doc, 'BALANCE FINANCIERO', `Período: ${periodo}`);
+      dibujarHeader(doc, 'BALANCE FINANCIERO', `Período: ${periodoTexto}`);
 
       let y = dibujarMetaBloque(doc, [
         { label: 'Total Ingresos', value: `$${resumen.ingresos.toFixed(2)}` },

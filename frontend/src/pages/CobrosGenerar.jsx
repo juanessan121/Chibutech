@@ -1,34 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, ArrowLeft, Search, User, DollarSign, Save, AlertTriangle } from 'lucide-react';
+import { PlusCircle, ArrowLeft, User, DollarSign, AlertTriangle, X } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
+import { generarMulta } from '../services/cobroService';
+import PersonaAutocompleteInput from '../components/PersonaAutocompleteInput';
 
 export default function CobrosGenerar() {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [motivo, setMotivo] = useState('');
   const [monto, setMonto] = useState('');
   const [urlDocumento, setUrlDocumento] = useState('');
 
-  // Mocks simulando la base de datos
-  const mockUsers = [
-    { id: 1, cedula: '1801234567', nombre: 'Juan Carlos Pérez' },
-    { id: 2, cedula: '1809876543', nombre: 'María Rosa Guamán' }
-  ];
-
-  const handleSearch = () => {
-    const found = mockUsers.find(u => u.cedula === searchTerm || u.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
-    if (found) {
-      setSelectedUser(found);
-    } else {
-      toast.error('Agricultor no encontrado.');
-      setSelectedUser(null);
-    }
-  };
-
-  const handleGenerarMulta = (e) => {
+  const handleGenerarMulta = async (e) => {
     e.preventDefault();
     if (!selectedUser || !motivo || !monto) {
       toast.error('Complete todos los campos requeridos.');
@@ -36,11 +21,20 @@ export default function CobrosGenerar() {
     }
     
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      await generarMulta({
+        id_persona: selectedUser.id_persona,
+        motivo,
+        monto,
+        url_documento: urlDocumento
+      });
       toast.success('Multa generada y asignada al agricultor exitosamente.');
       setTimeout(() => navigate('/dashboard/cobros'), 2000);
-    }, 1500);
+    } catch (error) {
+      toast.error('Error al generar la multa.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -67,28 +61,26 @@ export default function CobrosGenerar() {
             <h3 className="text-primary" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               1. Seleccionar Infractor
             </h3>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <input 
-                type="text" 
-                className="input-field" 
-                placeholder="Buscar por cédula o nombre..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearch())}
-              />
-              <button type="button" className="btn-primary" onClick={handleSearch} style={{ width: 'auto', padding: '0 1.5rem' }}>
-                <Search size={18} />
-              </button>
-            </div>
 
-            {selectedUser && (
-              <div className="animate-fade-in" style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(14, 165, 233, 0.1)', border: '1px solid var(--blue)', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <User size={24} className="text-blue" />
-                <div>
-                  <p style={{ margin: 0, fontWeight: 'bold', color: 'var(--text-main)' }}>{selectedUser.nombre}</p>
-                  <p style={{ margin: 0, fontSize: '0.85rem' }} className="text-muted">C.I: {selectedUser.cedula}</p>
+            {selectedUser ? (
+              <div className="animate-fade-in" style={{ padding: '1rem', background: 'rgba(14,165,233,0.1)', border: '1px solid var(--blue)', borderRadius: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <User size={24} className="text-blue" />
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 'bold', color: 'var(--text-main)' }}>{selectedUser.nombre} {selectedUser.apellido}</p>
+                    <p style={{ margin: 0, fontSize: '0.85rem' }} className="text-muted">C.I: {selectedUser.cedula}</p>
+                  </div>
                 </div>
+                <button type="button" onClick={() => setSelectedUser(null)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.3rem' }}>
+                  <X size={18} />
+                </button>
               </div>
+            ) : (
+              <PersonaAutocompleteInput
+                value={null}
+                placeholder="Buscar por cédula o nombre del infractor..."
+                onChange={(persona) => setSelectedUser(persona)}
+              />
             )}
           </div>
 

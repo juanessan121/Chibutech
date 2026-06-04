@@ -1,7 +1,6 @@
 .card-slider-container {
   max-width: 800px;
   margin: 0 auto;
-  overflow: hidden;
   padding: 1rem 0;
 }
 
@@ -34,26 +33,40 @@
 }
 
 .slider-viewport {
-  overflow: hidden;
+  position: relative;
   width: 100%;
 }
 
 .slider-track {
-  display: flex;
-  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  position: relative;
   width: 100%;
 }
 
 .slider-slide {
-  min-width: 100%;
-  padding: 0.5rem;
-  box-sizing: border-box;
+  width: 100%;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translateY(15px) scale(0.98);
+  transition: all 0.3s ease;
+}
+
+.slider-slide.active {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+  position: relative;
+  transform: translateY(0) scale(1);
+  transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1) 0.1s;
 }
 
 .slider-navigation {
   display: flex;
   justify-content: space-between;
-  margin-top: 2rem;
+  margin-top: 1.5rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--border-color);
 }

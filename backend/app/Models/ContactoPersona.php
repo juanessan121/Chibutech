@@ -16,4 +16,9 @@ class ContactoPersona extends Model
     {
         return $this->belongsTo(Persona::class, 'id_persona', 'id_persona');
     }
+
+    public function operadora()
+    {
+        return $this->belongsTo(CatalogoOperadora::class, 'id_operadora', 'id_operadora');
+    }
 }

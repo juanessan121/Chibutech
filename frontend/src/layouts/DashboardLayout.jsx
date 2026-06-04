@@ -13,6 +13,7 @@ export default function DashboardLayout() {
   const location = useLocation();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([
     { id: 1, title: 'Convocatoria a Minga', text: 'Limpieza de desarenador el sábado 28 de Oct.', time: 'Hace 10 min', unread: true, type: 'minga' },
@@ -47,15 +48,53 @@ export default function DashboardLayout() {
 
   const menuItems = [
     { name: 'Panel Principal', path: '/dashboard', icon: LayoutDashboard, show: true },
-    { name: 'Directiva', path: '/dashboard/directiva', icon: Award, show: true },
-    { name: 'Usuarios', path: '/dashboard/usuarios', icon: Users, show: hasPermission('crear_usuario') },
-    { name: 'Mingas', path: '/dashboard/mingas', icon: Users, show: hasPermission('gestionar_mingas') },
-    { name: 'Catastro de Predios', path: '/dashboard/catastro', icon: Map, show: hasPermission('gestionar_mingas') || hasPermission('crear_usuario') },
-    { name: 'Mi Predio', path: '/dashboard/catastro/detalles/1', icon: MapPin, show: isRole('Usuario Regular') },
-    { name: 'Multas y Cobros', path: '/dashboard/cobros', icon: ShieldAlert, show: hasPermission('gestionar_multas') },
+    { 
+      name: 'Usuarios', icon: Users, show: hasPermission('crear_usuario'),
+      subItems: [
+        { name: 'Padrón General', path: '/dashboard/usuarios/padron' },
+        { name: 'Agregar Usuario', path: '/dashboard/usuarios/agregar' }
+      ]
+    },
+    { 
+      name: 'Mingas', icon: Users, show: hasPermission('gestionar_mingas'),
+      subItems: [
+        { name: 'Lista de Mingas', path: '/dashboard/mingas' },
+        { name: 'Programar Minga', path: '/dashboard/mingas/programar' },
+        { name: 'Tomar Asistencia', path: '/dashboard/mingas/asistencia' }
+      ]
+    },
+    { 
+      name: 'Catastros', icon: Map, show: hasPermission('gestionar_mingas') || hasPermission('crear_usuario'),
+      subItems: [
+        { name: 'Catastro Global', path: '/dashboard/catastro' },
+        { name: 'Registrar Terreno', path: '/dashboard/terrenos' }
+      ]
+    },
+    { 
+      name: 'Multas y Cobros', icon: ShieldAlert, show: hasPermission('gestionar_multas'),
+      subItems: [
+        { name: 'Panel de Cobros', path: '/dashboard/cobros' },
+        { name: 'Generar Cobro', path: '/dashboard/cobros/generar' },
+        { name: 'Ventanilla', path: '/dashboard/cobros/ventanilla' }
+      ]
+    },
     { name: 'Reportes', path: '/dashboard/reportes', icon: FileText, show: hasPermission('ver_reportes') },
+    { 
+      name: 'Directiva', icon: Award, show: true,
+      subItems: [
+        { name: 'Directiva Actual', path: '/dashboard/directiva' },
+        { name: 'Gestionar', path: '/dashboard/directiva/gestionar' }
+      ]
+    },
+    { 
+      name: 'Administración', icon: Settings, show: hasPermission('gestionar_multas'),
+      subItems: [
+        { name: 'Panel Admin', path: '/dashboard/administracion' },
+        { name: 'Configuración', path: '/dashboard/administracion/configuracion' }
+      ]
+    },
     { name: 'Mis Deudas', path: '/dashboard/mis-deudas', icon: Droplet, show: isRole('Usuario Regular') },
-    { name: 'Administración', path: '/dashboard/administracion', icon: Settings, show: hasPermission('gestionar_multas') },
+    { name: 'Mi Predio', path: '/dashboard/catastro/detalles/1', icon: MapPin, show: isRole('Usuario Regular') },
   ];
 
   return (
@@ -84,8 +123,52 @@ export default function DashboardLayout() {
 
         <nav className="sidebar-nav">
           {menuItems.filter(item => item.show).map((item) => {
-            const isActive = location.pathname === item.path;
             const Icon = item.icon;
+            
+            if (item.subItems) {
+              const isOpen = openMenu === item.name;
+              return (
+                <div key={item.name} className="sidebar-accordion">
+                  <button 
+                    className="sidebar-link"
+                    onClick={() => setOpenMenu(isOpen ? '' : item.name)}
+                    style={{ justifyContent: 'space-between' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <Icon size={20} />
+                      <span>{item.name}</span>
+                    </div>
+                    <span style={{ transform: isOpen ? 'rotate(90deg)' : 'none', transition: '0.2s' }}>▶</span>
+                  </button>
+                  {isOpen && (
+                    <div className="sidebar-subitems" style={{ paddingLeft: '2.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                      {item.subItems.map(subItem => {
+                        const isSubActive = location.pathname === subItem.path;
+                        return (
+                          <button 
+                            key={subItem.path}
+                            className={`sidebar-sublink ${isSubActive ? 'active' : ''}`}
+                            onClick={() => {
+                              navigate(subItem.path);
+                              setIsSidebarOpen(false);
+                            }}
+                            style={{ 
+                              background: 'transparent', border: 'none', color: isSubActive ? 'var(--primary-light)' : '#94a3b8', 
+                              textAlign: 'left', cursor: 'pointer', fontSize: '0.9rem', padding: '0.3rem 0',
+                              transition: 'color 0.2s'
+                            }}
+                          >
+                            {subItem.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            const isActive = location.pathname === item.path;
             return (
               <button 
                 key={item.path}
