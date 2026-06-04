@@ -144,7 +144,7 @@ export default function PerfilUsuario() {
               </div>
               <div className="detail-row">
                 <span className="detail-label">Vocal del Ramal Responsable</span>
-                <span className="detail-value">Segundo Toalombo Chango</span>
+                <span className="detail-value">Por definir</span>
               </div>
             </div>
           </div>

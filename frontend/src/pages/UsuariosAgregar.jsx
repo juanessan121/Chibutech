@@ -9,6 +9,14 @@ import CardSlider from '../components/CardSlider';
 import AutocompleteInput from '../components/AutocompleteInput';
 import { allowOnlyLetters, allowOnlyNumbers } from '../utils/validators';
 
+// Utilidad para convertir archivo a base64
+const toBase64 = file => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = error => reject(error);
+});
+
 // Validador de Cédula Ecuatoriana (Módulo 10)
 const validarCedulaEcuatoriana = (cedula) => {
   if (typeof cedula !== 'string' || cedula.length !== 10) return false;
@@ -102,12 +110,22 @@ const HijoFields = ({ control, index, register, generos, errors }) => {
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
-                  <AutocompleteInput 
-                    placeholder="Escriba el título (ej. Ingeniero)"
-                    value={field.value}
-                    onChange={field.onChange}
-                  />
+                  <div style={{ flex: 2 }}>
+                    <AutocompleteInput 
+                      placeholder="Escriba el título (ej. Ingeniero)"
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </div>
                 )}
+              />
+              <input 
+                type="file" 
+                className="input-field" 
+                style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', minWidth: '150px' }} 
+                accept=".pdf,image/*"
+                title="Subir documento del título"
+                {...register(`dependientes.${index}.carreras.${cIndex}.archivo_titulo`)} 
               />
               {carrerasFields.length > 1 && (
                 <button type="button" className="btn-icon text-red" onClick={() => removeCarrera(cIndex)}>
@@ -295,6 +313,29 @@ export default function UsuariosAgregar() {
         }
         if (parseInt(payload.nivel_educativo_principal) < 3) {
           payload.carreras_principal = [];
+        } else {
+          // Convertir archivos_titulo del titular a base64
+          for (let i = 0; i < payload.carreras_principal.length; i++) {
+            let c = payload.carreras_principal[i];
+            if (c.archivo_titulo && c.archivo_titulo.length > 0) {
+              c.archivo_titulo_base64 = await toBase64(c.archivo_titulo[0]);
+            }
+          }
+        }
+
+        // Convertir archivos_titulo de dependientes a base64
+        if (payload.dependientes && payload.dependientes.length > 0) {
+          for (let i = 0; i < payload.dependientes.length; i++) {
+            let d = payload.dependientes[i];
+            if (parseInt(d.nivel_educativo) >= 3 && d.carreras) {
+              for (let j = 0; j < d.carreras.length; j++) {
+                let c = d.carreras[j];
+                if (c.archivo_titulo && c.archivo_titulo.length > 0) {
+                  c.archivo_titulo_base64 = await toBase64(c.archivo_titulo[0]);
+                }
+              }
+            }
+          }
         }
 
         if (!isEditMode) {
@@ -502,7 +543,7 @@ export default function UsuariosAgregar() {
                         control={control}
                         rules={{ required: true }}
                         render={({ field, fieldState }) => (
-                          <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+                          <div style={{ flex: 2, display: 'flex', flexDirection: 'column' }}>
                             <AutocompleteInput 
                               placeholder="Escriba el título (ej. Ingeniero)"
                               value={field.value || ''}
@@ -517,6 +558,14 @@ export default function UsuariosAgregar() {
                             {fieldState.error && <span style={{ color: '#f87171', fontSize: '0.75rem', marginTop: '0.25rem' }}>Requerido</span>}
                           </div>
                         )}
+                      />
+                      <input 
+                        type="file" 
+                        className="input-field" 
+                        style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', minWidth: '150px' }} 
+                        accept=".pdf,image/*"
+                        title="Subir documento del título"
+                        {...register(`carreras_principal.${index}.archivo_titulo`)} 
                       />
                       {titularCarrerasFields.length > 1 && (
                         <button type="button" className="btn-icon text-red" onClick={() => removeTitularCarrera(index)}>

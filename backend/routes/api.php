@@ -82,6 +82,8 @@ Route::get('/configuracion', [ConfiguracionController::class, 'getGlobales']);
 Route::put('/configuracion', [ConfiguracionController::class, 'updateGlobal']);
 Route::get('/configuracion/zonas-sectores', [ConfiguracionController::class, 'getZonasSectores']);
 Route::post('/configuracion/zonas', [ConfiguracionController::class, 'addZona']);
+Route::put('/configuracion/zonas/{id}', [ConfiguracionController::class, 'updateZona']);
 Route::post('/configuracion/sectores', [ConfiguracionController::class, 'addSector']);
+Route::put('/configuracion/sectores/{id}', [ConfiguracionController::class, 'updateSector']);
 Route::post('/configuracion/titulos', [ConfiguracionController::class, 'addTitulo']);
 

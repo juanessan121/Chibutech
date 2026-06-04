@@ -8,6 +8,14 @@ import PersonaAutocompleteInput from '../components/PersonaAutocompleteInput';
 import useAuthStore from '../store/useAuthStore';
 import api from '../services/axiosConfig';
 
+// Utilidad para convertir archivo a base64
+const toBase64 = file => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = error => reject(error);
+});
+
 const formatClaveCatastral = (value) => {
   if (!value) return '';
   const v = value.replace(/\D/g, '');
@@ -54,9 +62,21 @@ export default function TerrenosRegistro() {
 
     setIsSubmitting(true);
     try {
+      // Convertir archivos de escrituras a base64
+      const terrenosProcesados = await Promise.all(data.terrenos.map(async (t) => {
+        let archivo_base64 = null;
+        if (t.escrituras_file && t.escrituras_file.length > 0) {
+          archivo_base64 = await toBase64(t.escrituras_file[0]);
+        }
+        return {
+          ...t,
+          archivo_escritura_base64: archivo_base64
+        };
+      }));
+
       const payload = {
         id_persona: data.dueno.id_persona,
-        terrenos: data.terrenos
+        terrenos: terrenosProcesados
       };
 
       const res = await api.post('/terrenos', payload);
@@ -198,6 +218,17 @@ export default function TerrenosRegistro() {
                   </select>
                   {errors.terrenos?.[index]?.estado_terreno && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>Requerido</span>}
                 </div>
+
+                <div className="input-group">
+                  <label className="input-label">Escrituras (Respaldo)</label>
+                  <input 
+                    type="file" 
+                    className="input-field" 
+                    accept=".pdf,image/*"
+                    {...register(`terrenos.${index}.escrituras_file`)} 
+                  />
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>Opcional. Formatos: PDF, JPG, PNG</span>
+                </div>
               </div>
 
               {/* Mapa de este terreno */}
@@ -252,6 +283,7 @@ export default function TerrenosRegistro() {
                         <PersonaAutocompleteInput 
                           value={null}
                           placeholder="Buscar copropietario..."
+                          includeDependents={true}
                           onChange={(personaSel) => {
                             // Evitar agregar al dueño principal o a uno ya agregado
                             const duenoActual = watch('dueno');

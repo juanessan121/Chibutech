@@ -128,6 +128,7 @@ export default function MingasProgramar() {
               </label>
               <input 
                 type="datetime-local" 
+                min={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
                 className={`input-field ${errors.fecha_hora_programada ? 'error' : ''}`}
                 {...register("fecha_hora_programada", { required: "La fecha es obligatoria" })} 
               />

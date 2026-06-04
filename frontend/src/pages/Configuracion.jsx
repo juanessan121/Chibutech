@@ -21,6 +21,10 @@ export default function Configuracion() {
   const [nuevoSector, setNuevoSector] = useState({ id_zona: '', nombre_sector: '' });
   const [nuevoTitulo, setNuevoTitulo] = useState('');
 
+  // Edición
+  const [editingZona, setEditingZona] = useState(null);
+  const [editingSector, setEditingSector] = useState(null);
+
   // Diccionario amigable para las claves globales
   const labelsGlobales = {
     'TARIFA_METROS_BASE': 'Área Base de Terreno para Cobro (m²)',
@@ -109,6 +113,30 @@ export default function Configuracion() {
       loadData();
     } catch (err) {
       toast.error('Error al agregar Sector');
+    }
+  };
+
+  // ====== EDITAR ZONA ======
+  const handleUpdateZona = async (id_zona, nombre_zona) => {
+    try {
+      await axios.put(`/configuracion/zonas/${id_zona}`, { nombre_zona });
+      toast.success('Zona actualizada');
+      setEditingZona(null);
+      loadData();
+    } catch (err) {
+      toast.error('Error al actualizar Zona');
+    }
+  };
+
+  // ====== EDITAR SECTOR ======
+  const handleUpdateSector = async (id_sector, nombre_sector) => {
+    try {
+      await axios.put(`/configuracion/sectores/${id_sector}`, { nombre_sector });
+      toast.success('Sector actualizado');
+      setEditingSector(null);
+      loadData();
+    } catch (err) {
+      toast.error('Error al actualizar Sector');
     }
   };
 
@@ -209,8 +237,29 @@ export default function Configuracion() {
             </form>
             <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }}>
               {zonas.map(z => (
-                <div key={z.id_zona} style={{ padding: '0.8rem 1rem', borderBottom: '1px solid var(--border-color)' }}>
-                  {z.nombre_zona}
+                <div key={z.id_zona} style={{ padding: '0.8rem 1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  {editingZona === z.id_zona ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Editando Zona: <strong style={{color: 'var(--text-color)'}}>{z.nombre_zona}</strong></div>
+                        <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                          <input 
+                            type="text" 
+                            className="input-field" 
+                            defaultValue={z.nombre_zona} 
+                            id={`edit-zona-${z.id_zona}`}
+                            style={{ flex: 1, minWidth: '150px' }}
+                            autoFocus
+                          />
+                          <button onClick={() => handleUpdateZona(z.id_zona, document.getElementById(`edit-zona-${z.id_zona}`).value)} className="btn-primary" style={{ width: 'auto', padding: '0.4rem 1rem' }}>Guardar</button>
+                          <button onClick={() => setEditingZona(null)} className="btn-secondary" style={{ width: 'auto', padding: '0.4rem 1rem' }}>Cancelar</button>
+                        </div>
+                      </div>
+                  ) : (
+                    <>
+                      <span>{z.nombre_zona}</span>
+                      <button onClick={() => setEditingZona(z.id_zona)} className="btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}>Editar</button>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -228,8 +277,31 @@ export default function Configuracion() {
             </form>
             <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }}>
               {sectores.map(s => (
-                <div key={s.id_sector} style={{ padding: '0.8rem 1rem', borderBottom: '1px solid var(--border-color)' }}>
-                  <strong>{s.nombre_sector}</strong> <span className="text-muted" style={{fontSize: '0.8rem'}}>({s.nombre_zona})</span>
+                <div key={s.id_sector} style={{ padding: '0.8rem 1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  {editingSector === s.id_sector ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Editando Sector: <strong style={{color: 'var(--text-color)'}}>{s.nombre_sector}</strong></div>
+                        <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                          <input 
+                            type="text" 
+                            className="input-field" 
+                            defaultValue={s.nombre_sector} 
+                            id={`edit-sector-${s.id_sector}`}
+                            style={{ flex: 1, minWidth: '150px' }}
+                            autoFocus
+                          />
+                          <button onClick={() => handleUpdateSector(s.id_sector, document.getElementById(`edit-sector-${s.id_sector}`).value)} className="btn-primary" style={{ width: 'auto', padding: '0.4rem 1rem' }}>Guardar</button>
+                          <button onClick={() => setEditingSector(null)} className="btn-secondary" style={{ width: 'auto', padding: '0.4rem 1rem' }}>Cancelar</button>
+                        </div>
+                      </div>
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                      <div>
+                        <strong>{s.nombre_sector}</strong> <span className="text-muted" style={{fontSize: '0.8rem'}}>({s.nombre_zona})</span>
+                      </div>
+                      <button onClick={() => setEditingSector(s.id_sector)} className="btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}>Editar</button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -250,8 +322,8 @@ export default function Configuracion() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
             {titulos.map(t => (
-              <div key={t.id_titulo_educativo} style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <GraduationCap size={16} className="text-blue" /> {t.nombre_titulo}
+              <div key={t.codigo} style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <GraduationCap size={16} className="text-blue" /> {t.nombre}
               </div>
             ))}
           </div>

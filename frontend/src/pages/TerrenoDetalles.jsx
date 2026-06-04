@@ -125,7 +125,7 @@ export default function TerrenoDetalles() {
 
     // Sección 1: Información del Propietario
     doc.setFillColor(248, 250, 252);
-    doc.rect(15, 92, 180, 24, 'F');
+    doc.rect(15, 92, 180, 28, 'F');
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(15, 23, 42);
@@ -133,6 +133,14 @@ export default function TerrenoDetalles() {
     doc.setFont('Helvetica', 'normal');
     doc.text(`Nombre Completo: ${terreno.propietario}`, 20, 104);
     doc.text(`Cédula de Identidad: ${terreno.cedula}`, 20, 110);
+
+    if (terreno.copropietarios && terreno.copropietarios.length > 0) {
+      doc.setFont('Helvetica', 'bold');
+      doc.text('Copropietarios:', 20, 116);
+      doc.setFont('Helvetica', 'normal');
+      const copText = terreno.copropietarios.map(c => `${c.nombre} (${c.cedula})`).join(', ');
+      doc.text(doc.splitTextToSize(copText, 140), 50, 116);
+    }
 
     // Sección 2: Ficha Catastral del Lote
     doc.setFont('Helvetica', 'bold');
@@ -225,7 +233,7 @@ export default function TerrenoDetalles() {
     doc.setFont('Helvetica', 'normal');
     doc.setTextColor(100, 116, 139);
     doc.text('Ing. Franklin Masaquiza', 65, 270, { align: 'center' });
-    doc.text('Sr. Segundo C. Toalombo', 145, 270, { align: 'center' });
+    doc.text('', 145, 270, { align: 'center' });
 
     // Descargar
     doc.save(`Certificado_Riego_${terreno.clave_catastral}.pdf`);
@@ -325,6 +333,14 @@ export default function TerrenoDetalles() {
                   <span className="detail-label">Cédula</span>
                   <span className="detail-value">{terreno.cedula}</span>
                 </div>
+                {terreno.copropietarios && terreno.copropietarios.length > 0 && (
+                  <div className="detail-row">
+                    <span className="detail-label">Copropietarios</span>
+                    <span className="detail-value">
+                      {terreno.copropietarios.map(c => `${c.nombre} (${c.cedula})`).join(', ')}
+                    </span>
+                  </div>
+                )}
                 <div className="detail-item">
                   <span className="detail-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <MapPin size={16} /> Sector (Zona)
@@ -335,6 +351,21 @@ export default function TerrenoDetalles() {
                   <span className="detail-label">Estado de Construcción</span>
                   <span className="detail-value" style={{ color: 'var(--primary)', fontWeight: 'bold' }}>{terreno.estado_construccion}</span>
                 </div>
+                {terreno.archivo_escritura && (
+                  <div className="detail-row">
+                    <span className="detail-label">Archivo de Escrituras</span>
+                    <span className="detail-value">
+                      <a 
+                        href={`http://localhost:8000${terreno.archivo_escritura}`} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--primary)', textDecoration: 'underline' }}
+                      >
+                        <FileText size={16} /> Ver Documento
+                      </a>
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

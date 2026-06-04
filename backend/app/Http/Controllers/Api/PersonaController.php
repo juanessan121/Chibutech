@@ -11,6 +11,8 @@ use App\Models\CondicionPersona;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Exception;
 
 class PersonaController extends Controller
@@ -54,8 +56,11 @@ class PersonaController extends Controller
         
         $query = DB::table('Persona as p')
             ->leftJoin('Sector as s', 'p.id_sector', '=', 's.id_sector')
-            ->select('p.id_persona', 'p.cedula', 'p.nombre', 'p.apellido', 'p.estado_vital', 's.nombre_sector')
-            ->whereNull('p.id_representante_familia');
+            ->select('p.id_persona', 'p.cedula', 'p.nombre', 'p.apellido', 'p.estado_vital', 's.nombre_sector');
+            
+        if (!$request->query('include_dependents')) {
+            $query->whereNull('p.id_representante_familia');
+        }
 
         if (!empty($termino)) {
             $query->where(function($q) use ($termino) {
@@ -157,6 +162,13 @@ class PersonaController extends Controller
         try {
             DB::beginTransaction();
 
+            // Migración dinámica en caso de que no exista la columna en Perfil_Educativo_Persona
+            if (!Schema::hasColumn('Perfil_Educativo_Persona', 'archivo_titulo')) {
+                Schema::table('Perfil_Educativo_Persona', function($table) {
+                    $table->string('archivo_titulo')->nullable();
+                });
+            }
+
             // 1. Guardar Titular
             $titular = Persona::create([
                 'cedula' => $data['cedula'],
@@ -203,10 +215,24 @@ class PersonaController extends Controller
                         // Buscar el código del título en el catálogo
                         $tituloInfo = TituloEducativo::where('nombre', $carrera['nombre'])->first();
                         if ($tituloInfo) {
+                            $rutaArchivo = null;
+                            if (!empty($carrera['archivo_titulo_base64'])) {
+                                $base64data = substr($carrera['archivo_titulo_base64'], strpos($carrera['archivo_titulo_base64'], ',') + 1);
+                                $base64data = base64_decode($base64data);
+                                $extension = 'pdf'; 
+                                if (str_contains(substr($carrera['archivo_titulo_base64'], 0, 30), 'image/jpeg')) $extension = 'jpg';
+                                if (str_contains(substr($carrera['archivo_titulo_base64'], 0, 30), 'image/png')) $extension = 'png';
+            
+                                $nombreArchivo = 'titulos/' . uniqid() . '_' . $titular->cedula . '.' . $extension;
+                                Storage::disk('public')->put($nombreArchivo, $base64data);
+                                $rutaArchivo = '/storage/' . $nombreArchivo;
+                            }
+
                             PerfilEducativoPersona::create([
                                 'id_persona' => $titular->id_persona,
                                 'codigo_titulo_cine' => $tituloInfo->codigo,
-                                'estado_estudio' => 'Finalizado'
+                                'estado_estudio' => 'Finalizado',
+                                'archivo_titulo' => $rutaArchivo
                             ]);
                         }
                     }
@@ -475,10 +501,24 @@ class PersonaController extends Controller
                     if (!empty($carrera['nombre'])) {
                         $tituloInfo = TituloEducativo::where('nombre', $carrera['nombre'])->first();
                         if ($tituloInfo) {
+                            $rutaArchivo = null;
+                            if (!empty($carrera['archivo_titulo_base64'])) {
+                                $base64data = substr($carrera['archivo_titulo_base64'], strpos($carrera['archivo_titulo_base64'], ',') + 1);
+                                $base64data = base64_decode($base64data);
+                                $extension = 'pdf'; 
+                                if (str_contains(substr($carrera['archivo_titulo_base64'], 0, 30), 'image/jpeg')) $extension = 'jpg';
+                                if (str_contains(substr($carrera['archivo_titulo_base64'], 0, 30), 'image/png')) $extension = 'png';
+            
+                                $nombreArchivo = 'titulos/' . uniqid() . '_' . $id . '.' . $extension;
+                                Storage::disk('public')->put($nombreArchivo, $base64data);
+                                $rutaArchivo = '/storage/' . $nombreArchivo;
+                            }
+
                             PerfilEducativoPersona::create([
                                 'id_persona' => $id,
                                 'codigo_titulo_cine' => $tituloInfo->codigo,
-                                'estado_estudio' => 'Finalizado'
+                                'estado_estudio' => 'Finalizado',
+                                'archivo_titulo' => $rutaArchivo
                             ]);
                         }
                     }

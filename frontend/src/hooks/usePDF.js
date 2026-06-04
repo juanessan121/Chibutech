@@ -235,8 +235,14 @@ export function usePDF() {
   const generarMorosos = useCallback(async (filtros = {}, modo = 'download') => {
     setIsGenerating(true);
     try {
+      const queryParams = new URLSearchParams();
+      if (filtros.fechaDesde) queryParams.append('fechaDesde', filtros.fechaDesde);
+      if (filtros.fechaHasta) queryParams.append('fechaHasta', filtros.fechaHasta);
+      
+      const endpoint = `/reportes/morosos${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+
       const [resMorosos, resDirectiva] = await Promise.all([
-        axios.get('/reportes/morosos'),
+        axios.get(endpoint),
         axios.get('/directiva/actual').catch(() => ({ data: { data: [] } }))
       ]);
       let datos = resMorosos.data.data;

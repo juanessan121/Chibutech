@@ -112,6 +112,34 @@ class ConfiguracionController extends Controller
         }
     }
 
+    public function updateZona(Request $request, $id): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'nombre_zona' => 'required|string|max:100|unique:Zona,nombre_zona,' . $id . ',id_zona'
+            ]);
+
+            DB::table('Zona')->where('id_zona', $id)->update(['nombre_zona' => $validated['nombre_zona']]);
+            return response()->json(['status' => 'success']);
+        } catch (Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateSector(Request $request, $id): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'nombre_sector' => 'required|string|max:100|unique:Sector,nombre_sector,' . $id . ',id_sector'
+            ]);
+
+            DB::table('Sector')->where('id_sector', $id)->update(['nombre_sector' => $validated['nombre_sector']]);
+            return response()->json(['status' => 'success']);
+        } catch (Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
     // ==========================================
     // TÍTULOS EDUCATIVOS
     // ==========================================
@@ -119,13 +147,17 @@ class ConfiguracionController extends Controller
     {
         try {
             $validated = $request->validate([
-                'nombre_titulo' => 'required|string|max:150|unique:Catalogo_Titulo_Educativo,nombre_titulo',
-                'descripcion' => 'nullable|string'
+                'nombre_titulo' => 'required|string|max:150|unique:Catalogo_Titulo_Educativo,nombre'
             ]);
 
-            $id = DB::table('Catalogo_Titulo_Educativo')->insertGetId($validated);
-            return response()->json(['status' => 'success', 'data' => ['id_titulo_educativo' => $id]]);
+            DB::table('Catalogo_Titulo_Educativo')->insert([
+                'codigo' => 'TIT' . strtoupper(substr(uniqid(), -6)),
+                'nombre' => $validated['nombre_titulo'],
+                'nivel_jerarquico' => 9
+            ]);
+            return response()->json(['status' => 'success']);
         } catch (Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error en addTitulo: ' . $e->getMessage());
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }

@@ -7,6 +7,8 @@ use App\Models\Terreno;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Exception;
 
 class TerrenoController extends Controller
@@ -61,19 +63,48 @@ class TerrenoController extends Controller
             'terrenos.*.latitud' => 'nullable|numeric',
             'terrenos.*.longitud' => 'nullable|numeric',
             'terrenos.*.estado_terreno' => 'required|string',
+            'terrenos.*.archivo_escritura_base64' => 'nullable|string'
+        ], [
+            'terrenos.*.clave_catastral.unique' => 'La Clave Catastral ingresada ya se encuentra registrada en otro terreno.',
+            'terrenos.*.clave_catastral.required' => 'La Clave Catastral es obligatoria.',
+            'terrenos.*.area.required' => 'El área del terreno es obligatoria.'
         ]);
 
         try {
             DB::beginTransaction();
 
+            // Migración dinámica en caso de que no exista la columna
+            if (!Schema::hasColumn('Terreno', 'archivo_escritura')) {
+                Schema::table('Terreno', function($table) {
+                    $table->string('archivo_escritura')->nullable();
+                });
+            }
+
             foreach ($data['terrenos'] as $t) {
+                $rutaArchivo = null;
+                if (!empty($t['archivo_escritura_base64'])) {
+                    // Extraer los datos y la extensión
+                    $base64data = substr($t['archivo_escritura_base64'], strpos($t['archivo_escritura_base64'], ',') + 1);
+                    $base64data = base64_decode($base64data);
+                    
+                    // Determinar extensión simple (asumiendo que viene en mime type)
+                    $extension = 'pdf'; // Por defecto
+                    if (str_contains(substr($t['archivo_escritura_base64'], 0, 30), 'image/jpeg')) $extension = 'jpg';
+                    if (str_contains(substr($t['archivo_escritura_base64'], 0, 30), 'image/png')) $extension = 'png';
+
+                    $nombreArchivo = 'escrituras/' . uniqid() . '_' . $t['clave_catastral'] . '.' . $extension;
+                    Storage::disk('public')->put($nombreArchivo, $base64data);
+                    $rutaArchivo = '/storage/' . $nombreArchivo;
+                }
+
                 $nuevoTerreno = Terreno::create([
                     'id_persona' => $data['id_persona'],
                     'clave_catastral' => $t['clave_catastral'],
                     'area_total' => $t['area'],
                     'latitud' => $t['latitud'] ?? null,
                     'longitud' => $t['longitud'] ?? null,
-                    'id_estado_construccion' => $t['estado_terreno'] ?? 1
+                    'id_estado_construccion' => $t['estado_terreno'] ?? 1,
+                    'archivo_escritura' => $rutaArchivo
                 ]);
 
                 // Insertar copropietarios si existen
@@ -125,16 +156,22 @@ class TerrenoController extends Controller
     public function show($id): JsonResponse
     {
         try {
+            $selects = [
+                't.id_terreno', 't.clave_catastral', 't.area_total', 't.latitud', 't.longitud', 't.url_planimetria', 't.id_estado_construccion',
+                'p.id_persona', 'p.nombre', 'p.apellido', 'p.cedula',
+                's.nombre_sector', 'z.nombre_zona', 'c.nombre_estado'
+            ];
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn('Terreno', 'archivo_escritura')) {
+                $selects[] = 't.archivo_escritura';
+            }
+
             $terreno = DB::table('Terreno as t')
                 ->join('Persona as p', 't.id_persona', '=', 'p.id_persona')
                 ->leftJoin('Sector as s', 'p.id_sector', '=', 's.id_sector')
                 ->leftJoin('Zona as z', 's.id_zona', '=', 'z.id_zona')
                 ->join('Catalogo_Estado_Construccion as c', 't.id_estado_construccion', '=', 'c.id_estado_construccion')
-                ->select(
-                    't.id_terreno', 't.clave_catastral', 't.area_total', 't.latitud', 't.longitud', 't.url_planimetria', 't.id_estado_construccion',
-                    'p.id_persona', 'p.nombre', 'p.apellido', 'p.cedula',
-                    's.nombre_sector', 'z.nombre_zona', 'c.nombre_estado'
-                )
+                ->select($selects)
                 ->where('t.id_terreno', $id)
                 ->first();
 
@@ -157,6 +194,7 @@ class TerrenoController extends Controller
                 'latitud' => $terreno->latitud,
                 'longitud' => $terreno->longitud,
                 'url_planimetria' => $terreno->url_planimetria,
+                'archivo_escritura' => isset($terreno->archivo_escritura) ? $terreno->archivo_escritura : null,
                 'caudal_ls' => 2.5, // Mock temporal hasta tabla de riego
                 'acequia' => 'Ramal Principal',
                 'turno' => 'Lunes 08:00 - 10:00'
@@ -311,10 +349,13 @@ class TerrenoController extends Controller
     /**
      * Reporte: Listado de morosos (personas con multas o planillas pendientes)
      */
-    public function reporteMorosos(): JsonResponse
+    public function reporteMorosos(Request $request): JsonResponse
     {
         try {
-            $morosos = DB::table('Multa as m')
+            $fechaDesde = $request->query('fechaDesde');
+            $fechaHasta = $request->query('fechaHasta');
+
+            $query = DB::table('Multa as m')
                 ->join('Persona as p', 'm.id_persona', '=', 'p.id_persona')
                 ->leftJoin('Sector as s', 'p.id_sector', '=', 's.id_sector')
                 ->where('m.estado_pago', 'Pendiente')
@@ -326,9 +367,16 @@ class TerrenoController extends Controller
                     DB::raw("COALESCE(m.fecha_emision, CURDATE()) as fecha_emision"),
                     DB::raw("CAST(m.monto AS DECIMAL(10,2)) as monto"),
                     'm.estado_pago as estado'
-                )
-                ->orderByDesc('m.monto')
-                ->get();
+                );
+
+            if (!empty($fechaDesde)) {
+                $query->whereDate('m.fecha_emision', '>=', $fechaDesde);
+            }
+            if (!empty($fechaHasta)) {
+                $query->whereDate('m.fecha_emision', '<=', $fechaHasta);
+            }
+
+            $morosos = $query->orderByDesc('m.monto')->get();
 
             $totalDeuda = $morosos->sum('monto');
 

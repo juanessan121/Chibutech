@@ -71,6 +71,10 @@ export default function CobrosVentanilla() {
 
   const handleProcesarPago = async () => {
     if (deudasSeleccionadas.length === 0) return;
+    if (!comprobantePago.trim()) {
+      toast.error('El N° de Comprobante es obligatorio');
+      return;
+    }
     
     setIsProcessing(true);
     try {
@@ -261,7 +265,7 @@ export default function CobrosVentanilla() {
 
             {/* Número de comprobante — cubre columna numero_comprobante de Caja_Comunitaria */}
             <div className="input-group" style={{ marginBottom: '1rem' }}>
-              <label className="input-label" style={{ fontSize: '0.8rem' }}>N° Comprobante (Opcional — se autogenera si se deja vacío)</label>
+              <label className="input-label" style={{ fontSize: '0.8rem' }}>N° Comprobante *</label>
               <input
                 type="text"
                 className="input-field"

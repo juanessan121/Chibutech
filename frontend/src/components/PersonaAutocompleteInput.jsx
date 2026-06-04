@@ -2,13 +2,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../services/axiosConfig';
 
-export default function PersonaAutocompleteInput({ value, onChange, placeholder }) {
+export default function PersonaAutocompleteInput({ value, onChange, placeholder, includeDependents = false }) {
   const [query, setQuery] = useState(value?.cedula || value?.nombre || '');
   const [results, setResults] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rect, setRect] = useState(null);
   const wrapperRef = useRef(null);
+
+  // Sincronizar el estado interno de "query" cuando el prop "value" se limpia externamente
+  useEffect(() => {
+    if (value === null || value === '') {
+      setQuery('');
+    } else if (value && value.cedula) {
+      setQuery(`${value.nombre} ${value.apellido}`);
+    }
+  }, [value]);
 
   const updateRect = () => {
     if (wrapperRef.current) {
@@ -49,7 +58,8 @@ export default function PersonaAutocompleteInput({ value, onChange, placeholder 
       if (query && query.length >= 2 && isOpen) {
         setLoading(true);
         try {
-          const response = await api.get(`/personas?search=${query}`);
+          const url = `/personas?search=${query}${includeDependents ? '&include_dependents=1' : ''}`;
+          const response = await api.get(url);
           if (response.data.status === 'ok') {
             setResults(response.data.data);
           }

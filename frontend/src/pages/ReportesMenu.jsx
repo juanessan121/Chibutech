@@ -43,7 +43,7 @@ export default function ReportesMenu() {
 
   // Estado local de filtros por tipo de reporte
   const [filtroPadron, setFiltroPadron]         = useState({ sector: 'todos' });
-  const [filtroMorosos, setFiltroMorosos]       = useState({ concepto: 'todas', montoMin: '0' });
+  const [filtroMorosos, setFiltroMorosos]       = useState({ concepto: 'todas', montoMin: '0', fechaDesde: '', fechaHasta: '' });
   const [filtroFinanciero, setFiltroFinanciero] = useState({ periodo: 'este_mes', fechaDesde: '', fechaHasta: '' });
 
   // ── Dispatcher de generación según tipo activo ─────────────────────────────
@@ -56,7 +56,12 @@ export default function ReportesMenu() {
       if (activeReport === 'padron') {
         await generarPadron(filtroPadron);
       } else if (activeReport === 'morosos') {
-        await generarMorosos({ montoMin: parseFloat(filtroMorosos.montoMin) || 0 });
+        await generarMorosos({ 
+          montoMin: parseFloat(filtroMorosos.montoMin) || 0,
+          concepto: filtroMorosos.concepto,
+          fechaDesde: filtroMorosos.fechaDesde,
+          fechaHasta: filtroMorosos.fechaHasta
+        });
       } else if (activeReport === 'financiero') {
         await generarBalance({ periodo: filtroFinanciero.periodo });
       }
@@ -81,7 +86,12 @@ export default function ReportesMenu() {
       if (activeReport === 'padron') {
         url = await generarPadron(filtroPadron, 'preview');
       } else if (activeReport === 'morosos') {
-        url = await generarMorosos({ montoMin: parseFloat(filtroMorosos.montoMin) || 0 }, 'preview');
+        url = await generarMorosos({ 
+          montoMin: parseFloat(filtroMorosos.montoMin) || 0,
+          concepto: filtroMorosos.concepto,
+          fechaDesde: filtroMorosos.fechaDesde,
+          fechaHasta: filtroMorosos.fechaHasta
+        }, 'preview');
       } else if (activeReport === 'financiero') {
         url = await generarBalance({ periodo: filtroFinanciero.periodo }, 'preview');
       }
@@ -201,6 +211,26 @@ export default function ReportesMenu() {
                       <option value="50">Más de $50 dólares</option>
                       <option value="100">Más de $100 (Casos críticos)</option>
                     </select>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', gridColumn: '1 / -1' }}>
+                    <div className="input-group">
+                      <label className="input-label">Desde Fecha</label>
+                      <input
+                        type="date"
+                        className="input-field"
+                        value={filtroMorosos.fechaDesde}
+                        onChange={(e) => setFiltroMorosos(f => ({ ...f, fechaDesde: e.target.value }))}
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label className="input-label">Hasta Fecha</label>
+                      <input
+                        type="date"
+                        className="input-field"
+                        value={filtroMorosos.fechaHasta}
+                        onChange={(e) => setFiltroMorosos(f => ({ ...f, fechaHasta: e.target.value }))}
+                      />
+                    </div>
                   </div>
                 </>
               )}
