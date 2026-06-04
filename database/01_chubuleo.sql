@@ -322,6 +322,8 @@ CREATE TABLE Planilla_Cabecera (
     mes_fiscal INT NOT NULL,
     total_pagar DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     estado_pago ENUM('Pendiente', 'Pagada', 'Anulada') DEFAULT 'Pendiente',
+    numero_comprobante VARCHAR(50) NULL,
+    fecha_pago DATETIME NULL,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_planilla_persona FOREIGN KEY (id_persona) REFERENCES Persona(id_persona) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

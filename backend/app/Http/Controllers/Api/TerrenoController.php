@@ -341,5 +341,58 @@ class TerrenoController extends Controller
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
+
+    public function buscarUniversal(Request $request): JsonResponse
+    {
+        try {
+            $termino = $request->query('termino');
+            $criterio = $request->query('criterio', 'todos'); // clave, cedula, nombre, todos
+
+            if (empty($termino)) {
+                return response()->json(['status' => 'success', 'data' => []]);
+            }
+
+            $query = DB::table('Terreno as t')
+                ->join('Persona as p', 't.id_persona', '=', 'p.id_persona')
+                ->leftJoin('Sector as s', 'p.id_sector', '=', 's.id_sector')
+                ->select(
+                    't.id_terreno',
+                    't.clave_catastral',
+                    't.area_total',
+                    'p.id_persona as id_titular',
+                    'p.cedula as cedula_titular',
+                    DB::raw("CONCAT(p.nombre, ' ', p.apellido) as nombre_titular"),
+                    's.nombre_sector as sector'
+                );
+
+            if ($criterio === 'clave') {
+                $query->where('t.clave_catastral', 'LIKE', '%' . $termino . '%');
+            } else if ($criterio === 'cedula') {
+                $query->where('p.cedula', 'LIKE', '%' . $termino . '%');
+            } else if ($criterio === 'nombre') {
+                $query->where(DB::raw("CONCAT(p.nombre, ' ', p.apellido)"), 'LIKE', '%' . $termino . '%');
+            } else {
+                $query->where('t.clave_catastral', 'LIKE', '%' . $termino . '%')
+                      ->orWhere('p.cedula', 'LIKE', '%' . $termino . '%')
+                      ->orWhere(DB::raw("CONCAT(p.nombre, ' ', p.apellido)"), 'LIKE', '%' . $termino . '%');
+            }
+
+            $terrenos = $query->get();
+
+            // Adjuntar copropietarios a cada terreno
+            foreach ($terrenos as $t) {
+                $copropietarios = DB::table('Copropietario_Terreno as ct')
+                    ->join('Persona as cp', 'ct.id_persona', '=', 'cp.id_persona')
+                    ->where('ct.id_terreno', $t->id_terreno)
+                    ->select('cp.cedula', DB::raw("CONCAT(cp.nombre, ' ', cp.apellido) as nombre"))
+                    ->get();
+                $t->copropietarios = $copropietarios;
+            }
+
+            return response()->json(['status' => 'success', 'data' => $terrenos]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
 }
 

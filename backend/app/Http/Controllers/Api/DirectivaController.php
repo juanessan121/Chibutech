@@ -75,6 +75,8 @@ class DirectivaController extends Controller
         } catch (Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
+    }
+
     /**
      * Registra una nueva directiva.
      * Finaliza la actual y crea los nuevos registros.

@@ -34,7 +34,8 @@ Route::post('/personas', [PersonaController::class, 'store']);
 Route::put('/personas/{id}', [PersonaController::class, 'update']);
 Route::delete('/personas/{id}', [PersonaController::class, 'destroy']);
 
-// Terrenos (Registro y Actualización)
+// Terrenos y Propiedades
+Route::get('/terrenos/buscar-universal', [TerrenoController::class, 'buscarUniversal']);
 Route::get('/terrenos', [TerrenoController::class, 'index']);
 Route::get('/terrenos/{id}', [TerrenoController::class, 'show']);
 Route::post('/terrenos', [TerrenoController::class, 'store']);
@@ -51,7 +52,10 @@ Route::post('/mingas', [MingaController::class, 'store']);
 
 // Cobros y Caja
 Route::get('/cobros/deudas/{id}', [CobroController::class, 'deudasPendientes']);
+Route::get('/cobros/terreno/{id}/deudas', [CobroController::class, 'deudas']);
+Route::get('/cobros/terreno/{id}/consultar-mes', [CobroController::class, 'consultarMes']);
 Route::post('/cobros/pagar', [CobroController::class, 'procesarPago']);
+Route::post('/cobros/pagar-agua', [CobroController::class, 'pagarAgua']);
 Route::get('/cobros/historial', [CobroController::class, 'historialTransacciones']);
 Route::post('/cobros/multa', [CobroController::class, 'generarMulta']);
 Route::post('/cobros/egreso', [CobroController::class, 'registrarEgreso']);

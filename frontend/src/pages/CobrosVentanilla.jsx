@@ -4,6 +4,7 @@ import { Search, ArrowLeft, User, MapPin, DollarSign, Printer, CheckCircle, Aler
 import { Toaster, toast } from 'sonner';
 import { getUsers } from '../services/userService';
 import { getDeudasPendientes, procesarPago } from '../services/cobroService';
+import axios from '../services/axiosConfig';
 
 export default function CobrosVentanilla() {
   const navigate = useNavigate();
@@ -16,33 +17,46 @@ export default function CobrosVentanilla() {
   const [deudasSeleccionadas, setDeudasSeleccionadas] = useState([]);
   const [comprobantePago, setComprobantePago] = useState('');
 
-  useEffect(() => {
-    const cargarUsuarios = async () => {
-      try {
-        const users = await getUsers();
-        setUsuariosDB(users);
-      } catch (error) {
-        toast.error('Error al cargar la base de agricultores');
-      }
-    };
-    cargarUsuarios();
-  }, []);
+  const [buscando, setBuscando] = useState(false);
+  const [resultados, setResultados] = useState([]);
 
-  const handleSearch = async () => {
-    const found = usuariosDB.find(u => u.cedula === searchTerm || (u.nombre + ' ' + u.apellido).toLowerCase().includes(searchTerm.toLowerCase()));
-    if (found) {
-      setSelectedUser(found);
-      setDeudasSeleccionadas([]); 
-      try {
-        const deudas = await getDeudasPendientes(found.id_persona);
-        setDeudasActuales(deudas || []);
-      } catch (error) {
-        toast.error('Error al cargar las deudas pendientes.');
-        setDeudasActuales([]);
-      }
+  // Búsqueda en tiempo real
+  useEffect(() => {
+    if (searchTerm.length >= 3) {
+      const fetchResultados = async () => {
+        setBuscando(true);
+        try {
+          const res = await axios.get(`/terrenos/buscar-universal?termino=${searchTerm}&criterio=todos`);
+          setResultados(res.data.data);
+        } catch (error) {
+          console.error(error);
+        } finally {
+          setBuscando(false);
+        }
+      };
+      const debounce = setTimeout(fetchResultados, 300);
+      return () => clearTimeout(debounce);
     } else {
-      toast.error('No se encontró al agricultor en el padrón.');
-      setSelectedUser(null);
+      setResultados([]);
+    }
+  }, [searchTerm]);
+
+  const seleccionarPersona = async (terreno) => {
+    const userObj = {
+      id_persona: terreno.id_titular,
+      cedula: terreno.cedula_titular,
+      nombre: terreno.nombre_titular,
+      sector: terreno.sector
+    };
+    setSelectedUser(userObj);
+    setSearchTerm('');
+    setResultados([]);
+    setDeudasSeleccionadas([]);
+    try {
+      const deudas = await getDeudasPendientes(userObj.id_persona);
+      setDeudasActuales(deudas || []);
+    } catch (error) {
+      toast.error('Error al cargar las deudas pendientes.');
       setDeudasActuales([]);
     }
   };
@@ -105,18 +119,48 @@ export default function CobrosVentanilla() {
           
           <div className="glass-card" style={{ padding: '1.5rem' }}>
             <h3 style={{ marginBottom: '1rem', color: 'var(--text-main)' }}>Buscar Agricultor</h3>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <input 
-                type="text" 
-                className="input-field" 
-                placeholder="Ingrese Cédula o Apellidos..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-              <button className="btn-primary" onClick={handleSearch} style={{ width: 'auto', padding: '0 1.5rem' }}>
-                <Search size={18} />
-              </button>
+            <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Search size={18} style={{ position: 'absolute', left: '1rem', color: 'var(--text-muted)' }} />
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  style={{ paddingLeft: '2.5rem', width: '100%' }}
+                  placeholder="Ingrese Cédula, Nombre o Clave..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              {buscando && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', marginTop: '0.5rem', padding: '1rem', zIndex: 10, textAlign: 'center' }}>
+                  <span className="text-muted">Buscando...</span>
+                </div>
+              )}
+
+              {!buscando && resultados.length > 0 && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', marginTop: '0.5rem', maxHeight: '300px', overflowY: 'auto', zIndex: 10, display: 'flex', flexDirection: 'column' }}>
+                  {resultados.map(r => (
+                    <div 
+                      key={r.id_terreno}
+                      style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', transition: 'background 0.2s' }}
+                      onClick={() => seleccionarPersona(r)}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <div style={{ fontWeight: 'bold', color: 'var(--primary-light)', marginBottom: '0.2rem' }}>
+                        {r.nombre_titular}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        C.I: {r.cedula_titular} | Clave: {r.clave_catastral}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        Sector: {r.sector || 'N/A'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

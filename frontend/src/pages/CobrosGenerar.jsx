@@ -4,6 +4,7 @@ import { PlusCircle, ArrowLeft, User, DollarSign, AlertTriangle, X } from 'lucid
 import { Toaster, toast } from 'sonner';
 import { generarMulta } from '../services/cobroService';
 import PersonaAutocompleteInput from '../components/PersonaAutocompleteInput';
+import axios from '../services/axiosConfig';
 
 export default function CobrosGenerar() {
   const navigate = useNavigate();
@@ -12,6 +13,43 @@ export default function CobrosGenerar() {
   const [motivo, setMotivo] = useState('');
   const [monto, setMonto] = useState('');
   const [urlDocumento, setUrlDocumento] = useState('');
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [buscando, setBuscando] = useState(false);
+  const [resultados, setResultados] = useState([]);
+
+  // Búsqueda en tiempo real
+  React.useEffect(() => {
+    if (searchTerm.length >= 3) {
+      const fetchResultados = async () => {
+        setBuscando(true);
+        try {
+          const res = await axios.get(`/terrenos/buscar-universal?termino=${searchTerm}&criterio=todos`);
+          setResultados(res.data.data);
+        } catch (error) {
+          console.error(error);
+        } finally {
+          setBuscando(false);
+        }
+      };
+      const debounce = setTimeout(fetchResultados, 300);
+      return () => clearTimeout(debounce);
+    } else {
+      setResultados([]);
+    }
+  }, [searchTerm]);
+
+  const seleccionarPersona = (terreno) => {
+    setSelectedUser({
+      id_persona: terreno.id_titular,
+      cedula: terreno.cedula_titular,
+      nombre: terreno.nombre_titular,
+      apellido: '', // nombre_titular ya tiene nombre y apellido
+      sector: terreno.sector
+    });
+    setSearchTerm('');
+    setResultados([]);
+  };
 
   const handleGenerarMulta = async (e) => {
     e.preventDefault();
@@ -76,11 +114,49 @@ export default function CobrosGenerar() {
                 </button>
               </div>
             ) : (
-              <PersonaAutocompleteInput
-                value={null}
-                placeholder="Buscar por cédula o nombre del infractor..."
-                onChange={(persona) => setSelectedUser(persona)}
-              />
+              <div style={{ position: 'relative' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <Search size={18} style={{ position: 'absolute', left: '1rem', color: 'var(--text-muted)' }} />
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    style={{ paddingLeft: '2.5rem', width: '100%' }}
+                    placeholder="Ingrese Cédula, Nombre o Clave..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+
+                {buscando && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', marginTop: '0.5rem', padding: '1rem', zIndex: 10, textAlign: 'center' }}>
+                    <span className="text-muted">Buscando...</span>
+                  </div>
+                )}
+
+                {!buscando && resultados.length > 0 && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', marginTop: '0.5rem', maxHeight: '300px', overflowY: 'auto', zIndex: 10, display: 'flex', flexDirection: 'column' }}>
+                    {resultados.map(r => (
+                      <div 
+                        key={r.id_terreno}
+                        style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', transition: 'background 0.2s' }}
+                        onClick={() => seleccionarPersona(r)}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <div style={{ fontWeight: 'bold', color: 'var(--primary-light)', marginBottom: '0.2rem' }}>
+                          {r.nombre_titular}
+                        </div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          C.I: {r.cedula_titular} | Clave: {r.clave_catastral}
+                        </div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          Sector: {r.sector || 'N/A'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
