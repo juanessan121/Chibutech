@@ -21,6 +21,7 @@ class PersonaController extends Controller
     private function validarCedulaEcuatoriana($cedula)
     {
         if (strlen($cedula) !== 10) return false;
+        if (!ctype_digit($cedula)) return false;
         
         $provincia = intval(substr($cedula, 0, 2));
         if ($provincia < 1 || $provincia > 24) return false;
@@ -93,7 +94,7 @@ class PersonaController extends Controller
             'cedula' => 'required|string|size:10|unique:Persona,cedula',
             'nombres' => 'required|string|max:100|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/',
             'apellidos' => 'required|string|max:100|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/',
-            'fecha_nacimiento' => 'nullable|date',
+            'fecha_nacimiento' => 'nullable|date|after_or_equal:' . date('Y-m-d', strtotime('-120 years')) . '|before_or_equal:today',
             'id_genero' => 'nullable|integer',
             'tiene_condicion' => 'nullable|boolean',
             'condiciones' => 'nullable|array',
@@ -113,6 +114,15 @@ class PersonaController extends Controller
             'carreras_principal' => 'nullable|array',
             
             'dependientes' => 'nullable|array',
+        ], [
+            'cedula.unique' => 'La cédula ingresada ya se encuentra registrada en el sistema.',
+            'cedula.size' => 'La cédula debe tener exactamente 10 dígitos.',
+            'cedula.required' => 'El número de cédula es obligatorio.',
+            'nombres.regex' => 'Los nombres solo pueden contener letras.',
+            'apellidos.regex' => 'Los apellidos solo pueden contener letras.',
+            'fecha_nacimiento.after_or_equal' => 'La edad no puede ser mayor a 120 años.',
+            'fecha_nacimiento.before_or_equal' => 'La fecha de nacimiento no puede ser en el futuro.',
+            'contactos.*.valor_contacto.regex' => 'El formato del contacto no es válido.'
         ]);
 
         if (!$this->validarCedulaEcuatoriana($data['cedula'])) {
@@ -120,6 +130,28 @@ class PersonaController extends Controller
                 'status' => 'error',
                 'message' => 'La cédula ingresada no es válida para Ecuador.'
             ], 422);
+        }
+
+        if (!empty($data['dependientes'])) {
+            foreach ($data['dependientes'] as $dep) {
+                if (empty($dep['cedula']) || !$this->validarCedulaEcuatoriana($dep['cedula'])) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'La cédula del dependiente ' . ($dep['nombres'] ?? '') . ' no es válida para Ecuador.'
+                    ], 422);
+                }
+                
+                $query = Persona::where('cedula', $dep['cedula']);
+                if (!empty($dep['id_persona'])) {
+                    $query->where('id_persona', '!=', $dep['id_persona']);
+                }
+                if ($query->exists()) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'La cédula del dependiente ' . ($dep['nombres'] ?? '') . ' ya se encuentra registrada en el sistema.'
+                    ], 422);
+                }
+            }
         }
 
         try {
@@ -333,7 +365,7 @@ class PersonaController extends Controller
             'cedula' => 'required|string|size:10|unique:Persona,cedula,' . $id . ',id_persona',
             'nombres' => 'required|string|max:100|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/',
             'apellidos' => 'required|string|max:100|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/',
-            'fecha_nacimiento' => 'nullable|date',
+            'fecha_nacimiento' => 'nullable|date|after_or_equal:' . date('Y-m-d', strtotime('-120 years')) . '|before_or_equal:today',
             'id_genero' => 'nullable|integer',
             'tiene_condicion' => 'nullable|boolean',
             'condiciones' => 'nullable|array',
@@ -353,6 +385,14 @@ class PersonaController extends Controller
             'carreras_principal' => 'nullable|array',
             
             'dependientes' => 'nullable|array',
+        ], [
+            'cedula.unique' => 'La cédula ingresada ya se encuentra registrada en el sistema.',
+            'cedula.size' => 'La cédula debe tener exactamente 10 dígitos.',
+            'cedula.required' => 'El número de cédula es obligatorio.',
+            'nombres.regex' => 'Los nombres solo pueden contener letras.',
+            'apellidos.regex' => 'Los apellidos solo pueden contener letras.',
+            'fecha_nacimiento.after_or_equal' => 'La edad no puede ser mayor a 120 años.',
+            'fecha_nacimiento.before_or_equal' => 'La fecha de nacimiento no puede ser en el futuro.'
         ]);
 
         if (!$this->validarCedulaEcuatoriana($data['cedula'])) {
@@ -360,6 +400,28 @@ class PersonaController extends Controller
                 'status' => 'error',
                 'message' => 'La cédula ingresada no es válida para Ecuador.'
             ], 422);
+        }
+
+        if (!empty($data['dependientes'])) {
+            foreach ($data['dependientes'] as $dep) {
+                if (empty($dep['cedula']) || !$this->validarCedulaEcuatoriana($dep['cedula'])) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'La cédula del dependiente ' . ($dep['nombres'] ?? '') . ' no es válida para Ecuador.'
+                    ], 422);
+                }
+                
+                $query = Persona::where('cedula', $dep['cedula']);
+                if (!empty($dep['id_persona'])) {
+                    $query->where('id_persona', '!=', $dep['id_persona']);
+                }
+                if ($query->exists()) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'La cédula del dependiente ' . ($dep['nombres'] ?? '') . ' ya se encuentra registrada en el sistema.'
+                    ], 422);
+                }
+            }
         }
 
         try {

@@ -150,7 +150,7 @@ export default function DirectivaGestion() {
               </div>
             </div>
 
-            <div className="form-grid full">
+              <div className="form-grid full">
               <div className="input-group">
                 <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <FileText size={14} className="text-yellow" /> N° Resolución de Nombramiento *
@@ -161,9 +161,12 @@ export default function DirectivaGestion() {
                   placeholder="Ej. RES-2026-001 o Acta No. 45 del Ministerio de Inclusión"
                   required
                   value={formData.resolucion}
-                  onChange={e => setFormData({...formData, resolucion: e.target.value})}
+                  onChange={e => {
+                    const validValue = e.target.value.replace(/[^a-zA-Z0-9\s-]/g, '');
+                    setFormData({...formData, resolucion: validValue});
+                  }}
                 />
-                <span className="text-muted" style={{ fontSize: '0.75rem' }}>Corresponde al campo <code>resolucion_nombramiento</code> de la tabla Miembro_Directiva.</span>
+                <span className="text-muted" style={{ fontSize: '0.75rem' }}>Solo se permiten letras, números, espacios y guiones.</span>
               </div>
             </div>
 
@@ -177,7 +180,7 @@ export default function DirectivaGestion() {
                     <label style={{ color: 'var(--yellow)', fontWeight: 'bold', fontSize: '0.9rem' }}>{cargo.nombre}</label>
                     <div style={{ flex: 1 }}>
                       <PersonaAutocompleteInput
-                        onSelect={(id_persona) => handleCargoChange(cargo.id, id_persona)}
+                        onChange={(item) => handleCargoChange(cargo.id, item.id_persona)}
                         placeholder="Buscar por Cédula o Apellido..."
                       />
                     </div>

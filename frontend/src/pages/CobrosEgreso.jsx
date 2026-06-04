@@ -1,22 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wallet, ArrowLeft, DollarSign, FileText, Save } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { registrarEgreso } from '../services/cobroService';
 import { allowTextWithPunctuation } from '../utils/validators';
+import axios from '../services/axiosConfig';
 
 export default function CobrosEgreso() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saldoCaja, setSaldoCaja] = useState(null);
   
   const [concepto, setConcepto] = useState('');
   const [monto, setMonto] = useState('');
   const [comprobante, setComprobante] = useState('');
 
+  useEffect(() => {
+    const fetchBalance = async () => {
+      try {
+        const { data } = await axios.get('/reportes/balance');
+        setSaldoCaja(data.data.resumen.saldo);
+      } catch (error) {
+        console.error('Error obteniendo balance:', error);
+      }
+    };
+    fetchBalance();
+  }, []);
+
   const handleRegistrarEgreso = async (e) => {
     e.preventDefault();
     if (!concepto || !monto) {
       toast.error('El concepto y el monto son obligatorios.');
+      return;
+    }
+
+    if (saldoCaja !== null && parseFloat(monto) > saldoCaja) {
+      toast.error('El egreso no puede ser mayor al saldo disponible en caja.');
       return;
     }
     
@@ -28,7 +47,7 @@ export default function CobrosEgreso() {
         comprobante
       });
       toast.success('Gasto registrado correctamente en el Arqueo de Caja.');
-      setTimeout(() => navigate('/dashboard/cobros'), 2000);
+      setTimeout(() => navigate('/dashboard/cobros/historial'), 2000);
     } catch (error) {
       toast.error('Error al registrar el gasto.');
     } finally {
@@ -38,7 +57,6 @@ export default function CobrosEgreso() {
 
   return (
     <div className="animate-fade-in pb-10">
-      
       
       <div className="page-header" style={{ marginBottom: '2rem' }}>
         <div>
@@ -53,6 +71,24 @@ export default function CobrosEgreso() {
       </div>
 
       <div className="glass-card" style={{ padding: '2.5rem', maxWidth: '700px', margin: '0 auto' }}>
+        
+        {/* Banner de Saldo Disponible */}
+        {saldoCaja !== null && (
+          <div style={{ 
+            marginBottom: '2rem', padding: '1.5rem', background: 'var(--bg-darker)', 
+            borderRadius: '12px', borderLeft: '4px solid var(--success)',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
+          }}>
+            <div>
+              <span className="text-muted" style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Saldo Disponible en Caja Comunitaria</span>
+              <h2 style={{ margin: 0, color: saldoCaja >= 0 ? 'var(--success)' : 'var(--red)', fontSize: '2rem' }}>
+                ${saldoCaja.toFixed(2)}
+              </h2>
+            </div>
+            <Wallet size={40} style={{ color: 'var(--success)', opacity: 0.2 }} />
+          </div>
+        )}
+
         <form onSubmit={handleRegistrarEgreso} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
           <div className="form-grid full">

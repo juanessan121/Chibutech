@@ -243,7 +243,7 @@ export function usePDF() {
       const directivaActiva = resDirectiva.data.data;
       
       const montoMin = parseFloat(filtros.montoMin) || 0;
-      if (montoMin > 0) datos = datos.filter(u => u.monto >= montoMin);
+      if (montoMin > 0) datos = datos.filter(u => parseFloat(u.monto) >= montoMin);
 
       const totalDeuda = datos.reduce((acc, u) => acc + parseFloat(u.monto), 0);
 
@@ -286,7 +286,7 @@ export function usePDF() {
           u.sector,
           u.concepto,
           u.fecha_vence,
-          `$${u.monto.toFixed(2)}`,
+          `$${parseFloat(u.monto).toFixed(2)}`,
           u.estado,
         ]),
         ...TABLE_STYLES,

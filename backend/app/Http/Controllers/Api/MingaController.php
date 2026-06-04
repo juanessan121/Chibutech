@@ -102,6 +102,40 @@ class MingaController extends Controller
             }
 
             if ($request->cerrar_registro) {
+                // Primero obtenemos el valor de la multa para esta minga
+                $mingaData = DB::table('Minga')->where('id_minga', $id)->first();
+                $valorMulta = $mingaData ? $mingaData->valor_multa_inasistencia : 0;
+                
+                // Si la minga tiene multa configurada, generamos el registro en la tabla Multa
+                if ($valorMulta > 0) {
+                    $faltos = DB::table('Asistencia_Minga')
+                        ->where('id_minga', $id)
+                        ->where('id_estado_asistencia', 3) // 3 = Faltó
+                        ->pluck('id_persona');
+                    
+                    $multasToInsert = [];
+                    foreach ($faltos as $idPersona) {
+                        // Verificamos que no exista ya la multa para evitar duplicados en caso de múltiples clics
+                        $exists = DB::table('Multa')
+                            ->where('id_persona', $idPersona)
+                            ->where('motivo_multa', 'like', "Inasistencia a Minga: %($mingaData->fecha_programada)")
+                            ->exists();
+                            
+                        if (!$exists) {
+                            $multasToInsert[] = [
+                                'id_persona' => $idPersona,
+                                'motivo_multa' => 'Inasistencia a Minga: ' . $mingaData->motivo_general . ' (' . $mingaData->fecha_programada . ')',
+                                'monto' => $valorMulta,
+                                'estado_pago' => 'Pendiente',
+                                'fecha_emision' => now()
+                            ];
+                        }
+                    }
+                    if (!empty($multasToInsert)) {
+                        DB::table('Multa')->insert($multasToInsert);
+                    }
+                }
+
                 DB::table('Minga')->where('id_minga', $id)->update(['id_estado_minga' => 3]); // 3 = Finalizada
             }
 

@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { History, ArrowLeft, Search, Calendar, FileText, Download, Users } from 'lucide-react';
-import { getMingas } from '../services/mingaService';
+import { History, ArrowLeft, Search, Calendar, FileText, Download, Users, X } from 'lucide-react';
+import { getMingas, getConvocados } from '../services/mingaService';
+import { toast } from 'sonner';
+
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export default function MingasHistorial() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('Todos');
   const [historialMingas, setHistorialMingas] = useState([]);
+
+  // Modal de detalles
+  const [detallesModalOpen, setDetallesModalOpen] = useState(false);
+  const [mingaDetalle, setMingaDetalle] = useState(null);
+  const [convocadosDetalle, setConvocadosDetalle] = useState([]);
 
   useEffect(() => {
     getMingas().then(data => {
@@ -20,6 +29,63 @@ export default function MingasHistorial() {
     const matchEstado = filtroEstado === 'Todos' || m.estado === filtroEstado;
     return matchSearch && matchEstado;
   });
+
+  const abrirDetalles = async (minga) => {
+    const toastId = toast.loading('Cargando detalles...');
+    try {
+      const convocados = await getConvocados(minga.id);
+      setMingaDetalle(minga);
+      setConvocadosDetalle(convocados);
+      setDetallesModalOpen(true);
+      toast.dismiss(toastId);
+    } catch (error) {
+      toast.error('Error al cargar detalles', { id: toastId });
+    }
+  };
+
+  const descargarActaPdf = async (minga) => {
+    const toastId = toast.loading('Generando Acta PDF...');
+    try {
+      const convocados = await getConvocados(minga.id);
+      
+      const doc = new jsPDF();
+      doc.setFontSize(18);
+      doc.text("ACTA DE MINGA COMUNITARIA", 14, 20);
+      
+      doc.setFontSize(12);
+      doc.text(`Fecha: ${minga.fecha}`, 14, 30);
+      doc.text(`Motivo: ${minga.motivo}`, 14, 38);
+      doc.text(`Lugar: ${minga.lugar}`, 14, 46);
+      doc.text(`Multa por inasistencia: $${minga.multa.toFixed(2)}`, 14, 54);
+      
+      const presentes = convocados.filter(c => c.estado === 'Presente').length;
+      const faltas = convocados.filter(c => c.estado === 'Faltó' || c.estado === 'Faltó (Pagado)').length;
+      const justificados = convocados.filter(c => c.estado === 'Justificado').length;
+
+      doc.text(`Resumen: ${presentes} Presentes, ${faltas} Faltas, ${justificados} Justificados`, 14, 62);
+
+      const tableData = convocados.map(c => [
+        c.cedula,
+        c.nombre,
+        c.sector,
+        c.estado
+      ]);
+
+          doc.autoTable({
+            startY: 70,
+            head: [['Cédula', 'Nombre', 'Sector', 'Estado']],
+            body: tableData,
+            theme: 'grid',
+            styles: { fontSize: 9 },
+            headStyles: { fillColor: [16, 185, 129] } // Verde
+          });
+
+          doc.save(`Acta_Minga_${minga.fecha}.pdf`);
+          toast.success('PDF descargado con éxito', { id: toastId });
+    } catch (error) {
+      toast.error('Error al generar PDF', { id: toastId });
+    }
+  };
 
   return (
     <div className="animate-fade-in pb-10">
@@ -112,6 +178,7 @@ export default function MingasHistorial() {
                       <button 
                         title="Ver Resumen Detallado"
                         className="btn-icon"
+                        onClick={() => abrirDetalles(minga)}
                         style={{ color: 'var(--blue)', background: 'rgba(14, 165, 233, 0.1)', border: '1px solid var(--blue)', borderRadius: '0.5rem', padding: '0.4rem' }}
                       >
                         <FileText size={18} />
@@ -120,6 +187,7 @@ export default function MingasHistorial() {
                         <button 
                           title="Descargar Acta PDF"
                           className="btn-icon"
+                          onClick={() => descargarActaPdf(minga)}
                           style={{ color: 'var(--earth)', background: 'rgba(217, 119, 6, 0.1)', border: '1px solid var(--earth)', borderRadius: '0.5rem', padding: '0.4rem' }}
                         >
                           <Download size={18} />
@@ -139,6 +207,84 @@ export default function MingasHistorial() {
           </tbody>
         </table>
       </div>
+      {detallesModalOpen && mingaDetalle && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+        }}>
+          <div className="glass-card animate-fade-in" style={{ padding: '2rem', width: '90%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
+            <button 
+              onClick={() => setDetallesModalOpen(false)} 
+              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-main)', cursor: 'pointer', borderRadius: '50%', width: '2.5rem', height: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, transition: 'all 0.2s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'; e.currentTarget.style.color = 'var(--red)'; e.currentTarget.style.borderColor = 'var(--red)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-color)'; e.currentTarget.style.color = 'var(--text-main)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
+            >
+              <X size={20} />
+            </button>
+            <h3 style={{ marginBottom: '0.5rem', color: 'var(--blue)' }}>Resumen de Minga</h3>
+            <p className="text-muted" style={{ marginBottom: '1.5rem' }}>{mingaDetalle.fecha} - {mingaDetalle.motivo}</p>
+
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+              <div style={{ flex: 1, padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '0.5rem', textAlign: 'center', border: '1px solid var(--green)' }}>
+                <span style={{ display: 'block', fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--green)' }}>
+                  {convocadosDetalle.filter(c => c.estado === 'Presente').length}
+                </span>
+                <span className="text-muted" style={{ fontSize: '0.85rem' }}>Asistencias</span>
+              </div>
+              <div style={{ flex: 1, padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.5rem', textAlign: 'center', border: '1px solid var(--red)' }}>
+                <span style={{ display: 'block', fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--red)' }}>
+                  {convocadosDetalle.filter(c => c.estado === 'Faltó' || c.estado === 'Faltó (Pagado)').length}
+                </span>
+                <span className="text-muted" style={{ fontSize: '0.85rem' }}>Faltas</span>
+              </div>
+              <div style={{ flex: 1, padding: '1rem', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '0.5rem', textAlign: 'center', border: '1px solid var(--yellow)' }}>
+                <span style={{ display: 'block', fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--yellow)' }}>
+                  {convocadosDetalle.filter(c => c.estado === 'Justificado').length}
+                </span>
+                <span className="text-muted" style={{ fontSize: '0.85rem' }}>Justificados</span>
+              </div>
+            </div>
+
+            <h4 style={{ marginBottom: '1rem' }}>Detalle de Convocados</h4>
+            <div className="table-container" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Cédula</th>
+                    <th>Nombre y Apellido</th>
+                    <th>Sector</th>
+                    <th style={{ textAlign: 'center' }}>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {convocadosDetalle.map((c, i) => (
+                    <tr key={i}>
+                      <td>{c.cedula}</td>
+                      <td>{c.nombre}</td>
+                      <td>{c.sector}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span className={`badge ${c.estado === 'Presente' ? 'badge-admin' : c.estado.includes('Faltó') ? 'badge-user' : 'badge-directive'}`}>
+                          {c.estado}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {convocadosDetalle.length === 0 && (
+                    <tr>
+                      <td colSpan="4" style={{ textAlign: 'center', padding: '2rem' }}>No hay datos de asistentes registrados.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+              <button className="btn-primary" onClick={() => setDetallesModalOpen(false)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

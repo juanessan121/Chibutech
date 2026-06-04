@@ -80,7 +80,8 @@ export default function MingasProgramar() {
       toast.success('¡Convocatoria de Minga creada exitosamente!');
       setTimeout(() => navigate('/dashboard/mingas'), 2000);
     } catch (error) {
-      toast.error(error.message || 'Error al programar la minga');
+      const errorMsg = error.response?.data?.message || error.message || 'Error al programar la minga';
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
