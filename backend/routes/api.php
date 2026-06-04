@@ -7,10 +7,21 @@ use App\Http\Controllers\Api\PersonaController;
 use App\Http\Controllers\Api\TerrenoController;
 use App\Http\Controllers\Api\MingaController;
 use App\Http\Controllers\Api\CobroController;
+use App\Http\Controllers\Api\AuthController;
 
-Route::get('/user', function (Request $request) {
+Route::post('/auth/login', [AuthController::class, 'login']);
+Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
+
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+});
+
+// Envolver las rutas existentes en un grupo protegido por sanctum 
+// Route::middleware('auth:sanctum')->group(function () {
+// Pero como el frontend tal vez no esté listo todavía para enviar el token en TODAS las peticiones,
+// Lo dejaremos público por un momento hasta modificar el axiosConfig, o podemos protegerlo ya.
+// De hecho, el plan dice "proteger el resto de las rutas". Lo protegeré.
+Route::middleware('auth:sanctum')->group(function () {
 
 // Buscar títulos educativos
 Route::get('/catalogos/titulos/todos', [TituloController::class, 'todos']);
@@ -67,23 +78,21 @@ Route::get('/reportes/morosos',  [TerrenoController::class, 'reporteMorosos']);
 Route::get('/reportes/balance',  [CobroController::class,   'reporteBalance']);
 
 // Directiva
-use App\Http\Controllers\Api\DirectivaController;
-Route::get('/directiva/actual', [DirectivaController::class, 'actual']);
-Route::get('/directiva/historial', [DirectivaController::class, 'historial']);
-Route::post('/directiva', [DirectivaController::class, 'store']);
+Route::get('/directiva/actual', [\App\Http\Controllers\Api\DirectivaController::class, 'actual']);
+Route::get('/directiva/historial', [\App\Http\Controllers\Api\DirectivaController::class, 'historial']);
+Route::post('/directiva', [\App\Http\Controllers\Api\DirectivaController::class, 'store']);
 
 // Auditoría
-use App\Http\Controllers\Api\AuditoriaController;
-Route::get('/auditoria', [AuditoriaController::class, 'index']);
+Route::get('/auditoria', [\App\Http\Controllers\Api\AuditoriaController::class, 'index']);
 
 // Configuración Global y Catálogos
-use App\Http\Controllers\Api\ConfiguracionController;
-Route::get('/configuracion', [ConfiguracionController::class, 'getGlobales']);
-Route::put('/configuracion', [ConfiguracionController::class, 'updateGlobal']);
-Route::get('/configuracion/zonas-sectores', [ConfiguracionController::class, 'getZonasSectores']);
-Route::post('/configuracion/zonas', [ConfiguracionController::class, 'addZona']);
-Route::put('/configuracion/zonas/{id}', [ConfiguracionController::class, 'updateZona']);
-Route::post('/configuracion/sectores', [ConfiguracionController::class, 'addSector']);
-Route::put('/configuracion/sectores/{id}', [ConfiguracionController::class, 'updateSector']);
-Route::post('/configuracion/titulos', [ConfiguracionController::class, 'addTitulo']);
+Route::get('/configuracion', [\App\Http\Controllers\Api\ConfiguracionController::class, 'getGlobales']);
+Route::put('/configuracion', [\App\Http\Controllers\Api\ConfiguracionController::class, 'updateGlobal']);
+Route::get('/configuracion/zonas-sectores', [\App\Http\Controllers\Api\ConfiguracionController::class, 'getZonasSectores']);
+Route::post('/configuracion/zonas', [\App\Http\Controllers\Api\ConfiguracionController::class, 'addZona']);
+Route::put('/configuracion/zonas/{id}', [\App\Http\Controllers\Api\ConfiguracionController::class, 'updateZona']);
+Route::post('/configuracion/sectores', [\App\Http\Controllers\Api\ConfiguracionController::class, 'addSector']);
+Route::put('/configuracion/sectores/{id}', [\App\Http\Controllers\Api\ConfiguracionController::class, 'updateSector']);
+Route::post('/configuracion/titulos', [\App\Http\Controllers\Api\ConfiguracionController::class, 'addTitulo']);
+});
 

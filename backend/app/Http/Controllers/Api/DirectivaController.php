@@ -101,9 +101,9 @@ class DirectivaController extends Controller
                     'fecha_fin' => DB::raw("COALESCE(fecha_fin, '" . $validated['fecha_inicio'] . "')")
                 ]);
 
-            // 2. Insertar los nuevos miembros
+            // 2. Insertar los nuevos miembros y actualizar usuarios
             $nuevosMiembros = [];
-            foreach ($validated['cargos'] as $cargo) {
+            foreach ($request->input('cargos', []) as $cargo) {
                 if (!empty($cargo['id_persona'])) {
                     $nuevosMiembros[] = [
                         'id_persona' => $cargo['id_persona'],
@@ -113,6 +113,27 @@ class DirectivaController extends Controller
                         'resolucion_nombramiento' => $validated['resolucion'] ?? null,
                         'estado' => 'Activo'
                     ];
+
+                    // Mapear el ID de cargo al nombre del rol
+                    $rol = 'Vocal';
+                    if ($cargo['id_cargo_directivo'] == 1) $rol = 'Presidente';
+                    elseif ($cargo['id_cargo_directivo'] == 2) $rol = 'Vicepresidente';
+                    elseif ($cargo['id_cargo_directivo'] == 3) $rol = 'Secretario';
+                    elseif ($cargo['id_cargo_directivo'] == 4) $rol = 'Tesorero';
+
+                    // Obtener la cédula para el usuario
+                    $persona = \Illuminate\Support\Facades\DB::table('Persona')->where('id_persona', $cargo['id_persona'])->first();
+
+                    if ($persona) {
+                        \App\Models\Usuario::updateOrCreate(
+                            ['id_persona' => $cargo['id_persona']],
+                            [
+                                'cedula' => $persona->cedula,
+                                'password' => \Illuminate\Support\Facades\Hash::make($cargo['password'] ?? 'chibuleo2024'),
+                                'rol' => $rol
+                            ]
+                        );
+                    }
                 }
             }
 

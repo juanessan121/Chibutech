@@ -24,6 +24,7 @@ export default function DirectivaGestion() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [cargosSeleccionados, setCargosSeleccionados] = useState({});
+  const [cargosPasswords, setCargosPasswords] = useState({});
   const [formData, setFormData] = useState({
     fecha_inicio: new Date().toISOString().split('T')[0],
     fecha_fin: '',
@@ -51,6 +52,10 @@ export default function DirectivaGestion() {
   const handleCargoChange = (id_cargo_directivo, id_persona) => {
     setCargosSeleccionados(prev => ({ ...prev, [id_cargo_directivo]: id_persona }));
   };
+  
+  const handlePasswordChange = (id_cargo_directivo, password) => {
+    setCargosPasswords(prev => ({ ...prev, [id_cargo_directivo]: password }));
+  };
 
   const handleGuardarDirectiva = async (e) => {
     e.preventDefault();
@@ -59,7 +64,8 @@ export default function DirectivaGestion() {
     // Transformar el estado a array esperado
     const payloadCargos = Object.entries(cargosSeleccionados).map(([id_cargo, id_persona]) => ({
       id_cargo_directivo: parseInt(id_cargo),
-      id_persona
+      id_persona,
+      password: cargosPasswords[id_cargo] || 'chibuleo2024' // default
     })).filter(c => c.id_persona); // solo los que hayan asignado a alguien
 
     if (payloadCargos.length === 0) {
@@ -176,14 +182,29 @@ export default function DirectivaGestion() {
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {CARGOS_DIRECTIVA.map((cargo, idx) => (
-                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '170px 1fr', alignItems: 'center', gap: '1rem' }}>
-                    <label style={{ color: 'var(--yellow)', fontWeight: 'bold', fontSize: '0.9rem' }}>{cargo.nombre}</label>
-                    <div style={{ flex: 1 }}>
-                      <PersonaAutocompleteInput
-                        onChange={(item) => handleCargoChange(cargo.id, item.id_persona)}
-                        placeholder="Buscar por Cédula o Apellido..."
-                      />
+                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr', alignItems: 'center', gap: '1rem' }}>
+                      <label style={{ color: 'var(--yellow)', fontWeight: 'bold', fontSize: '0.9rem' }}>{cargo.nombre}</label>
+                      <div style={{ flex: 1 }}>
+                        <PersonaAutocompleteInput
+                          onChange={(item) => handleCargoChange(cargo.id, item.id_persona)}
+                          placeholder="Buscar por Cédula o Apellido..."
+                        />
+                      </div>
                     </div>
+                    {cargosSeleccionados[cargo.id] && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr', alignItems: 'center', gap: '1rem' }}>
+                        <label className="input-label" style={{ textAlign: 'right', fontSize: '0.8rem' }}>Asignar Contraseña:</label>
+                        <input
+                          type="text"
+                          className="input-field"
+                          placeholder="Contraseña temporal (ej. chibuleo2024)"
+                          value={cargosPasswords[cargo.id] || ''}
+                          onChange={(e) => handlePasswordChange(cargo.id, e.target.value)}
+                          style={{ maxWidth: '300px', fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

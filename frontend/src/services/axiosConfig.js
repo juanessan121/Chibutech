@@ -8,11 +8,18 @@ const api = axios.create({
   },
 });
 
-// Interceptor para inyectar automáticamente el token de seguridad
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const storageStr = localStorage.getItem('auth-storage');
+  if (storageStr) {
+    try {
+      const parsed = JSON.parse(storageStr);
+      const token = parsed?.state?.token;
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (e) {
+      console.error("Error parsing auth token", e);
+    }
   }
   return config;
 });

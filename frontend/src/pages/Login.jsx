@@ -20,8 +20,8 @@ export default function Login() {
     e.preventDefault();
     
     // Nielsen 5: Error prevention
-    if (!username.trim() || !password.trim()) {
-      setErrorMsg('Por favor, completa todos los campos.');
+    if (!username.trim()) {
+      setErrorMsg('Por favor, ingresa tu número de cédula.');
       return;
     }
     
@@ -98,14 +98,14 @@ export default function Login() {
           )}
 
           <div className="input-group">
-            <label htmlFor="username" className="input-label">Usuario</label>
+            <label htmlFor="username" className="input-label">Cédula de Identidad</label>
             <div className="input-wrapper">
               <User className="input-icon" size={20} aria-hidden="true" />
               <input 
                 id="username"
                 type="text" 
                 className="input-field" 
-                placeholder="Ingresa tu usuario"
+                placeholder="Ingresa tu número de cédula"
                 value={username}
                 onChange={(e) => setUsername(allowAlphanumeric(e.target.value))}
                 disabled={isLoading}
@@ -117,7 +117,7 @@ export default function Login() {
           </div>
 
           <div className="input-group">
-            <label htmlFor="password" className="input-label">Contraseña</label>
+            <label htmlFor="password" className="input-label">Contraseña <span style={{fontSize:'0.8em', color:'var(--text-muted)'}}>(Opcional para comuneros)</span></label>
             <div className="input-wrapper">
               <Lock className="input-icon" size={20} aria-hidden="true" />
               <input 
@@ -128,7 +128,6 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
-                aria-required="true"
                 autoComplete="current-password"
               />
             </div>
