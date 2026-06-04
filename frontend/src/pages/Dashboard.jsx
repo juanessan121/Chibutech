@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users, FileText, ShieldAlert, Droplets, ArrowRight,
   User, Banknote, TrendingUp, ClipboardList, AlertTriangle,
@@ -8,6 +8,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import useAuthStore from '../store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
 import StatCard from '../components/ui/StatCard';
+import axios from '../services/axiosConfig';
 
 // Importar imágenes de fondo
 import bgUsuarios   from '../assets/bg_usuarios.png';
@@ -18,54 +19,75 @@ import bgDeudas     from '../assets/bg_deudas.png';
 import bgHeader     from '../assets/bg_header.png';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MOCK DATA — Reemplazar con llamadas API cuando esté disponible
-// ─────────────────────────────────────────────────────────────────────────────
-const STATS_ADMIN = [
-  { title: 'Comuneros Registrados', value: 156, icon: Users,         color: '#0ea5e9', trend: 8,  trendLabel: 'nuevos este mes',  subtext: 'Padrón activo del sistema' },
-  { title: 'Recaudación del Mes',   value: 2340, icon: Banknote,      color: '#10b981', trend: 12, trendLabel: 'vs. mes anterior', subtext: 'Planillas + multas cobradas', prefix: '$' },
-  { title: 'Multas Pendientes',     value: 23,   icon: ShieldAlert,   color: '#ef4444', trend: -5, trendLabel: 'vs. mes anterior', subtext: 'Usuarios con deuda activa' },
-  { title: 'Mingas del Mes',        value: 4,    icon: ClipboardList, color: '#f59e0b', trend: 0,  trendLabel: 'igual que siempre', subtext: 'Jornadas comunitarias programadas' },
-  { title: 'Terrenos Catastrados',  value: 312,  icon: MapPin,        color: '#8b5cf6', trend: 3,  trendLabel: 'nuevos predios',   subtext: 'Lotes con derecho a riego' },
-  { title: 'Ingresos del Año',      value: 18420, icon: TrendingUp,   color: '#6366f1', trend: 15, trendLabel: 'vs. año anterior', subtext: 'Total acumulado 2024', prefix: '$' },
-];
-
-const STATS_TESORERO = [
-  { title: 'Recaudación del Mes',   value: 2340, icon: Banknote,    color: '#10b981', trend: 12, trendLabel: 'vs. mes anterior', subtext: 'Total cobrado en caja', prefix: '$' },
-  { title: 'Multas Pendientes',     value: 23,   icon: ShieldAlert, color: '#ef4444', trend: -5, trendLabel: 'vs. mes anterior', subtext: 'Requieren cobro inmediato' },
-  { title: 'Pagos de Hoy',          value: 8,    icon: CalendarCheck,color: '#0ea5e9', subtext: 'Transacciones registradas hoy' },
-  { title: 'Deuda Total Acumulada', value: 450,  icon: AlertTriangle,color: '#f59e0b', subtext: 'Saldo en mora del sistema', prefix: '$' },
-];
-
-const STATS_SECRETARIO = [
-  { title: 'Comuneros Registrados', value: 156, icon: Users,         color: '#0ea5e9', subtext: 'En el padrón activo' },
-  { title: 'Mingas Programadas',    value: 4,   icon: ClipboardList, color: '#f59e0b', subtext: 'Este mes en el calendario' },
-  { title: 'Asistencias Tomadas',   value: 3,   icon: CalendarCheck, color: '#10b981', subtext: 'Mingas con asistencia registrada' },
-];
-
-// Stats personales del usuario comunero — valores mock
-const STATS_USUARIO = [
-  { title: 'Mis Multas Pendientes', value: 1,   icon: ShieldAlert,   color: '#ef4444', subtext: 'Inasistencia a minga' },
-  { title: 'Total a Pagar',         value: 15,  icon: Banknote,      color: '#f59e0b', subtext: 'Deuda vigente', prefix: '$' },
-  { title: 'Asistencia a Mingas',   value: 100, icon: CalendarCheck, color: '#10b981', subtext: 'Histórico de asistencia', suffix: '%' },
-  { title: 'Lotes Registrados',     value: 1,   icon: MapPin,        color: '#0ea5e9', subtext: 'Lote #45 — Sector Centro' },
-];
-
-/** Devuelve el array de stats según el rol del usuario */
-function getStatsByRole(rol) {
-  if (rol === 'Administrador' || rol === 'Presidente' || rol === 'Vicepresidente') return STATS_ADMIN;
-  if (rol === 'Tesorero') return STATS_TESORERO;
-  if (rol === 'Secretario' || rol === 'Vocal') return STATS_SECRETARIO;
-  return STATS_USUARIO; // Usuario Regular
-}
-
+// DATA POR ROL
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { hasPermission } = usePermissions();
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [showStats, setShowStats] = useState(false); // Desplegable para las estadísticas
+  const [realData, setRealData] = useState({ comuneros: 0, recaudacion: 0 });
 
   const isUsuarioBase = user?.rol === 'Usuario Regular' || user?.rol === 'Usuario';
+
+  useEffect(() => {
+    // Solo admins/tesoreros/directiva necesitan estos datos reales
+    if (!isUsuarioBase) {
+      const fetchDashboardData = async () => {
+        try {
+          const [resPersonas, resBalance] = await Promise.all([
+            axios.get('/personas'),
+            axios.get('/reportes/balance?periodo=este_mes')
+          ]);
+          setRealData({
+            comuneros: resPersonas.data.data.length || 0,
+            recaudacion: resBalance.data.data.resumen.ingresos || 0
+          });
+        } catch (error) {
+          console.error("Error cargando datos del dashboard", error);
+        }
+      };
+      fetchDashboardData();
+    }
+  }, [isUsuarioBase]);
+
+  // Actualizar la data en el mock para que también se refleje en los cuadros pequeños (opcional)
+  const STATS_ADMIN = [
+    { title: 'Comuneros Registrados', value: realData.comuneros, icon: Users,         color: '#0ea5e9', trend: 0,  trendLabel: 'padrón general',  subtext: 'Padrón activo del sistema' },
+    { title: 'Recaudación del Mes',   value: realData.recaudacion, icon: Banknote,      color: '#10b981', trend: 0, trendLabel: 'acumulado actual', subtext: 'Planillas + multas cobradas', prefix: '$' },
+    { title: 'Multas Pendientes',     value: 23,   icon: ShieldAlert,   color: '#ef4444', trend: -5, trendLabel: 'vs. mes anterior', subtext: 'Usuarios con deuda activa' },
+    { title: 'Mingas del Mes',        value: 4,    icon: ClipboardList, color: '#f59e0b', trend: 0,  trendLabel: 'igual que siempre', subtext: 'Jornadas comunitarias programadas' },
+    { title: 'Terrenos Catastrados',  value: 312,  icon: MapPin,        color: '#8b5cf6', trend: 3,  trendLabel: 'nuevos predios',   subtext: 'Lotes con derecho a riego' },
+    { title: 'Ingresos del Año',      value: realData.recaudacion, icon: TrendingUp,   color: '#6366f1', trend: 15, trendLabel: 'vs. año anterior', subtext: 'Total acumulado 2024', prefix: '$' },
+  ];
+
+  const STATS_TESORERO = [
+    { title: 'Recaudación del Mes',   value: realData.recaudacion, icon: Banknote,    color: '#10b981', trend: 0, trendLabel: 'acumulado actual', subtext: 'Total cobrado en caja', prefix: '$' },
+    { title: 'Multas Pendientes',     value: 23,   icon: ShieldAlert, color: '#ef4444', trend: -5, trendLabel: 'vs. mes anterior', subtext: 'Requieren cobro inmediato' },
+    { title: 'Pagos de Hoy',          value: 8,    icon: CalendarCheck,color: '#0ea5e9', subtext: 'Transacciones registradas hoy' },
+    { title: 'Deuda Total Acumulada', value: 450,  icon: AlertTriangle,color: '#f59e0b', subtext: 'Saldo en mora del sistema', prefix: '$' },
+  ];
+
+  const STATS_SECRETARIO = [
+    { title: 'Comuneros Registrados', value: realData.comuneros, icon: Users,         color: '#0ea5e9', subtext: 'En el padrón activo' },
+    { title: 'Mingas Programadas',    value: 4,   icon: ClipboardList, color: '#f59e0b', subtext: 'Este mes en el calendario' },
+    { title: 'Asistencias Tomadas',   value: 3,   icon: CalendarCheck, color: '#10b981', subtext: 'Mingas con asistencia registrada' },
+  ];
+
+  const STATS_USUARIO = [
+    { title: 'Mis Multas Pendientes', value: 1,   icon: ShieldAlert,   color: '#ef4444', subtext: 'Inasistencia a minga' },
+    { title: 'Total a Pagar',         value: 15,  icon: Banknote,      color: '#f59e0b', subtext: 'Deuda vigente', prefix: '$' },
+    { title: 'Asistencia a Mingas',   value: 100, icon: CalendarCheck, color: '#10b981', subtext: 'Histórico de asistencia', suffix: '%' },
+    { title: 'Lotes Registrados',     value: 1,   icon: MapPin,        color: '#0ea5e9', subtext: 'Lote #45 — Sector Centro' },
+  ];
+
+  const getStatsByRole = (rol) => {
+    if (rol === 'Administrador' || rol === 'Presidente' || rol === 'Vicepresidente') return STATS_ADMIN;
+    if (rol === 'Tesorero') return STATS_TESORERO;
+    if (rol === 'Secretario' || rol === 'Vocal') return STATS_SECRETARIO;
+    return STATS_USUARIO; 
+  };
+
   const stats = getStatsByRole(user?.rol);
 
   return (
@@ -104,11 +126,11 @@ export default function Dashboard() {
           ) : (
             <>
               <div className="stat-item">
-                <span className="stat-value">156</span>
+                <span className="stat-value">{realData.comuneros}</span>
                 <span className="stat-label">Comuneros Activos</span>
               </div>
               <div className="stat-item">
-                <span className="stat-value">$2,340</span>
+                <span className="stat-value">${realData.recaudacion.toFixed(2)}</span>
                 <span className="stat-label">Recaudación Mensual</span>
               </div>
             </>

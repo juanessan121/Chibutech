@@ -81,7 +81,7 @@ function dibujarFooter(doc) {
 }
 
 /** Dibuja las líneas de firma al final del documento */
-function dibujarFirmas(doc, y) {
+function dibujarFirmas(doc, y, directiva = []) {
   const pageH = doc.internal.pageSize.getHeight();
   const pageW = doc.internal.pageSize.getWidth();
   
@@ -117,9 +117,17 @@ function dibujarFirmas(doc, y) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(...COLORS.muted);
-  doc.text('Luis Alberto Sisa', x1 + w/2, y + 10, { align: 'center' });
-  doc.text('José María Lliguin', x2 + w/2, y + 10, { align: 'center' });
-  doc.text('Carmen Toalombo', x3 + w/2, y + 10, { align: 'center' });
+
+  // Buscar nombres en la directiva activa
+  const getNombreCargo = (nombreCargo, defecto) => {
+    if (!directiva || directiva.length === 0) return defecto;
+    const miembro = directiva.find(m => m.cargo && m.cargo.toLowerCase().includes(nombreCargo.toLowerCase()));
+    return miembro ? miembro.nombre : defecto;
+  };
+
+  doc.text(getNombreCargo('Presidente', '_________________'), x1 + w/2, y + 10, { align: 'center' });
+  doc.text(getNombreCargo('Secretario', '_________________'), x2 + w/2, y + 10, { align: 'center' });
+  doc.text(getNombreCargo('Tesorero', '_________________'), x3 + w/2, y + 10, { align: 'center' });
 }
 
 /** Dibujar bloque de info (clave: valor) en fila horizontal */
@@ -155,8 +163,12 @@ export function usePDF() {
     setIsGenerating(true);
     try {
       // 1. Obtener datos reales de la API
-      const { data: response } = await axios.get('/reportes/padron');
-      let datos = response.data;
+      const [resPadron, resDirectiva] = await Promise.all([
+        axios.get('/reportes/padron'),
+        axios.get('/directiva/actual').catch(() => ({ data: { data: [] } }))
+      ]);
+      let datos = resPadron.data.data;
+      const directivaActiva = resDirectiva.data.data;
 
       // 2. Aplicar filtros
       if (filtros.sector && filtros.sector !== 'todos') {
@@ -210,7 +222,7 @@ export function usePDF() {
         didDrawPage: () => {},
       });
 
-      dibujarFirmas(doc, doc.lastAutoTable.finalY);
+      dibujarFirmas(doc, doc.lastAutoTable.finalY, directivaActiva);
       dibujarFooter(doc);
       if (modo === 'preview') return doc.output('bloburl');
       doc.save(`padron_usuarios_${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -223,8 +235,12 @@ export function usePDF() {
   const generarMorosos = useCallback(async (filtros = {}, modo = 'download') => {
     setIsGenerating(true);
     try {
-      const { data: response } = await axios.get('/reportes/morosos');
-      let datos = response.data;
+      const [resMorosos, resDirectiva] = await Promise.all([
+        axios.get('/reportes/morosos'),
+        axios.get('/directiva/actual').catch(() => ({ data: { data: [] } }))
+      ]);
+      let datos = resMorosos.data.data;
+      const directivaActiva = resDirectiva.data.data;
       
       const montoMin = parseFloat(filtros.montoMin) || 0;
       if (montoMin > 0) datos = datos.filter(u => u.monto >= montoMin);
@@ -293,7 +309,7 @@ export function usePDF() {
         },
       });
 
-      dibujarFirmas(doc, doc.lastAutoTable.finalY);
+      dibujarFirmas(doc, doc.lastAutoTable.finalY, directivaActiva);
       dibujarFooter(doc);
       if (modo === 'preview') return doc.output('bloburl');
       doc.save(`reporte_morosos_${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -307,8 +323,12 @@ export function usePDF() {
     setIsGenerating(true);
     try {
       const periodo = filtros.periodo || 'este_mes';
-      const { data: response } = await axios.get(`/reportes/balance?periodo=${periodo}`);
-      const { resumen, ingresos, egresos } = response.data;
+      const [resBalance, resDirectiva] = await Promise.all([
+        axios.get(`/reportes/balance?periodo=${periodo}`),
+        axios.get('/directiva/actual').catch(() => ({ data: { data: [] } }))
+      ]);
+      const { resumen, ingresos, egresos } = resBalance.data.data;
+      const directivaActiva = resDirectiva.data.data;
 
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pageW = doc.internal.pageSize.getWidth();
@@ -409,7 +429,7 @@ export function usePDF() {
       doc.text('SALDO NETO DE CAJA:', LAYOUT.marginLeft + 5, finalY + 7);
       doc.text(`$${resumen.saldo.toFixed(2)}`, pageW - LAYOUT.marginRight - 5, finalY + 7, { align: 'right' });
 
-      dibujarFirmas(doc, finalY + 14);
+      dibujarFirmas(doc, finalY + 14, directivaActiva);
       dibujarFooter(doc);
       if (modo === 'preview') return doc.output('bloburl');
       doc.save(`balance_financiero_${new Date().toISOString().slice(0, 10)}.pdf`);
