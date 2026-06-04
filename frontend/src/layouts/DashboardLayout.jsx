@@ -15,6 +15,7 @@ export default function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [notifications, setNotifications] = useState([
     { id: 1, title: 'Convocatoria a Minga', text: 'Limpieza de desarenador el sábado 28 de Oct.', time: 'Hace 10 min', unread: true, type: 'minga' },
     { id: 2, title: 'Pago Registrado', text: 'Se ha registrado tu pago de cuota mensual de $9.00.', time: 'Hace 2 horas', unread: true, type: 'pago' },
@@ -147,12 +148,17 @@ export default function DashboardLayout() {
       />
 
       {/* Sidebar (Menú Lateral) */}
-      <aside className={`sidebar glass-card ${isSidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="logo-icon-small">
-            <Droplets size={24} color="white" />
+      <aside className={`sidebar glass-card ${isSidebarOpen ? 'open' : ''} ${isCollapsed ? 'collapsed' : ''}`}>
+        <div className="sidebar-header" style={{ justifyContent: isCollapsed ? 'center' : 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div className="logo-icon-small">
+              <Droplets size={24} color="white" />
+            </div>
+            {!isCollapsed && <h2>Chibutech</h2>}
           </div>
-          <h2>Chibutech</h2>
+          <button className="desktop-collapse-btn" onClick={() => setIsCollapsed(!isCollapsed)} title={isCollapsed ? "Expandir menú" : "Colapsar menú"}>
+            <Menu size={20} />
+          </button>
         </div>
 
         <nav className="sidebar-nav">
@@ -174,92 +180,104 @@ export default function DashboardLayout() {
                 <div key={item.name} className="sidebar-accordion">
                   <button 
                     className={`sidebar-link ${isParentActive ? 'active' : ''}`}
-                    onClick={() => setOpenMenu(isOpen ? '' : item.name)}
-                    style={{ justifyContent: 'space-between' }}
+                    onClick={() => {
+                      if (isCollapsed) {
+                        setIsCollapsed(false);
+                        setOpenMenu(item.name);
+                      } else {
+                        setOpenMenu(isOpen ? '' : item.name);
+                      }
+                    }}
+                    style={{ justifyContent: isCollapsed ? 'center' : 'space-between' }}
+                    title={isCollapsed ? item.name : ''}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                       <Icon size={20} />
-                      <span>{item.name}</span>
+                      {!isCollapsed && <span>{item.name}</span>}
                     </div>
-                    <span style={{ transform: isOpen ? 'rotate(90deg)' : 'none', transition: '0.2s' }}>▶</span>
+                    {!isCollapsed && (
+                      <span style={{ transform: isOpen ? 'rotate(90deg)' : 'none', transition: '0.2s' }}>▶</span>
+                    )}
                   </button>
-                  <div 
-                    style={{ 
-                      display: 'grid', 
-                      gridTemplateRows: isOpen ? '1fr' : '0fr',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      opacity: isOpen ? 1 : 0
-                    }}
-                  >
-                    <div style={{ overflow: 'hidden' }}>
-                      <div className="sidebar-subitems" style={{ paddingLeft: '2.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem', paddingBottom: '0.5rem' }}>
-                        {item.subItems.map(subItem => {
-                          const isSubActive = location.pathname === subItem.path;
-                          return (
-                            <button 
-                              key={subItem.path}
-                              className={`sidebar-sublink ${isSubActive ? 'active' : ''}`}
-                              tabIndex={isOpen ? 0 : -1}
-                              onMouseEnter={(e) => {
-                                if (!isSubActive) {
-                                  e.currentTarget.style.color = 'var(--text-main)';
-                                  e.currentTarget.style.transform = 'translateX(4px)';
-                                }
-                              }}
-                              onMouseLeave={(e) => {
-                                if (!isSubActive) {
-                                  e.currentTarget.style.color = '#94a3b8';
-                                  e.currentTarget.style.transform = 'translateX(0)';
-                                }
-                              }}
-                              onClick={() => {
-                                navigate(subItem.path);
-                                setIsSidebarOpen(false);
-                              }}
-                              style={{ 
-                                background: isSubActive ? 'rgba(14, 165, 233, 0.08)' : 'transparent', 
-                                border: 'none', 
-                                color: isSubActive ? 'var(--primary)' : '#94a3b8', 
-                                fontWeight: isSubActive ? '600' : 'normal',
-                                textAlign: 'left', 
-                                cursor: 'pointer', 
-                                fontSize: '0.9rem', 
-                                padding: '0.4rem 0.6rem',
-                                borderRadius: '0.4rem',
-                                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                position: 'relative',
-                                display: 'flex',
-                                alignItems: 'center',
-                                transform: isSubActive ? 'translateX(4px)' : 'translateX(0)'
-                              }}
-                            >
-                              {/* Indicador activo sutil para el submenú (punto luminoso) */}
-                              {isSubActive ? (
-                                <div style={{
-                                  width: '5px',
-                                  height: '5px',
-                                  backgroundColor: 'var(--primary)',
-                                  borderRadius: '50%',
-                                  marginRight: '8px',
-                                  boxShadow: '0 0 6px var(--primary)'
-                                }} />
-                              ) : (
-                                <div style={{
-                                  width: '5px',
-                                  height: '5px',
-                                  backgroundColor: 'transparent',
-                                  borderRadius: '50%',
-                                  marginRight: '8px',
-                                  transition: 'background-color 0.2s'
-                                }} />
-                              )}
-                              {subItem.name}
-                            </button>
-                          )
-                        })}
+                  {!isCollapsed && (
+                    <div 
+                      style={{ 
+                        display: 'grid', 
+                        gridTemplateRows: isOpen ? '1fr' : '0fr',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        opacity: isOpen ? 1 : 0
+                      }}
+                    >
+                      <div style={{ overflow: 'hidden' }}>
+                        <div className="sidebar-subitems" style={{ paddingLeft: '2.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem', paddingBottom: '0.5rem' }}>
+                          {item.subItems.map(subItem => {
+                            const isSubActive = location.pathname === subItem.path;
+                            return (
+                              <button 
+                                key={subItem.path}
+                                className={`sidebar-sublink ${isSubActive ? 'active' : ''}`}
+                                tabIndex={isOpen ? 0 : -1}
+                                onMouseEnter={(e) => {
+                                  if (!isSubActive) {
+                                    e.currentTarget.style.color = 'var(--text-main)';
+                                    e.currentTarget.style.transform = 'translateX(4px)';
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isSubActive) {
+                                    e.currentTarget.style.color = '#94a3b8';
+                                    e.currentTarget.style.transform = 'translateX(0)';
+                                  }
+                                }}
+                                onClick={() => {
+                                  navigate(subItem.path);
+                                  setIsSidebarOpen(false);
+                                }}
+                                style={{ 
+                                  background: isSubActive ? 'rgba(14, 165, 233, 0.08)' : 'transparent', 
+                                  border: 'none', 
+                                  color: isSubActive ? 'var(--primary)' : '#94a3b8', 
+                                  fontWeight: isSubActive ? '600' : 'normal',
+                                  textAlign: 'left', 
+                                  cursor: 'pointer', 
+                                  fontSize: '0.9rem', 
+                                  padding: '0.4rem 0.6rem',
+                                  borderRadius: '0.4rem',
+                                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                                  position: 'relative',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  transform: isSubActive ? 'translateX(4px)' : 'translateX(0)'
+                                }}
+                              >
+                                {/* Indicador activo sutil para el submenú (punto luminoso) */}
+                                {isSubActive ? (
+                                  <div style={{
+                                    width: '5px',
+                                    height: '5px',
+                                    backgroundColor: 'var(--primary)',
+                                    borderRadius: '50%',
+                                    marginRight: '8px',
+                                    boxShadow: '0 0 6px var(--primary)'
+                                  }} />
+                                ) : (
+                                  <div style={{
+                                    width: '5px',
+                                    height: '5px',
+                                    backgroundColor: 'transparent',
+                                    borderRadius: '50%',
+                                    marginRight: '8px',
+                                    transition: 'background-color 0.2s'
+                                  }} />
+                                )}
+                                {subItem.name}
+                              </button>
+                            )
+                          })}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             }
@@ -282,9 +300,11 @@ export default function DashboardLayout() {
                   navigate(item.path);
                   setIsSidebarOpen(false);
                 }}
+                style={{ justifyContent: isCollapsed ? 'center' : 'flex-start' }}
+                title={isCollapsed ? item.name : ''}
               >
                 <Icon size={20} />
-                <span>{item.name}</span>
+                {!isCollapsed && <span>{item.name}</span>}
               </button>
             );
           })}
@@ -293,21 +313,24 @@ export default function DashboardLayout() {
         <div className="sidebar-footer">
           <div 
             className="user-mini-profile" 
-            style={{ cursor: 'pointer' }}
+            style={{ cursor: 'pointer', justifyContent: isCollapsed ? 'center' : 'flex-start' }}
             onClick={() => {
               navigate('/dashboard/perfil');
               setIsSidebarOpen(false);
             }}
+            title={isCollapsed ? `${user?.username} (${user?.rol})` : ''}
           >
             <UserCircle size={32} color="var(--primary)" />
-            <div className="user-info">
-              <span className="user-name">{user?.username}</span>
-              <span className="user-role">{user?.rol}</span>
-            </div>
+            {!isCollapsed && (
+              <div className="user-info">
+                <span className="user-name">{user?.username}</span>
+                <span className="user-role">{user?.rol}</span>
+              </div>
+            )}
           </div>
-          <button className="logout-btn" onClick={handleLogout}>
+          <button className="logout-btn" onClick={handleLogout} style={{ justifyContent: isCollapsed ? 'center' : 'center' }} title={isCollapsed ? 'Cerrar Sesión' : ''}>
             <LogOut size={18} />
-            Cerrar Sesión
+            {!isCollapsed && <span>Cerrar Sesión</span>}
           </button>
         </div>
       </aside>
