@@ -61,7 +61,8 @@ export default function DashboardLayout() {
       name: 'Mingas', icon: Users, show: hasPermission('gestionar_mingas'),
       activePaths: ['/dashboard/mingas'],
       subItems: [
-        { name: 'Lista de Mingas', path: '/dashboard/mingas' },
+        { name: 'Control de Mingas', path: '/dashboard/mingas' },
+        { name: 'Historial de Mingas', path: '/dashboard/mingas/historial' },
         { name: 'Programar Minga', path: '/dashboard/mingas/programar' },
         { name: 'Tomar Asistencia', path: '/dashboard/mingas/asistencia' }
       ]
@@ -177,6 +178,18 @@ export default function DashboardLayout() {
                           <button 
                             key={subItem.path}
                             className={`sidebar-sublink ${isSubActive ? 'active' : ''}`}
+                            onMouseEnter={(e) => {
+                              if (!isSubActive) {
+                                e.currentTarget.style.color = 'var(--text-main)';
+                                e.currentTarget.style.transform = 'translateX(4px)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSubActive) {
+                                e.currentTarget.style.color = '#94a3b8';
+                                e.currentTarget.style.transform = 'translateX(0)';
+                              }
+                            }}
                             onClick={() => {
                               navigate(subItem.path);
                               setIsSidebarOpen(false);
@@ -191,10 +204,11 @@ export default function DashboardLayout() {
                               fontSize: '0.9rem', 
                               padding: '0.4rem 0.6rem',
                               borderRadius: '0.4rem',
-                              transition: 'all 0.2s',
+                              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                               position: 'relative',
                               display: 'flex',
-                              alignItems: 'center'
+                              alignItems: 'center',
+                              transform: isSubActive ? 'translateX(4px)' : 'translateX(0)'
                             }}
                           >
                             {/* Indicador activo sutil para el submenú (punto luminoso) */}
@@ -213,7 +227,8 @@ export default function DashboardLayout() {
                                 height: '5px',
                                 backgroundColor: 'transparent',
                                 borderRadius: '50%',
-                                marginRight: '8px'
+                                marginRight: '8px',
+                                transition: 'background-color 0.2s'
                               }} />
                             )}
                             {subItem.name}
