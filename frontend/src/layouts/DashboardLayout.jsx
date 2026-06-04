@@ -71,7 +71,7 @@ export default function DashboardLayout() {
       name: 'Catastros', icon: Map, show: hasPermission('gestionar_mingas') || hasPermission('crear_usuario'),
       activePaths: ['/dashboard/catastro', '/dashboard/terrenos'],
       subItems: [
-        { name: 'Catastro Global', path: '/dashboard/catastro' },
+        { name: 'Catastro de Predios', path: '/dashboard/catastro/generales' },
         { name: 'Registrar Terreno', path: '/dashboard/terrenos' }
       ]
     },
