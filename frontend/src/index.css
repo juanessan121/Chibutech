@@ -64,11 +64,8 @@ body {
   animation: fadeIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-.spin {
-  animation: spin 1s linear infinite;
-}
-
-.spinner {
+/* .spin y .spinner son la misma animación: usar cualquiera de las dos */
+.spin, .spinner {
   animation: spin 1s linear infinite;
 }
 

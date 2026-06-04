@@ -16,11 +16,7 @@ export default function DashboardLayout() {
   const [openMenu, setOpenMenu] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'Convocatoria a Minga', text: 'Limpieza de desarenador el sábado 28 de Oct.', time: 'Hace 10 min', unread: true, type: 'minga' },
-    { id: 2, title: 'Pago Registrado', text: 'Se ha registrado tu pago de cuota mensual de $9.00.', time: 'Hace 2 horas', unread: true, type: 'pago' },
-    { id: 3, title: 'Multa Generada', text: 'Inasistencia a minga de mantenimiento. Total: $15.00.', time: 'Ayer', unread: false, type: 'multa' }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   const notificationsRef = useRef(null);
 

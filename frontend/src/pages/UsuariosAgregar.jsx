@@ -296,8 +296,6 @@ export default function UsuariosAgregar() {
     const isValid = await trigger();
     if (!isValid) {
       toast.error('Faltan campos por llenar o hay datos incorrectos. Revisa el formulario.');
-      // Opcional: imprimir los errores en consola para depuración
-      console.log('Errores de validación:', errors);
       return;
     }
 
@@ -343,8 +341,6 @@ export default function UsuariosAgregar() {
           payload.password = payload.cedula;
           payload.id_rol = 1; // 1 = Usuario regular por defecto
         }
-        
-        console.log("Datos limpios para la API:", payload);
         
         if (isEditMode) {
           await updateUser(id, payload);

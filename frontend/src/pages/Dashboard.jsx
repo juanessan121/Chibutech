@@ -26,66 +26,66 @@ export default function Dashboard() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [showStats, setShowStats] = useState(false); // Desplegable para las estadísticas
-  const [realData, setRealData] = useState({ comuneros: 0, recaudacion: 0 });
+  const [realData, setRealData] = useState({ comuneros: 0, recaudacion: 0, multasPendientes: null, mingasMes: null, terrenos: null });
 
   const isUsuarioBase = user?.rol === 'Usuario Regular' || user?.rol === 'Usuario';
 
   useEffect(() => {
-    // Solo admins/tesoreros/directiva necesitan estos datos reales
     if (!isUsuarioBase) {
       const fetchDashboardData = async () => {
         try {
-          const [resPersonas, resBalance] = await Promise.all([
+          const [resPersonas, resBalance, resMingas, resTerrenos] = await Promise.all([
             axios.get('/personas'),
-            axios.get('/reportes/balance?periodo=este_mes')
+            axios.get('/reportes/balance?periodo=este_mes'),
+            axios.get('/mingas').catch(() => ({ data: { data: [] } })),
+            axios.get('/terrenos').catch(() => ({ data: { data: [] } })),
           ]);
           setRealData({
-            comuneros: resPersonas.data.data.length || 0,
-            recaudacion: resBalance.data.data.resumen.ingresos || 0
+            comuneros:        resPersonas.data.data?.length ?? 0,
+            recaudacion:      resBalance.data.data?.resumen?.ingresos ?? 0,
+            mingasMes:        resMingas.data.data?.length ?? 0,
+            terrenos:         resTerrenos.data.data?.length ?? 0,
+            multasPendientes: null, // Conectar cuando exista endpoint de multas pendientes
           });
         } catch (error) {
-          console.error("Error cargando datos del dashboard", error);
+          console.error('Error cargando datos del dashboard', error);
         }
       };
       fetchDashboardData();
     }
   }, [isUsuarioBase]);
 
-  // Actualizar la data en el mock para que también se refleje en los cuadros pequeños (opcional)
   const STATS_ADMIN = [
-    { title: 'Comuneros Registrados', value: realData.comuneros, icon: Users,         color: '#0ea5e9', trend: 0,  trendLabel: 'padrón general',  subtext: 'Padrón activo del sistema' },
-    { title: 'Recaudación del Mes',   value: realData.recaudacion, icon: Banknote,      color: '#10b981', trend: 0, trendLabel: 'acumulado actual', subtext: 'Planillas + multas cobradas', prefix: '$' },
-    { title: 'Multas Pendientes',     value: 23,   icon: ShieldAlert,   color: '#ef4444', trend: -5, trendLabel: 'vs. mes anterior', subtext: 'Usuarios con deuda activa' },
-    { title: 'Mingas del Mes',        value: 4,    icon: ClipboardList, color: '#f59e0b', trend: 0,  trendLabel: 'igual que siempre', subtext: 'Jornadas comunitarias programadas' },
-    { title: 'Terrenos Catastrados',  value: 312,  icon: MapPin,        color: '#8b5cf6', trend: 3,  trendLabel: 'nuevos predios',   subtext: 'Lotes con derecho a riego' },
-    { title: 'Ingresos del Año',      value: realData.recaudacion, icon: TrendingUp,   color: '#6366f1', trend: 15, trendLabel: 'vs. año anterior', subtext: 'Total acumulado 2024', prefix: '$' },
+    { title: 'Comuneros Registrados', value: realData.comuneros,    icon: Users,         color: '#0ea5e9', trend: 0, trendLabel: 'padrón general',  subtext: 'Padrón activo del sistema' },
+    { title: 'Recaudación del Mes',   value: realData.recaudacion,  icon: Banknote,      color: '#10b981', trend: 0, trendLabel: 'acumulado actual', subtext: 'Planillas + multas cobradas', prefix: '$' },
+    { title: 'Multas Pendientes',     value: realData.multasPendientes ?? '—', icon: ShieldAlert,   color: '#ef4444', subtext: 'Usuarios con deuda activa' },
+    { title: 'Mingas del Mes',        value: realData.mingasMes ?? '—',        icon: ClipboardList, color: '#f59e0b', subtext: 'Jornadas comunitarias programadas' },
+    { title: 'Terrenos Catastrados',  value: realData.terrenos ?? '—',         icon: MapPin,        color: '#8b5cf6', subtext: 'Lotes con derecho a riego' },
+    { title: 'Ingresos del Año',      value: realData.recaudacion,  icon: TrendingUp,    color: '#6366f1', trend: 0, trendLabel: 'acumulado anual', subtext: 'Total recaudado', prefix: '$' },
   ];
 
   const STATS_TESORERO = [
-    { title: 'Recaudación del Mes',   value: realData.recaudacion, icon: Banknote,    color: '#10b981', trend: 0, trendLabel: 'acumulado actual', subtext: 'Total cobrado en caja', prefix: '$' },
-    { title: 'Multas Pendientes',     value: 23,   icon: ShieldAlert, color: '#ef4444', trend: -5, trendLabel: 'vs. mes anterior', subtext: 'Requieren cobro inmediato' },
-    { title: 'Pagos de Hoy',          value: 8,    icon: CalendarCheck,color: '#0ea5e9', subtext: 'Transacciones registradas hoy' },
-    { title: 'Deuda Total Acumulada', value: 450,  icon: AlertTriangle,color: '#f59e0b', subtext: 'Saldo en mora del sistema', prefix: '$' },
+    { title: 'Recaudación del Mes',   value: realData.recaudacion,  icon: Banknote,    color: '#10b981', trend: 0, trendLabel: 'acumulado actual', subtext: 'Total cobrado en caja', prefix: '$' },
+    { title: 'Multas Pendientes',     value: realData.multasPendientes ?? '—', icon: ShieldAlert, color: '#ef4444', subtext: 'Requieren cobro inmediato' },
   ];
 
   const STATS_SECRETARIO = [
-    { title: 'Comuneros Registrados', value: realData.comuneros, icon: Users,         color: '#0ea5e9', subtext: 'En el padrón activo' },
-    { title: 'Mingas Programadas',    value: 4,   icon: ClipboardList, color: '#f59e0b', subtext: 'Este mes en el calendario' },
-    { title: 'Asistencias Tomadas',   value: 3,   icon: CalendarCheck, color: '#10b981', subtext: 'Mingas con asistencia registrada' },
+    { title: 'Comuneros Registrados', value: realData.comuneros, icon: Users, color: '#0ea5e9', subtext: 'En el padrón activo' },
+    { title: 'Mingas Programadas',    value: realData.mingasMes ?? '—', icon: ClipboardList, color: '#f59e0b', subtext: 'Este mes en el calendario' },
   ];
 
   const STATS_USUARIO = [
-    { title: 'Mis Multas Pendientes', value: 1,   icon: ShieldAlert,   color: '#ef4444', subtext: 'Inasistencia a minga' },
-    { title: 'Total a Pagar',         value: 15,  icon: Banknote,      color: '#f59e0b', subtext: 'Deuda vigente', prefix: '$' },
-    { title: 'Asistencia a Mingas',   value: 100, icon: CalendarCheck, color: '#10b981', subtext: 'Histórico de asistencia', suffix: '%' },
-    { title: 'Lotes Registrados',     value: 1,   icon: MapPin,        color: '#0ea5e9', subtext: 'Lote #45 — Sector Centro' },
+    { title: 'Mis Multas Pendientes', value: '—', icon: ShieldAlert,   color: '#ef4444', subtext: 'Cargando...' },
+    { title: 'Total a Pagar',         value: '—', icon: Banknote,      color: '#f59e0b', subtext: 'Cargando...', prefix: '$' },
+    { title: 'Asistencia a Mingas',   value: '—', icon: CalendarCheck, color: '#10b981', subtext: 'Cargando...', suffix: '%' },
+    { title: 'Lotes Registrados',     value: '—', icon: MapPin,        color: '#0ea5e9', subtext: 'Cargando...' },
   ];
 
   const getStatsByRole = (rol) => {
     if (rol === 'Administrador' || rol === 'Presidente' || rol === 'Vicepresidente') return STATS_ADMIN;
     if (rol === 'Tesorero') return STATS_TESORERO;
     if (rol === 'Secretario' || rol === 'Vocal') return STATS_SECRETARIO;
-    return STATS_USUARIO; 
+    return STATS_USUARIO;
   };
 
   const stats = getStatsByRole(user?.rol);

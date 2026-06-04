@@ -16,11 +16,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// Envolver las rutas existentes en un grupo protegido por sanctum 
-// Route::middleware('auth:sanctum')->group(function () {
-// Pero como el frontend tal vez no esté listo todavía para enviar el token en TODAS las peticiones,
-// Lo dejaremos público por un momento hasta modificar el axiosConfig, o podemos protegerlo ya.
-// De hecho, el plan dice "proteger el resto de las rutas". Lo protegeré.
 Route::middleware('auth:sanctum')->group(function () {
 
 // Buscar títulos educativos
