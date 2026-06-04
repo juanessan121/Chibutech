@@ -51,6 +51,7 @@ export default function DashboardLayout() {
     { name: 'Panel Principal', path: '/dashboard', icon: LayoutDashboard, show: true },
     { 
       name: 'Usuarios', icon: Users, show: hasPermission('crear_usuario'),
+      activePaths: ['/dashboard/usuarios'],
       subItems: [
         { name: 'Padrón General', path: '/dashboard/usuarios/padron' },
         { name: 'Agregar Usuario', path: '/dashboard/usuarios/agregar' }
@@ -58,6 +59,7 @@ export default function DashboardLayout() {
     },
     { 
       name: 'Mingas', icon: Users, show: hasPermission('gestionar_mingas'),
+      activePaths: ['/dashboard/mingas'],
       subItems: [
         { name: 'Lista de Mingas', path: '/dashboard/mingas' },
         { name: 'Programar Minga', path: '/dashboard/mingas/programar' },
@@ -66,6 +68,7 @@ export default function DashboardLayout() {
     },
     { 
       name: 'Catastros', icon: Map, show: hasPermission('gestionar_mingas') || hasPermission('crear_usuario'),
+      activePaths: ['/dashboard/catastro', '/dashboard/terrenos'],
       subItems: [
         { name: 'Catastro Global', path: '/dashboard/catastro' },
         { name: 'Registrar Terreno', path: '/dashboard/terrenos' }
@@ -73,6 +76,7 @@ export default function DashboardLayout() {
     },
     { 
       name: 'Multas y Cobros', icon: ShieldAlert, show: hasPermission('gestionar_multas'),
+      activePaths: ['/dashboard/cobros'],
       subItems: [
         { name: 'Panel de Cobros', path: '/dashboard/cobros' },
         { name: 'Generar Cobro', path: '/dashboard/cobros/generar' },
@@ -82,6 +86,7 @@ export default function DashboardLayout() {
     { name: 'Reportes', path: '/dashboard/reportes', icon: FileText, show: hasPermission('ver_reportes') },
     { 
       name: 'Directiva', icon: Award, show: true,
+      activePaths: ['/dashboard/directiva'],
       subItems: [
         { name: 'Directiva Actual', path: '/dashboard/directiva' },
         { name: 'Gestionar', path: '/dashboard/directiva/gestionar' }
@@ -89,6 +94,7 @@ export default function DashboardLayout() {
     },
     { 
       name: 'Administración', icon: Settings, show: hasPermission('gestionar_multas'),
+      activePaths: ['/dashboard/administracion'],
       subItems: [
         { name: 'Panel Admin', path: '/dashboard/administracion' },
         { name: 'Configuración', path: '/dashboard/administracion/configuracion' }
@@ -97,6 +103,22 @@ export default function DashboardLayout() {
     { name: 'Mis Deudas', path: '/dashboard/mis-deudas', icon: Droplet, show: isRole('Usuario Regular') },
     { name: 'Mi Predio', path: '/dashboard/catastro/detalles/1', icon: MapPin, show: isRole('Usuario Regular') },
   ];
+
+  // Sincronizar automáticamente el submenú abierto (accordion) con la ruta actual
+  useEffect(() => {
+    const activeItem = menuItems.find(item => {
+      if (!item.subItems) return false;
+      return item.activePaths 
+        ? item.activePaths.some(p => location.pathname === p || location.pathname.startsWith(p + '/'))
+        : item.subItems.some(sub => location.pathname === sub.path || location.pathname.startsWith(sub.path + '/'));
+    });
+    
+    // Solo actualizamos si el menú activo cambia para no forzar renders innecesarios
+    if (activeItem && openMenu !== activeItem.name) {
+      setOpenMenu(activeItem.name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   return (
     <div className="layout-container" style={{ 
@@ -128,10 +150,16 @@ export default function DashboardLayout() {
             
             if (item.subItems) {
               const isOpen = openMenu === item.name;
+              
+              // Determinar si la opción padre debe estar activa basado en los activePaths o en los subItems
+              const isParentActive = item.activePaths 
+                ? item.activePaths.some(p => location.pathname === p || location.pathname.startsWith(p + '/'))
+                : item.subItems.some(sub => location.pathname === sub.path || location.pathname.startsWith(sub.path + '/'));
+
               return (
                 <div key={item.name} className="sidebar-accordion">
                   <button 
-                    className="sidebar-link"
+                    className={`sidebar-link ${isParentActive ? 'active' : ''}`}
                     onClick={() => setOpenMenu(isOpen ? '' : item.name)}
                     style={{ justifyContent: 'space-between' }}
                   >
@@ -154,11 +182,40 @@ export default function DashboardLayout() {
                               setIsSidebarOpen(false);
                             }}
                             style={{ 
-                              background: 'transparent', border: 'none', color: isSubActive ? 'var(--primary-light)' : '#94a3b8', 
-                              textAlign: 'left', cursor: 'pointer', fontSize: '0.9rem', padding: '0.3rem 0',
-                              transition: 'color 0.2s'
+                              background: isSubActive ? 'rgba(14, 165, 233, 0.08)' : 'transparent', 
+                              border: 'none', 
+                              color: isSubActive ? 'var(--primary-light)' : '#94a3b8', 
+                              fontWeight: isSubActive ? '600' : 'normal',
+                              textAlign: 'left', 
+                              cursor: 'pointer', 
+                              fontSize: '0.9rem', 
+                              padding: '0.4rem 0.6rem',
+                              borderRadius: '0.4rem',
+                              transition: 'all 0.2s',
+                              position: 'relative',
+                              display: 'flex',
+                              alignItems: 'center'
                             }}
                           >
+                            {/* Indicador activo sutil para el submenú (punto luminoso) */}
+                            {isSubActive ? (
+                              <div style={{
+                                width: '5px',
+                                height: '5px',
+                                backgroundColor: 'var(--primary-light)',
+                                borderRadius: '50%',
+                                marginRight: '8px',
+                                boxShadow: '0 0 6px var(--primary-light)'
+                              }} />
+                            ) : (
+                              <div style={{
+                                width: '5px',
+                                height: '5px',
+                                backgroundColor: 'transparent',
+                                borderRadius: '50%',
+                                marginRight: '8px'
+                              }} />
+                            )}
                             {subItem.name}
                           </button>
                         )
@@ -169,7 +226,12 @@ export default function DashboardLayout() {
               );
             }
 
-            const isActive = location.pathname === item.path;
+            // Para elementos sin submenú (ej. Panel Principal, Reportes)
+            // Se usa coincidencia exacta para la raíz (/dashboard) y startsWith para el resto para que submódulos sigan marcando el padre.
+            const isActive = item.path === '/dashboard' 
+              ? location.pathname === '/dashboard' 
+              : location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+              
             return (
               <button 
                 key={item.path}
