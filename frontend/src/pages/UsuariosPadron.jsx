@@ -40,7 +40,7 @@ export default function UsuariosPadron() {
 
   return (
     <div className="animate-fade-in">
-      <Toaster richColors />
+      
       
       <div className="page-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>

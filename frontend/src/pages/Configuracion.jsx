@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Save, RefreshCw, Layers, MapPin, GraduationCap, Plus } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import axios from '../services/axiosConfig';
+import { allowTextWithPunctuation, allowOnlyLetters } from '../utils/validators';
 
 export default function Configuracion() {
   const [activeTab, setActiveTab] = useState('parametros');
@@ -126,7 +127,7 @@ export default function Configuracion() {
 
   return (
     <div className="animate-fade-in pb-10">
-      <Toaster richColors />
+      
       <div className="page-header" style={{ marginBottom: '2rem' }}>
         <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Settings className="text-blue" /> Configuración Global del Sistema
@@ -203,7 +204,7 @@ export default function Configuracion() {
           <div className="glass-card" style={{ padding: '2rem' }}>
             <h3 className="text-yellow" style={{ marginBottom: '1.5rem' }}>Zonas</h3>
             <form onSubmit={handleAddZona} style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-              <input type="text" className="input-field" placeholder="Nombre de nueva Zona..." required value={nuevaZona} onChange={e => setNuevaZona(e.target.value)} />
+              <input type="text" className="input-field" placeholder="Nombre de nueva Zona..." required value={nuevaZona} onChange={e => setNuevaZona(allowOnlyLetters(e.target.value))} />
               <button type="submit" className="btn-primary" style={{ width: 'auto' }}><Plus size={18}/></button>
             </form>
             <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }}>
@@ -222,7 +223,7 @@ export default function Configuracion() {
                 <option value="">Seleccione Zona...</option>
                 {zonas.map(z => <option key={z.id_zona} value={z.id_zona}>{z.nombre_zona}</option>)}
               </select>
-              <input type="text" className="input-field" placeholder="Nuevo Sector..." required value={nuevoSector.nombre_sector} onChange={e => setNuevoSector({...nuevoSector, nombre_sector: e.target.value})} style={{ flex: 2, minWidth: '200px' }} />
+              <input type="text" className="input-field" placeholder="Nuevo Sector..." required value={nuevoSector.nombre_sector} onChange={e => setNuevoSector({...nuevoSector, nombre_sector: allowTextWithPunctuation(e.target.value)})} style={{ flex: 2, minWidth: '200px' }} />
               <button type="submit" className="btn-primary" style={{ width: 'auto' }}><Plus size={18}/></button>
             </form>
             <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }}>
@@ -243,7 +244,7 @@ export default function Configuracion() {
           <h3 className="text-primary" style={{ marginBottom: '1.5rem' }}>Catálogo de Títulos Universitarios / Educativos</h3>
           
           <form onSubmit={handleAddTitulo} style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-            <input type="text" className="input-field" placeholder="Ej. Ingeniero Agrónomo..." required value={nuevoTitulo} onChange={e => setNuevoTitulo(e.target.value)} />
+            <input type="text" className="input-field" placeholder="Ej. Ingeniero Agrónomo..." required value={nuevoTitulo} onChange={e => setNuevoTitulo(allowTextWithPunctuation(e.target.value))} />
             <button type="submit" className="btn-primary" style={{ width: 'auto', gap: '0.5rem' }}><Plus size={18}/> Agregar Título</button>
           </form>
 

@@ -98,19 +98,13 @@ class CobroController extends Controller
         $transacciones = CajaComunitaria::orderBy('id_transaccion', 'desc')->get()->map(function($t) {
             return [
                 'id' => $t->id_transaccion,
-                'fecha' => $t->numero_comprobante ? 'N/A' : 'N/A', // TODO: Agregar columna fecha en DB si se requiere, por ahora usaremos una calculada o timestamp si hubiera
+                'fecha' => date('Y-m-d'), // La tabla no tiene fecha_registro nativa por ahora
                 'tipo' => $t->tipo_movimiento,
-                'concepto' => $t->concepto,
+                'concepto' => $t->concepto ?: 'Sin concepto',
                 'monto' => (float) $t->monto,
                 'comprobante' => $t->numero_comprobante
             ];
         });
-
-        // La base de datos original Caja_Comunitaria no tiene campo fecha, vamos a extraer fecha del ID autoincremental de forma aproximada o simplemente devolver la fecha actual, lo ideal es agregar fecha_registro en la tabla.
-        // Dado que no la alteramos, devolveremos fecha actual.
-        foreach($transacciones as $k => $v) {
-            $transacciones[$k]['fecha'] = date('Y-m-d'); 
-        }
 
         return response()->json([
             'status' => 'ok',

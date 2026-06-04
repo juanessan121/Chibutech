@@ -94,7 +94,7 @@ export default function ReportesMenu() {
 
   return (
     <div className="animate-fade-in pb-10">
-      <Toaster richColors position="top-right" />
+      
 
       <PageHeader
         title="Centro de Reportes"

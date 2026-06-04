@@ -59,7 +59,7 @@ export default function PerfilUsuario() {
 
   return (
     <div className="page-slide-in pb-10">
-      <Toaster richColors position="top-right" />
+      
 
       {/* Cabecera */}
       <div className="page-header" style={{ marginBottom: '2rem' }}>

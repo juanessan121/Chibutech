@@ -89,7 +89,7 @@ export default function PagoAgua() {
 
   return (
     <div className="animate-fade-in pb-10">
-      <Toaster richColors />
+      
       <div className="page-header" style={{ marginBottom: '2rem' }}>
         <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Search className="text-blue" /> Pago de Agua

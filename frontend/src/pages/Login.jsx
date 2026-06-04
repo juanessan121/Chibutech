@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import useAuthStore from '../store/useAuthStore';
 import { login as authLogin } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
+import { allowAlphanumeric } from '../utils/validators';
 import { User, Lock, LogIn, Droplet, AlertCircle, ArrowLeft } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import loginBg from '../assets/login-bg.png';
@@ -106,7 +107,7 @@ export default function Login() {
                 className="input-field" 
                 placeholder="Ingresa tu usuario"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => setUsername(allowAlphanumeric(e.target.value))}
                 disabled={isLoading}
                 aria-required="true"
                 aria-invalid={errorMsg ? "true" : "false"}

@@ -178,6 +178,7 @@ export default function TerrenosRegistro() {
                     step="0.01"
                     className="input-field" 
                     placeholder="0.00" 
+                    onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
                     {...register(`terrenos.${index}.area`, { required: "Requerido", min: 0.01 })} 
                   />
                   {errors.terrenos?.[index]?.area && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>Valor inválido</span>}

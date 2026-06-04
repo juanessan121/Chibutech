@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ClipboardCheck, ArrowLeft, Search, Save, CheckCircle, XCircle, FileText, Lock } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { getMingasActivas, getConvocados, registrarAsistencia } from '../services/mingaService';
+import { allowTextWithPunctuation } from '../utils/validators';
 
 export default function MingasAsistencia() {
   const navigate = useNavigate();
@@ -53,7 +54,7 @@ export default function MingasAsistencia() {
 
   return (
     <div className="animate-fade-in pb-10">
-      <Toaster richColors />
+      
       
       <div className="page-header" style={{ marginBottom: '2rem' }}>
         <div>
@@ -94,7 +95,7 @@ export default function MingasAsistencia() {
               type="text" 
               placeholder="Buscar por nombre o cédula..." 
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(allowTextWithPunctuation(e.target.value))}
               style={{ border: 'none', background: 'transparent', color: 'var(--text-main)', width: '100%', outline: 'none', marginLeft: '0.5rem' }}
             />
           </div>

@@ -5,6 +5,7 @@ import { Toaster, toast } from 'sonner';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { getAllSectores } from '../services/catalogoService';
 import { programarMinga } from '../services/mingaService';
+import { allowTextWithPunctuation } from '../utils/validators';
 
 // Catálogo local de tipos de evento (refleja Catalogo_Tipo_Evento de la BD)
 const TIPOS_EVENTO = [
@@ -87,7 +88,7 @@ export default function MingasProgramar() {
 
   return (
     <div className="animate-fade-in pb-10">
-      <Toaster richColors />
+      
       
       <div className="page-header" style={{ marginBottom: '2rem' }}>
         <div>
@@ -142,6 +143,7 @@ export default function MingasProgramar() {
                 type="text" 
                 className={`input-field ${errors.lugar_encuentro ? 'error' : ''}`}
                 placeholder="Ej. Sede Central de la Junta" 
+                onInput={(e) => e.target.value = allowTextWithPunctuation(e.target.value)}
                 {...register("lugar_encuentro", { required: "El lugar es obligatorio" })} 
               />
             </div>
@@ -154,6 +156,7 @@ export default function MingasProgramar() {
                 className={`input-field ${errors.motivo_minga ? 'error' : ''}`}
                 style={{ minHeight: '80px', resize: 'vertical' }}
                 placeholder="Ej. Limpieza de las acequias principales..." 
+                onInput={(e) => e.target.value = allowTextWithPunctuation(e.target.value)}
                 {...register("motivo_minga", { required: "Debe especificar un motivo" })} 
               ></textarea>
             </div>
@@ -170,6 +173,7 @@ export default function MingasProgramar() {
                 step="0.01"
                 className={`input-field ${errors.valor_multa_inasistencia ? 'error' : ''}`}
                 placeholder="Ej. 10.00" 
+                onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
                 {...register("valor_multa_inasistencia", { required: "Ingrese el valor de la multa", min: 0 })} 
               />
             </div>
@@ -181,6 +185,7 @@ export default function MingasProgramar() {
                 type="text" 
                 className="input-field"
                 placeholder="Ej. Llevar palas y picos..." 
+                onInput={(e) => e.target.value = allowTextWithPunctuation(e.target.value)}
                 {...register("observacion_estado")} 
               />
             </div>

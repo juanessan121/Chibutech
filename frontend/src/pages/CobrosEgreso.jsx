@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Wallet, ArrowLeft, DollarSign, FileText, Save } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { registrarEgreso } from '../services/cobroService';
+import { allowTextWithPunctuation } from '../utils/validators';
 
 export default function CobrosEgreso() {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ export default function CobrosEgreso() {
 
   return (
     <div className="animate-fade-in pb-10">
-      <Toaster richColors />
+      
       
       <div className="page-header" style={{ marginBottom: '2rem' }}>
         <div>
@@ -62,7 +63,7 @@ export default function CobrosEgreso() {
                 placeholder="Ej. Compra de tubería PVC de 2 pulgadas para reparación en San Luis..."
                 style={{ minHeight: '80px', resize: 'vertical' }}
                 value={concepto}
-                onChange={(e) => setConcepto(e.target.value)}
+                onChange={(e) => setConcepto(allowTextWithPunctuation(e.target.value))}
                 required
               ></textarea>
             </div>
@@ -80,6 +81,7 @@ export default function CobrosEgreso() {
                 className="input-field" 
                 placeholder="Ej. 150.50" 
                 value={monto}
+                onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
                 onChange={(e) => setMonto(e.target.value)}
                 required
               />
@@ -94,7 +96,7 @@ export default function CobrosEgreso() {
                 className="input-field" 
                 placeholder="Ej. FAC-001-002-123456" 
                 value={comprobante}
-                onChange={(e) => setComprobante(e.target.value)}
+                onChange={(e) => setComprobante(allowTextWithPunctuation(e.target.value))}
               />
               <span className="text-muted" style={{fontSize: '0.75rem'}}>Opcional, pero recomendado para auditorías.</span>
             </div>

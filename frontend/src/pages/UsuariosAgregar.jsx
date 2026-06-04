@@ -7,6 +7,7 @@ import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import CardSlider from '../components/CardSlider';
 import AutocompleteInput from '../components/AutocompleteInput';
+import { allowOnlyLetters, allowOnlyNumbers } from '../utils/validators';
 
 // Validador de Cédula Ecuatoriana (Módulo 10)
 const validarCedulaEcuatoriana = (cedula) => {
@@ -50,17 +51,17 @@ const HijoFields = ({ control, index, register, generos, errors }) => {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
         <div className="input-group">
           <label className="input-label" style={{ fontSize: '0.7rem' }}>Nombres *</label>
-          <input type="text" className={`input-field ${errors?.dependientes?.[index]?.nombres ? 'error' : ''}`} placeholder="Nombres" onInput={(e) => e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')} {...register(`dependientes.${index}.nombres`, { required: true })} />
+          <input type="text" className={`input-field ${errors?.dependientes?.[index]?.nombres ? 'error' : ''}`} placeholder="Nombres" onInput={(e) => e.target.value = allowOnlyLetters(e.target.value)} {...register(`dependientes.${index}.nombres`, { required: true })} />
           {errors?.dependientes?.[index]?.nombres && <span style={{ color: '#f87171', fontSize: '0.75rem', marginTop: '0.25rem' }}>Requerido</span>}
         </div>
         <div className="input-group">
           <label className="input-label" style={{ fontSize: '0.7rem' }}>Apellidos *</label>
-          <input type="text" className={`input-field ${errors?.dependientes?.[index]?.apellidos ? 'error' : ''}`} placeholder="Apellidos" onInput={(e) => e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')} {...register(`dependientes.${index}.apellidos`, { required: true })} />
+          <input type="text" className={`input-field ${errors?.dependientes?.[index]?.apellidos ? 'error' : ''}`} placeholder="Apellidos" onInput={(e) => e.target.value = allowOnlyLetters(e.target.value)} {...register(`dependientes.${index}.apellidos`, { required: true })} />
           {errors?.dependientes?.[index]?.apellidos && <span style={{ color: '#f87171', fontSize: '0.75rem', marginTop: '0.25rem' }}>Requerido</span>}
         </div>
         <div className="input-group">
           <label className="input-label" style={{ fontSize: '0.7rem' }}>Cédula</label>
-          <input type="text" className="input-field" placeholder="10 dígitos" maxLength="10" onInput={(e) => e.target.value = e.target.value.replace(/[^0-9]/g, '')} {...register(`dependientes.${index}.cedula`)} />
+          <input type="text" className="input-field" placeholder="10 dígitos" maxLength="10" onInput={(e) => e.target.value = allowOnlyNumbers(e.target.value)} {...register(`dependientes.${index}.cedula`)} />
         </div>
       </div>
 
@@ -323,7 +324,7 @@ export default function UsuariosAgregar() {
 
   return (
     <div className="animate-fade-in pb-10">
-      <Toaster richColors />
+      
 
       <div className="page-header" style={{ marginBottom: '2rem' }}>
         <div>
@@ -351,7 +352,7 @@ export default function UsuariosAgregar() {
           <div className="form-grid">
             <div className="input-group">
               <label className="input-label">Cédula del Titular *</label>
-              <input type="text" className={`input-field ${errors.cedula ? 'error' : ''}`} placeholder="10 dígitos" maxLength="10" onInput={(e) => e.target.value = e.target.value.replace(/[^0-9]/g, '')} {...register("cedula", { required: "Este campo es obligatorio", validate: v => validarCedulaEcuatoriana(v) || "Cédula Ecuatoriana inválida" })} />
+              <input type="text" className={`input-field ${errors.cedula ? 'error' : ''}`} placeholder="10 dígitos" maxLength="10" onInput={(e) => e.target.value = allowOnlyNumbers(e.target.value)} {...register("cedula", { required: "Este campo es obligatorio", validate: v => validarCedulaEcuatoriana(v) || "Cédula Ecuatoriana inválida" })} />
               {errors.cedula && <span style={{ color: '#f87171', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.cedula.message}</span>}
             </div>
             <div className="input-group">
@@ -361,12 +362,12 @@ export default function UsuariosAgregar() {
             </div>
             <div className="input-group">
               <label className="input-label">Nombres Completos *</label>
-              <input type="text" className={`input-field ${errors.nombres ? 'error' : ''}`} placeholder="Ej. Juan Carlos" onInput={(e) => e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')} {...register("nombres", { required: "Requerido", pattern: { value: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, message: "Solo letras permitidas" } })} />
+              <input type="text" className={`input-field ${errors.nombres ? 'error' : ''}`} placeholder="Ej. Juan Carlos" onInput={(e) => e.target.value = allowOnlyLetters(e.target.value)} {...register("nombres", { required: "Requerido", pattern: { value: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, message: "Solo letras permitidas" } })} />
               {errors.nombres && <span style={{ color: '#f87171', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.nombres.message}</span>}
             </div>
             <div className="input-group">
               <label className="input-label">Apellidos Completos *</label>
-              <input type="text" className={`input-field ${errors.apellidos ? 'error' : ''}`} placeholder="Ej. Pérez López" onInput={(e) => e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')} {...register("apellidos", { required: "Requerido", pattern: { value: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, message: "Solo letras permitidas" } })} />
+              <input type="text" className={`input-field ${errors.apellidos ? 'error' : ''}`} placeholder="Ej. Pérez López" onInput={(e) => e.target.value = allowOnlyLetters(e.target.value)} {...register("apellidos", { required: "Requerido", pattern: { value: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, message: "Solo letras permitidas" } })} />
               {errors.apellidos && <span style={{ color: '#f87171', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.apellidos.message}</span>}
             </div>
             <div className="form-group">
@@ -546,7 +547,7 @@ export default function UsuariosAgregar() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                   <div className="input-group">
                     <label className="input-label" style={{ fontSize: '0.7rem' }}>Número de Teléfono *</label>
-                    <input type="text" className={`input-field ${errors.contactos?.[index]?.valor_contacto ? 'error' : ''}`} placeholder="Solo números ej. 0991234567" maxLength="15" onInput={(e) => e.target.value = e.target.value.replace(/[^0-9]/g, '')} {...register(`contactos.${index}.valor_contacto`, { required: "Debe ingresar un número de teléfono", pattern: { value: /^[0-9]+$/, message: "Solo se permiten números" } })} />
+                    <input type="text" className={`input-field ${errors.contactos?.[index]?.valor_contacto ? 'error' : ''}`} placeholder="Solo números ej. 0991234567" maxLength="15" onInput={(e) => e.target.value = allowOnlyNumbers(e.target.value)} {...register(`contactos.${index}.valor_contacto`, { required: "Debe ingresar un número de teléfono", pattern: { value: /^[0-9]+$/, message: "Solo se permiten números" } })} />
                     {errors.contactos?.[index]?.valor_contacto && <span style={{ color: '#f87171', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.contactos[index].valor_contacto.message}</span>}
                   </div>
                   <div className="input-group">

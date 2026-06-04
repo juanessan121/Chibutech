@@ -84,7 +84,7 @@ export default function DirectivaGestion() {
 
   return (
     <div className="animate-fade-in pb-10">
-      <Toaster richColors />
+      
       
       <div className="page-header" style={{ marginBottom: '2rem' }}>
         <div>

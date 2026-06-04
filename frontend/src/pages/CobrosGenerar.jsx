@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, ArrowLeft, User, DollarSign, AlertTriangle, X } from 'lucide-react';
+import { PlusCircle, ArrowLeft, User, DollarSign, AlertTriangle, X, Search } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { generarMulta } from '../services/cobroService';
 import PersonaAutocompleteInput from '../components/PersonaAutocompleteInput';
 import axios from '../services/axiosConfig';
+import { allowTextWithPunctuation } from '../utils/validators';
 
 export default function CobrosGenerar() {
   const navigate = useNavigate();
@@ -77,7 +78,7 @@ export default function CobrosGenerar() {
 
   return (
     <div className="animate-fade-in pb-10">
-      <Toaster richColors />
+      
       
       <div className="page-header" style={{ marginBottom: '2rem' }}>
         <div>
@@ -174,7 +175,7 @@ export default function CobrosGenerar() {
                   placeholder="Ej. Desperdicio comprobado de agua potable en riego..."
                   style={{ minHeight: '80px', resize: 'vertical' }}
                   value={motivo}
-                  onChange={(e) => setMotivo(e.target.value)}
+                  onChange={(e) => setMotivo(allowTextWithPunctuation(e.target.value))}
                   required
                 ></textarea>
               </div>
@@ -192,6 +193,7 @@ export default function CobrosGenerar() {
                   className="input-field" 
                   placeholder="Ej. 25.00" 
                   value={monto}
+                  onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
                   onChange={(e) => setMonto(e.target.value)}
                   required
                 />

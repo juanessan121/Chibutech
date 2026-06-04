@@ -80,8 +80,11 @@ export default function DashboardLayout() {
       activePaths: ['/dashboard/cobros'],
       subItems: [
         { name: 'Panel de Cobros', path: '/dashboard/cobros' },
-        { name: 'Generar Cobro', path: '/dashboard/cobros/generar' },
-        { name: 'Ventanilla', path: '/dashboard/cobros/ventanilla' }
+        { name: 'Ventanilla de Cobro', path: '/dashboard/cobros/ventanilla' },
+        { name: 'Generar Multa Manual', path: '/dashboard/cobros/generar' },
+        { name: 'Registrar Egreso', path: '/dashboard/cobros/egreso' },
+        { name: 'Arqueo e Historial', path: '/dashboard/cobros/historial' },
+        { name: 'Emitir Planillas', path: '/dashboard/cobros/planilla' }
       ]
     },
     { name: 'Reportes', path: '/dashboard/reportes', icon: FileText, show: hasPermission('ver_reportes') },

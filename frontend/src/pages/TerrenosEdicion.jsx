@@ -110,6 +110,7 @@ export default function TerrenosEdicion() {
                 step="0.01"
                 className="input-field" 
                 placeholder="0.00" 
+                onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
                 {...register('area_total', { required: "Requerido", min: 0.01 })} 
               />
               {errors.area_total && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>Requerido</span>}
