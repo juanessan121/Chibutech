@@ -7,6 +7,29 @@ import { getAllSectores } from '../services/catalogoService';
 import { programarMinga } from '../services/mingaService';
 import { allowTextWithPunctuation } from '../utils/validators';
 
+function StepBadge({ n, activo }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      width: '18px', height: '18px', borderRadius: '50%', fontSize: '0.65rem',
+      fontWeight: 700, flexShrink: 0,
+      background: activo ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
+      color: activo ? '#fff' : '#64748b',
+      transition: 'background 0.3s, color 0.3s',
+    }}>{n}</span>
+  );
+}
+
+const estiloProgresivo = (activo) => ({
+  opacity: activo ? 1 : 0.38,
+  pointerEvents: activo ? 'auto' : 'none',
+  transition: 'opacity 0.35s ease',
+});
+
+const hintTexto = {
+  fontSize: '0.7rem', color: '#475569', fontWeight: 400, marginLeft: '0.25rem',
+};
+
 // Catálogo local de tipos de evento (refleja Catalogo_Tipo_Evento de la BD)
 const TIPOS_EVENTO = [
   { id: 1, nombre: 'Minga Comunitaria' },
@@ -18,7 +41,18 @@ const TIPOS_EVENTO = [
 export default function MingasProgramar() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, control, handleSubmit, formState: { errors } } = useForm();
+  const { register, control, handleSubmit, watch, formState: { errors } } = useForm();
+
+  // Progresividad: cada campo se habilita cuando el anterior tiene valor
+  const watchFecha  = watch('fecha_hora_programada');
+  const watchLugar  = watch('lugar_encuentro');
+  const watchMotivo = watch('motivo_minga');
+  const watchValor  = watch('valor_multa_inasistencia');
+
+  const paso3 = !!watchFecha;                              // Lugar ← después de fecha
+  const paso4 = !!watchLugar?.trim();                      // Motivo ← después de lugar
+  const paso5 = !!watchMotivo?.trim();                     // Valor multa ← después de motivo
+  const paso6 = !!watchValor && Number(watchValor) > 0;    // Obs + Sectores ← después de valor
   
   const { fields: asignacionesFields, replace } = useFieldArray({
     control,
@@ -110,11 +144,11 @@ export default function MingasProgramar() {
             Detalles de la Jornada
           </h3>
 
-          {/* Tipo de Evento — cubre columna id_tipo_evento de tabla Minga */}
+          {/* Paso 1+2 — Tipo de Evento y Fecha (ambos activos desde el inicio) */}
           <div className="form-grid">
             <div className="input-group">
               <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Tag size={14} className="text-purple" /> Tipo de Evento *
+                <StepBadge n={1} activo /> <Tag size={14} className="text-purple" /> Tipo de Evento *
               </label>
               <select className="form-select" {...register('id_tipo_evento', { required: true })}>
                 {TIPOS_EVENTO.map(t => (
@@ -124,79 +158,89 @@ export default function MingasProgramar() {
             </div>
             <div className="input-group">
               <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Clock size={16} className="text-blue" /> Fecha y Hora Programada *
+                <StepBadge n={2} activo /> <Clock size={16} className="text-blue" /> Fecha y Hora Programada *
               </label>
-              <input 
-                type="datetime-local" 
+              <input
+                type="datetime-local"
                 min={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
                 className={`input-field ${errors.fecha_hora_programada ? 'error' : ''}`}
-                {...register("fecha_hora_programada", { required: "La fecha es obligatoria" })} 
+                {...register("fecha_hora_programada", { required: "La fecha es obligatoria" })}
               />
               {errors.fecha_hora_programada && <span className="text-red" style={{fontSize:'0.75rem'}}>{errors.fecha_hora_programada.message}</span>}
             </div>
           </div>
 
-          <div className="form-grid full">
+          {/* Paso 3 — Lugar (habilita cuando hay fecha) */}
+          <div className="form-grid full" style={estiloProgresivo(paso3)}>
             <div className="input-group">
               <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <MapPin size={16} className="text-earth" /> Lugar de Encuentro *
+                <StepBadge n={3} activo={paso3} /> <MapPin size={16} className="text-earth" /> Lugar de Encuentro *
+                {!paso3 && <span style={hintTexto}>← ingresa la fecha primero</span>}
               </label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 className={`input-field ${errors.lugar_encuentro ? 'error' : ''}`}
-                placeholder="Ej. Sede Central de la Junta" 
+                placeholder="Ej. Sede Central de la Junta"
                 onInput={(e) => e.target.value = allowTextWithPunctuation(e.target.value)}
-                {...register("lugar_encuentro", { required: "El lugar es obligatorio" })} 
+                {...register("lugar_encuentro", { required: "El lugar es obligatorio" })}
               />
             </div>
           </div>
 
-          <div className="form-grid full">
+          {/* Paso 4 — Motivo (habilita cuando hay lugar) */}
+          <div className="form-grid full" style={estiloProgresivo(paso4)}>
             <div className="input-group">
-              <label className="input-label">Motivo o Trabajo a Realizar *</label>
-              <textarea 
+              <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <StepBadge n={4} activo={paso4} /> Motivo o Trabajo a Realizar *
+                {paso3 && !paso4 && <span style={hintTexto}>← ingresa el lugar primero</span>}
+              </label>
+              <textarea
                 className={`input-field ${errors.motivo_minga ? 'error' : ''}`}
                 style={{ minHeight: '80px', resize: 'vertical' }}
-                placeholder="Ej. Limpieza de las acequias principales..." 
+                placeholder="Ej. Limpieza de las acequias principales..."
                 onInput={(e) => e.target.value = allowTextWithPunctuation(e.target.value)}
-                {...register("motivo_minga", { required: "Debe especificar un motivo" })} 
-              ></textarea>
+                {...register("motivo_minga", { required: "Debe especificar un motivo" })}
+              />
             </div>
           </div>
 
-
-          <div className="form-grid">
+          {/* Paso 5+6 — Valor Multa y Observación (habilita cuando hay motivo) */}
+          <div className="form-grid" style={estiloProgresivo(paso5)}>
             <div className="input-group">
               <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <DollarSign size={16} className="text-green" /> Valor Multa General Inasistencia ($) *
+                <StepBadge n={5} activo={paso5} /> <DollarSign size={16} className="text-green" /> Valor Multa Inasistencia ($) *
+                {paso4 && !paso5 && <span style={hintTexto}>← ingresa el motivo primero</span>}
               </label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 step="0.01"
                 className={`input-field ${errors.valor_multa_inasistencia ? 'error' : ''}`}
-                placeholder="Ej. 10.00" 
+                placeholder="Ej. 10.00"
                 onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
-                {...register("valor_multa_inasistencia", { required: "Ingrese el valor de la multa", min: 0 })} 
+                {...register("valor_multa_inasistencia", { required: "Ingrese el valor de la multa", min: 0 })}
               />
             </div>
-            <div className="input-group">
+            <div className="input-group" style={estiloProgresivo(paso6)}>
               <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <FileText size={16} className="text-muted" /> Observación Inicial (Opcional)
+                <StepBadge n={6} activo={paso6} /> <FileText size={16} className="text-muted" /> Observación Inicial (Opcional)
+                {paso5 && !paso6 && <span style={hintTexto}>← ingresa el valor de multa primero</span>}
               </label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 className="input-field"
-                placeholder="Ej. Llevar palas y picos..." 
+                placeholder="Ej. Llevar palas y picos..."
                 onInput={(e) => e.target.value = allowTextWithPunctuation(e.target.value)}
-                {...register("observacion_estado")} 
+                {...register("observacion_estado")}
               />
             </div>
           </div>
 
-          <div className="form-grid full" style={{ marginTop: '1rem' }}>
+          {/* Paso 7 — Sectores (habilita cuando hay valor de multa) */}
+          <div className="form-grid full" style={{ marginTop: '1rem', ...estiloProgresivo(paso6) }}>
             <div className="input-group">
               <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Users size={16} className="text-purple" /> Sectores Asignados
+                <StepBadge n={7} activo={paso6} /> <Users size={16} className="text-purple" /> Sectores Asignados
+                {paso5 && !paso6 && <span style={hintTexto}>← ingresa el valor de multa primero</span>}
               </label>
               
               <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>

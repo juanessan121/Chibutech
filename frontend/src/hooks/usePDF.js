@@ -170,11 +170,18 @@ export function usePDF() {
       let datos = resPadron.data.data;
       const directivaActiva = resDirectiva.data.data;
 
-      // 2. Aplicar filtros
-      if (filtros.sector && filtros.sector !== 'todos') {
-        const sectorMap = { '1': 'Centro', '2': 'San Luis', '3': 'San Francisco' };
-        datos = datos.filter(u => u.sector === sectorMap[filtros.sector]);
+      // 2. Aplicar filtros jerárquicos: sector específico > todos de la zona > sin filtro
+      if (filtros.nombreSector) {
+        datos = datos.filter(u => u.sector === filtros.nombreSector);
+      } else if (filtros.sectoresDeLaZona?.length > 0) {
+        datos = datos.filter(u => filtros.sectoresDeLaZona.includes(u.sector));
       }
+
+      const filtroTexto = filtros.nombreSector
+        ? filtros.nombreSector
+        : filtros.nombreZona
+          ? `Zona ${filtros.nombreZona} (todos los sectores)`
+          : 'Todos los sectores';
 
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       dibujarHeader(doc, 'PADRÓN DE USUARIOS', `Total registros: ${datos.length}`);
@@ -184,7 +191,7 @@ export function usePDF() {
         { label: 'Total Registros', value: datos.length },
         { label: 'Vivos',           value: datos.filter(u => u.estado === 'Vivo').length },
         { label: 'Fallecidos',      value: datos.filter(u => u.estado === 'Fallecido').length },
-        { label: 'Sector Filtrado', value: filtros.sector === 'todos' || !filtros.sector ? 'Todos' : filtros.sector },
+        { label: 'Filtro Aplicado', value: filtroTexto },
       ], LAYOUT.headerHeight + 5);
 
       // Título de sección

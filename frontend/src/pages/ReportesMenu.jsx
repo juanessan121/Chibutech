@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Users, AlertCircle, BarChart3, Filter, CheckCircle2, XCircle } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { usePDF } from '../hooks/usePDF';
 import PDFDownloadButton from '../components/pdf/PDFDownloadButton';
 import PageHeader from '../components/ui/PageHeader';
+import { getZonas, getAllSectores } from '../services/catalogoService';
 import bgRepPadron from '../assets/bg_rep_padron.png';
 import bgRepMorosos from '../assets/bg_rep_morosos.png';
 import bgRepFinanciero from '../assets/bg_rep_financiero.png';
@@ -42,9 +43,25 @@ export default function ReportesMenu() {
   const { generarPadron, generarMorosos, generarBalance, isGenerating } = usePDF();
 
   // Estado local de filtros por tipo de reporte
-  const [filtroPadron, setFiltroPadron]         = useState({ sector: 'todos' });
+  const [filtroPadron, setFiltroPadron] = useState({
+    zona: 'todas', sector: 'todos', nombreZona: '', nombreSector: '', sectoresDeLaZona: []
+  });
   const [filtroMorosos, setFiltroMorosos]       = useState({ concepto: 'todas', montoMin: '0', fechaDesde: '', fechaHasta: '' });
   const [filtroFinanciero, setFiltroFinanciero] = useState({ periodo: 'este_mes', fechaDesde: '', fechaHasta: '' });
+
+  // Progreso de campos para Morosos: 0=solo Origen, 1=+Monto, 2=+Fechas
+  const [pasoMorosos, setPasoMorosos] = useState(0);
+
+  // Catálogos para el filtro jerárquico del Padrón
+  const [zonas, setZonas]     = useState([]);
+  const [sectores, setSectores] = useState([]);
+
+  useEffect(() => {
+    Promise.all([getZonas(), getAllSectores()]).then(([z, s]) => {
+      setZonas(z);
+      setSectores(s);
+    }).catch(() => {});
+  }, []);
 
   // ── Dispatcher de generación según tipo activo ─────────────────────────────
   const handleGenerate = async (e) => {
@@ -123,7 +140,7 @@ export default function ReportesMenu() {
             <div
               key={rep.id}
               className={`glass-card hover-glow cursor-pointer`}
-              onClick={() => setActiveReport(rep.id)}
+              onClick={() => { setActiveReport(rep.id); setPreviewUrl(null); setPasoMorosos(0); }}
               style={{
                 padding: '1.5rem',
                 border: isActive ? `2px solid ${rep.color}` : '1px solid var(--border-color)',
@@ -166,32 +183,88 @@ export default function ReportesMenu() {
           <form onSubmit={handleGenerate}>
             <div className="form-grid" style={{ marginBottom: '2rem' }}>
 
-              {/* ── FILTROS: PADRÓN ─────────────────────────────────────── */}
+              {/* ── FILTROS: PADRÓN — jerarquía Zona → Sector ─────────── */}
               {activeReport === 'padron' && (
-                <div className="input-group">
-                  <label className="input-label">Filtrar por Sector (Zona)</label>
-                  <select
-                    className="form-select"
-                    value={filtroPadron.sector}
-                    onChange={(e) => setFiltroPadron({ sector: e.target.value })}
-                  >
-                    <option value="todos">Todos los Sectores</option>
-                    <option value="1">Sector Centro</option>
-                    <option value="2">San Luis</option>
-                    <option value="3">San Francisco</option>
-                  </select>
-                </div>
+                <>
+                  {/* Paso 1 — Zona */}
+                  <div className="input-group">
+                    <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <StepBadge n={1} activo />
+                      Zona / Área geográfica
+                    </label>
+                    <select
+                      className="form-select"
+                      value={filtroPadron.zona}
+                      onChange={(e) => {
+                        const idZona = e.target.value;
+                        const zonaObj = zonas.find(z => String(z.id_zona) === idZona);
+                        const sects   = sectores.filter(s => String(s.id_zona) === idZona);
+                        setFiltroPadron({
+                          zona: idZona,
+                          sector: 'todos',
+                          nombreZona: zonaObj?.nombre_zona ?? '',
+                          nombreSector: '',
+                          sectoresDeLaZona: sects.map(s => s.nombre_sector),
+                        });
+                      }}
+                    >
+                      <option value="todas">Todas las zonas</option>
+                      {zonas.map(z => (
+                        <option key={z.id_zona} value={z.id_zona}>{z.nombre_zona}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Paso 2 — Sector (se activa al elegir zona) */}
+                  <div className="input-group" style={estiloProgresivo(filtroPadron.zona !== 'todas')}>
+                    <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <StepBadge n={2} activo={filtroPadron.zona !== 'todas'} />
+                      Sector específico
+                      {filtroPadron.zona === 'todas' && <span style={styles.hintTexto}>← elige una zona primero</span>}
+                    </label>
+                    <select
+                      className="form-select"
+                      disabled={filtroPadron.zona === 'todas'}
+                      value={filtroPadron.sector}
+                      onChange={(e) => {
+                        const idSector = e.target.value;
+                        const sectObj  = sectores.find(s => String(s.id_sector) === idSector);
+                        setFiltroPadron(f => ({
+                          ...f,
+                          sector: idSector,
+                          nombreSector: sectObj?.nombre_sector ?? '',
+                        }));
+                      }}
+                    >
+                      <option value="todos">
+                        Todos los sectores{filtroPadron.nombreZona ? ` de ${filtroPadron.nombreZona}` : ''}
+                      </option>
+                      {sectores
+                        .filter(s => String(s.id_zona) === filtroPadron.zona)
+                        .map(s => (
+                          <option key={s.id_sector} value={s.id_sector}>{s.nombre_sector}</option>
+                        ))}
+                    </select>
+                  </div>
+                </>
               )}
 
-              {/* ── FILTROS: MOROSOS ─────────────────────────────────────── */}
+              {/* ── FILTROS: MOROSOS (progresivo) ────────────────────────── */}
               {activeReport === 'morosos' && (
                 <>
+                  {/* Paso 1 — Origen */}
                   <div className="input-group">
-                    <label className="input-label">Origen de la Deuda</label>
+                    <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <StepBadge n={1} activo />
+                      Origen de la Deuda
+                    </label>
                     <select
                       className="form-select"
                       value={filtroMorosos.concepto}
-                      onChange={(e) => setFiltroMorosos(f => ({ ...f, concepto: e.target.value }))}
+                      onChange={(e) => {
+                        setFiltroMorosos(f => ({ ...f, concepto: e.target.value }));
+                        if (pasoMorosos < 1) setPasoMorosos(1);
+                      }}
                     >
                       <option value="todas">Todas las deudas y multas</option>
                       <option value="mingas">Solo inasistencias a Mingas</option>
@@ -199,12 +272,22 @@ export default function ReportesMenu() {
                       <option value="danos">Solo multas por daños/disciplina</option>
                     </select>
                   </div>
-                  <div className="input-group">
-                    <label className="input-label">Mostrar usuarios que deban más de:</label>
+
+                  {/* Paso 2 — Monto mínimo */}
+                  <div className="input-group" style={estiloProgresivo(pasoMorosos >= 1)}>
+                    <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <StepBadge n={2} activo={pasoMorosos >= 1} />
+                      Mostrar usuarios que deban más de:
+                      {pasoMorosos < 1 && <span style={styles.hintTexto}>← selecciona el origen primero</span>}
+                    </label>
                     <select
                       className="form-select"
+                      disabled={pasoMorosos < 1}
                       value={filtroMorosos.montoMin}
-                      onChange={(e) => setFiltroMorosos(f => ({ ...f, montoMin: e.target.value }))}
+                      onChange={(e) => {
+                        setFiltroMorosos(f => ({ ...f, montoMin: e.target.value }));
+                        if (pasoMorosos < 2) setPasoMorosos(2);
+                      }}
                     >
                       <option value="0">Cualquier valor (Desde $1)</option>
                       <option value="10">Más de $10 dólares</option>
@@ -212,21 +295,34 @@ export default function ReportesMenu() {
                       <option value="100">Más de $100 (Casos críticos)</option>
                     </select>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', gridColumn: '1 / -1' }}>
+
+                  {/* Paso 3 — Rango de fechas */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', gridColumn: '1 / -1', ...estiloProgresivo(pasoMorosos >= 2) }}>
                     <div className="input-group">
-                      <label className="input-label">Desde Fecha</label>
+                      <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <StepBadge n={3} activo={pasoMorosos >= 2} />
+                        Desde Fecha
+                        {pasoMorosos < 2 && <span style={styles.hintTexto}>← selecciona el monto primero</span>}
+                      </label>
                       <input
                         type="date"
                         className="input-field"
+                        disabled={pasoMorosos < 2}
                         value={filtroMorosos.fechaDesde}
-                        onChange={(e) => setFiltroMorosos(f => ({ ...f, fechaDesde: e.target.value }))}
+                        onChange={(e) => setFiltroMorosos(f => ({ ...f, fechaDesde: e.target.value, fechaHasta: '' }))}
                       />
                     </div>
                     <div className="input-group">
-                      <label className="input-label">Hasta Fecha</label>
+                      <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <StepBadge n={4} activo={!!filtroMorosos.fechaDesde} />
+                        Hasta Fecha
+                        {pasoMorosos >= 2 && !filtroMorosos.fechaDesde && <span style={styles.hintTexto}>← ingresa la fecha de inicio</span>}
+                      </label>
                       <input
                         type="date"
                         className="input-field"
+                        disabled={!filtroMorosos.fechaDesde}
+                        min={filtroMorosos.fechaDesde}
                         value={filtroMorosos.fechaHasta}
                         onChange={(e) => setFiltroMorosos(f => ({ ...f, fechaHasta: e.target.value }))}
                       />
@@ -254,20 +350,29 @@ export default function ReportesMenu() {
                   {filtroFinanciero.periodo === 'personalizado' && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', gridColumn: '1 / -1' }}>
                       <div className="input-group">
-                        <label className="input-label">Desde</label>
+                        <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <StepBadge n={2} activo />
+                          Desde
+                        </label>
                         <input
                           type="date"
                           className="input-field"
                           value={filtroFinanciero.fechaDesde}
-                          onChange={(e) => setFiltroFinanciero(f => ({ ...f, fechaDesde: e.target.value }))}
+                          onChange={(e) => setFiltroFinanciero(f => ({ ...f, fechaDesde: e.target.value, fechaHasta: '' }))}
                           required
                         />
                       </div>
-                      <div className="input-group">
-                        <label className="input-label">Hasta</label>
+                      <div className="input-group" style={estiloProgresivo(!!filtroFinanciero.fechaDesde)}>
+                        <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <StepBadge n={3} activo={!!filtroFinanciero.fechaDesde} />
+                          Hasta
+                          {!filtroFinanciero.fechaDesde && <span style={styles.hintTexto}>← ingresa la fecha de inicio</span>}
+                        </label>
                         <input
                           type="date"
                           className="input-field"
+                          disabled={!filtroFinanciero.fechaDesde}
+                          min={filtroFinanciero.fechaDesde}
                           value={filtroFinanciero.fechaHasta}
                           onChange={(e) => setFiltroFinanciero(f => ({ ...f, fechaHasta: e.target.value }))}
                           required
@@ -325,6 +430,29 @@ export default function ReportesMenu() {
   );
 }
 
+// Badge numerado para cada paso del formulario progresivo
+function StepBadge({ n, activo }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      width: '18px', height: '18px', borderRadius: '50%', fontSize: '0.65rem',
+      fontWeight: 700, flexShrink: 0,
+      background: activo ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
+      color: activo ? '#fff' : '#64748b',
+      transition: 'background 0.3s, color 0.3s',
+    }}>
+      {n}
+    </span>
+  );
+}
+
+// Estilo que atenúa visualmente los campos aún no habilitados
+const estiloProgresivo = (activo) => ({
+  opacity: activo ? 1 : 0.38,
+  pointerEvents: activo ? 'auto' : 'none',
+  transition: 'opacity 0.35s ease',
+});
+
 const styles = {
   reportGrid: {
     display: 'grid',
@@ -349,5 +477,11 @@ const styles = {
     justifyContent: 'flex-end',
     paddingTop: '1.5rem',
     borderTop: '1px solid var(--border-color)',
+  },
+  hintTexto: {
+    fontSize: '0.7rem',
+    color: '#475569',
+    fontWeight: 400,
+    marginLeft: '0.25rem',
   },
 };
