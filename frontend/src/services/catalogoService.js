@@ -5,8 +5,7 @@ import api from './axiosConfig';
  */
 export const getZonas = async () => {
   const { data } = await api.get('/configuracion/zonas-sectores');
-  // La ruta devuelve { zonas: [...], sectores: [...] }
-  return data.zonas ?? [];
+  return data.data?.zonas ?? [];
 };
 
 /**
@@ -14,7 +13,7 @@ export const getZonas = async () => {
  */
 export const getSectoresByZona = async (id_zona) => {
   const { data } = await api.get('/configuracion/zonas-sectores');
-  const sectores = data.sectores ?? [];
+  const sectores = data.data?.sectores ?? [];
   return sectores.filter(s => String(s.id_zona) === String(id_zona));
 };
 
@@ -23,7 +22,7 @@ export const getSectoresByZona = async (id_zona) => {
  */
 export const getAllSectores = async () => {
   const { data } = await api.get('/configuracion/zonas-sectores');
-  return data.sectores ?? [];
+  return data.data?.sectores ?? [];
 };
 
 /**

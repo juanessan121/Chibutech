@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, User, CheckCircle, AlertCircle, FileText, Calendar } from 'lucide-react';
-import { Toaster, toast } from 'sonner';
+import { Search, MapPin, User, CheckCircle, AlertCircle, FileText, Calendar, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
 import axios from '../services/axiosConfig';
 
 export default function PagoAgua() {
@@ -8,9 +8,10 @@ export default function PagoAgua() {
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
   const [resultados, setResultados] = useState([]);
   const [buscando, setBuscando] = useState(false);
-  
+
   const [terrenoSeleccionado, setTerrenoSeleccionado] = useState(null);
-  
+  const [multasPendientes, setMultasPendientes] = useState([]);
+
   // Consulta proactiva
   const [mesSeleccionado, setMesSeleccionado] = useState(new Date().getMonth() + 1);
   const [anioSeleccionado, setAnioSeleccionado] = useState(new Date().getFullYear());
@@ -49,7 +50,19 @@ export default function PagoAgua() {
     setTerrenoSeleccionado(t);
     setTerminoBusqueda('');
     setResultados([]);
-    setPlanillaConsultada(null); // Reset
+    setPlanillaConsultada(null);
+    setMultasPendientes([]);
+    // Consultar multas pendientes del titular al seleccionar el terreno
+    try {
+      const res = await axios.get(`/cobros/deudas/${t.id_titular}`);
+      const multas = (res.data.data || []).filter(d => d.tipo === 'Multa');
+      setMultasPendientes(multas);
+      if (multas.length > 0) {
+        toast.warning(`Este comunero tiene ${multas.length} multa${multas.length > 1 ? 's' : ''} pendiente${multas.length > 1 ? 's' : ''}. No puede pagar el agua hasta cancelarlas.`);
+      }
+    } catch {
+      setMultasPendientes([]);
+    }
   };
 
   const consultarMes = async (id_terreno) => {
@@ -67,9 +80,21 @@ export default function PagoAgua() {
     }
   };
 
+  const intentarPagar = (planilla) => {
+    if (multasPendientes.length > 0) {
+      toast.error(`No puede pagar el agua. Tiene ${multasPendientes.length} multa${multasPendientes.length > 1 ? 's' : ''} pendiente${multasPendientes.length > 1 ? 's' : ''} que deben cancelarse al 100% primero.`);
+      return;
+    }
+    setPlanillaAPagar(planilla);
+  };
+
   const procesarPago = async (e) => {
     e.preventDefault();
     if (!comprobante) return toast.warning("El número de comprobante es obligatorio");
+    if (multasPendientes.length > 0) {
+      toast.error('No puede procesar el pago. Existen multas pendientes.');
+      return;
+    }
     setPagando(true);
     try {
       await axios.post('/cobros/pagar-agua', {
@@ -79,7 +104,7 @@ export default function PagoAgua() {
       toast.success('Pago procesado correctamente');
       setPlanillaAPagar(null);
       setComprobante('');
-      consultarMes(terrenoSeleccionado.id_terreno); // Recargar la planilla actual
+      consultarMes(terrenoSeleccionado.id_terreno);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al procesar el pago');
     } finally {
@@ -196,6 +221,32 @@ export default function PagoAgua() {
         </div>
       )}
 
+      {/* Alerta de multas pendientes */}
+      {terrenoSeleccionado && multasPendientes.length > 0 && (
+        <div className="glass-card animate-fade-in" style={{ padding: '1.5rem', marginBottom: '2rem', border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.07)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+            <AlertTriangle size={22} style={{ color: '#ef4444', flexShrink: 0 }} />
+            <div>
+              <h4 style={{ margin: 0, color: '#ef4444' }}>Pago de agua bloqueado — {multasPendientes.length} multa{multasPendientes.length > 1 ? 's' : ''} pendiente{multasPendientes.length > 1 ? 's' : ''}</h4>
+              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>
+                Deben cancelarse al 100% antes de poder pagar planillas de agua.
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {multasPendientes.map(m => (
+              <div key={m.id_deuda} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.6rem 1rem', borderRadius: '0.5rem', fontSize: '0.9rem' }}>
+                <span style={{ color: 'var(--text-main)' }}>{m.motivo}</span>
+                <span style={{ fontWeight: 'bold', color: '#ef4444' }}>${m.monto.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+          <p style={{ margin: '0.75rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+            Para cobrar las multas diríjase a <strong>Ventanilla de Cobro</strong>.
+          </p>
+        </div>
+      )}
+
       {/* Historial de Meses */}
       {terrenoSeleccionado && (
         <div className="glass-card animate-fade-in" style={{ padding: '2rem' }}>
@@ -251,8 +302,13 @@ export default function PagoAgua() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                 <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>${planillaConsultada.total_pagar}</span>
                 {planillaConsultada.estado_pago === 'Pendiente' && (
-                  <button className="btn-primary" style={{ padding: '0.5rem 1.5rem', width: 'auto' }} onClick={() => setPlanillaAPagar(planillaConsultada)}>
-                    Pagar Ahora
+                  <button
+                    className="btn-primary"
+                    style={{ padding: '0.5rem 1.5rem', width: 'auto', background: multasPendientes.length > 0 ? '#4b5563' : undefined, cursor: multasPendientes.length > 0 ? 'not-allowed' : 'pointer', opacity: multasPendientes.length > 0 ? 0.6 : 1 }}
+                    onClick={() => intentarPagar(planillaConsultada)}
+                    title={multasPendientes.length > 0 ? 'Primero cancele las multas pendientes' : ''}
+                  >
+                    {multasPendientes.length > 0 ? '🔒 Pago Bloqueado' : 'Pagar Ahora'}
                   </button>
                 )}
               </div>

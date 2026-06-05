@@ -85,15 +85,15 @@ export default function DashboardLayout() {
       ]
     },
     { name: 'Reportes', path: '/dashboard/reportes', icon: FileText, show: hasPermission('ver_reportes') },
-    { 
-      name: 'Directiva', icon: Award, show: true,
+    {
+      name: 'Directiva', icon: Award, show: hasPermission('crear_usuario'),
       activePaths: ['/dashboard/directiva'],
       subItems: [
         { name: 'Directiva Actual', path: '/dashboard/directiva' },
         { name: 'Gestionar', path: '/dashboard/directiva/gestionar' }
       ]
     },
-    { 
+    {
       name: 'Administración', icon: Settings, show: hasPermission('gestionar_multas'),
       activePaths: ['/dashboard/administracion'],
       subItems: [
@@ -102,7 +102,7 @@ export default function DashboardLayout() {
       ]
     },
     { name: 'Mis Deudas', path: '/dashboard/mis-deudas', icon: Droplet, show: isRole('Usuario Regular') },
-    { name: 'Mi Predio', path: '/dashboard/catastro/detalles/1', icon: MapPin, show: isRole('Usuario Regular') },
+    { name: 'Mis Terrenos', path: '/dashboard/mis-terrenos', icon: MapPin, show: isRole('Usuario Regular') },
   ];
 
   // Sincronizar automáticamente el submenú abierto (accordion) con la ruta actual
@@ -314,12 +314,12 @@ export default function DashboardLayout() {
               navigate('/dashboard/perfil');
               setIsSidebarOpen(false);
             }}
-            title={isCollapsed ? `${user?.username} (${user?.rol})` : ''}
+            title={isCollapsed ? `${user?.nombre_completo || user?.username} (${user?.rol})` : ''}
           >
             <UserCircle size={32} color="var(--primary)" />
             {!isCollapsed && (
               <div className="user-info">
-                <span className="user-name">{user?.username}</span>
+                <span className="user-name" style={{ fontSize: '0.82rem' }}>{user?.nombre_completo || user?.username}</span>
                 <span className="user-role">{user?.rol}</span>
               </div>
             )}
@@ -492,7 +492,7 @@ export default function DashboardLayout() {
               onClick={() => navigate('/dashboard/perfil')}
             >
               <User size={16} />
-              <span style={{ fontSize: '0.85rem' }}>{user?.username}</span>
+              <span style={{ fontSize: '0.85rem' }}>{user?.nombre_completo || user?.username}</span>
             </button>
           </div>
         </div>

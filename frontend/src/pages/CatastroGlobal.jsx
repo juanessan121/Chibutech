@@ -132,6 +132,12 @@ export default function CatastroGlobal() {
                 <td style={{ padding: '1rem' }}>
                   <p style={{ margin: 0, fontWeight: '600', color: 'var(--text-main)' }}>{t.propietario}</p>
                   <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>C.I: {t.cedula}</p>
+                  {t.total_copropietarios > 0 && (
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.7rem', color: '#f59e0b' }}
+                      title={t.nombres_copros}>
+                      +{t.total_copropietarios} copropietario{t.total_copropietarios > 1 ? 's' : ''}
+                    </p>
+                  )}
                 </td>
                 <td style={{ padding: '1rem' }}>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t.zona}</div>

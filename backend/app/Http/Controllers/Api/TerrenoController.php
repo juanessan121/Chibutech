@@ -7,7 +7,6 @@ use App\Models\Terreno;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Exception;
 
@@ -24,6 +23,13 @@ class TerrenoController extends Controller
                 ->leftJoin('Sector as s', 'p.id_sector', '=', 's.id_sector')
                 ->leftJoin('Zona as z', 's.id_zona', '=', 'z.id_zona')
                 ->join('Catalogo_Estado_Construccion as cec', 't.id_estado_construccion', '=', 'cec.id_estado_construccion')
+                ->leftJoin(DB::raw(
+                    '(SELECT ct.id_terreno, COUNT(*) as total_copros,
+                      GROUP_CONCAT(CONCAT(cp.nombre," ",cp.apellido) SEPARATOR ", ") as nombres_copros
+                      FROM Copropietario_Terreno ct
+                      JOIN Persona cp ON ct.id_persona = cp.id_persona
+                      GROUP BY ct.id_terreno) as coprodata'
+                ), 'coprodata.id_terreno', '=', 't.id_terreno')
                 ->select(
                     't.id_terreno',
                     DB::raw("CONCAT(p.nombre, ' ', p.apellido) as propietario"),
@@ -34,7 +40,9 @@ class TerrenoController extends Controller
                     't.area_total as area_m2',
                     't.latitud',
                     't.longitud',
-                    't.url_planimetria'
+                    't.url_planimetria',
+                    DB::raw('COALESCE(coprodata.total_copros, 0) as total_copropietarios'),
+                    'coprodata.nombres_copros'
                 )
                 ->get();
 
@@ -73,12 +81,6 @@ class TerrenoController extends Controller
         try {
             DB::beginTransaction();
 
-            // Migración dinámica en caso de que no exista la columna
-            if (!Schema::hasColumn('Terreno', 'archivo_escritura')) {
-                Schema::table('Terreno', function($table) {
-                    $table->string('archivo_escritura')->nullable();
-                });
-            }
 
             foreach ($data['terrenos'] as $t) {
                 $rutaArchivo = null;
@@ -157,14 +159,11 @@ class TerrenoController extends Controller
     {
         try {
             $selects = [
-                't.id_terreno', 't.clave_catastral', 't.area_total', 't.latitud', 't.longitud', 't.url_planimetria', 't.id_estado_construccion',
+                't.id_terreno', 't.clave_catastral', 't.area_total', 't.latitud', 't.longitud',
+                't.url_planimetria', 't.id_estado_construccion', 't.archivo_escritura',
                 'p.id_persona', 'p.nombre', 'p.apellido', 'p.cedula',
                 's.nombre_sector', 'z.nombre_zona', 'c.nombre_estado'
             ];
-
-            if (\Illuminate\Support\Facades\Schema::hasColumn('Terreno', 'archivo_escritura')) {
-                $selects[] = 't.archivo_escritura';
-            }
 
             $terreno = DB::table('Terreno as t')
                 ->join('Persona as p', 't.id_persona', '=', 'p.id_persona')
@@ -250,8 +249,8 @@ class TerrenoController extends Controller
                 'operacion' => 'UPDATE',
                 'id_registro' => $id,
                 'datos_anteriores' => json_encode($terrenoAnterior),
-                'datos_nuevos' => json_encode($request->all()),
-                'id_usuario' => 1,
+                'datos_nuevos' => json_encode($request->only(['area_total', 'id_estado_construccion', 'latitud', 'longitud'])),
+                'id_usuario' => auth()->id(),
                 'fecha_hora' => now()
             ]);
 
@@ -303,7 +302,7 @@ class TerrenoController extends Controller
                     'nuevo_id_persona' => $request->nuevo_id_persona,
                     'motivo_traspaso' => $request->motivo
                 ]),
-                'id_usuario' => 1, // Usuario Dummy por ahora
+                'id_usuario' => auth()->id(),
                 'fecha_hora' => now()
             ]);
 
@@ -394,7 +393,7 @@ class TerrenoController extends Controller
     {
         try {
             $termino = $request->query('termino');
-            $criterio = $request->query('criterio', 'todos'); // clave, cedula, nombre, todos
+            $criterio = $request->query('criterio', 'todos');
 
             if (empty($termino)) {
                 return response()->json(['status' => 'success', 'data' => []]);
@@ -403,6 +402,13 @@ class TerrenoController extends Controller
             $query = DB::table('Terreno as t')
                 ->join('Persona as p', 't.id_persona', '=', 'p.id_persona')
                 ->leftJoin('Sector as s', 'p.id_sector', '=', 's.id_sector')
+                // JOIN de copropietarios agregados — elimina el N+1 anterior
+                ->leftJoin(DB::raw(
+                    '(SELECT ct.id_terreno, GROUP_CONCAT(CONCAT(cp.cedula,"|",cp.nombre," ",cp.apellido) SEPARATOR ";") as copros'
+                    . ' FROM Copropietario_Terreno ct'
+                    . ' JOIN Persona cp ON ct.id_persona = cp.id_persona'
+                    . ' GROUP BY ct.id_terreno) as coprodata'
+                ), 'coprodata.id_terreno', '=', 't.id_terreno')
                 ->select(
                     't.id_terreno',
                     't.clave_catastral',
@@ -410,32 +416,92 @@ class TerrenoController extends Controller
                     'p.id_persona as id_titular',
                     'p.cedula as cedula_titular',
                     DB::raw("CONCAT(p.nombre, ' ', p.apellido) as nombre_titular"),
-                    's.nombre_sector as sector'
+                    's.nombre_sector as sector',
+                    'coprodata.copros'
                 );
 
             if ($criterio === 'clave') {
                 $query->where('t.clave_catastral', 'LIKE', '%' . $termino . '%');
-            } else if ($criterio === 'cedula') {
+            } elseif ($criterio === 'cedula') {
                 $query->where('p.cedula', 'LIKE', '%' . $termino . '%');
-            } else if ($criterio === 'nombre') {
+            } elseif ($criterio === 'nombre') {
                 $query->where(DB::raw("CONCAT(p.nombre, ' ', p.apellido)"), 'LIKE', '%' . $termino . '%');
             } else {
-                $query->where('t.clave_catastral', 'LIKE', '%' . $termino . '%')
+                $query->where(function($q) use ($termino) {
+                    $q->where('t.clave_catastral', 'LIKE', '%' . $termino . '%')
                       ->orWhere('p.cedula', 'LIKE', '%' . $termino . '%')
                       ->orWhere(DB::raw("CONCAT(p.nombre, ' ', p.apellido)"), 'LIKE', '%' . $termino . '%');
+                });
             }
 
-            $terrenos = $query->get();
+            $terrenosTitular = $query->get()->map(function($t) {
+                $copros = [];
+                if (!empty($t->copros)) {
+                    foreach (explode(';', $t->copros) as $entry) {
+                        [$cedula, $nombre] = explode('|', $entry, 2);
+                        $copros[] = ['cedula' => $cedula, 'nombre' => $nombre];
+                    }
+                }
+                return [
+                    'id_terreno'      => $t->id_terreno,
+                    'clave_catastral' => $t->clave_catastral,
+                    'area_total'      => $t->area_total,
+                    'id_titular'      => $t->id_titular,
+                    'cedula_titular'  => $t->cedula_titular,
+                    'nombre_titular'  => $t->nombre_titular,
+                    'sector'          => $t->sector,
+                    'copropietarios'  => $copros,
+                    'id_persona_cobro'  => $t->id_titular,
+                    'cedula_cobro'      => $t->cedula_titular,
+                    'nombre_cobro'      => $t->nombre_titular,
+                    'es_copropietario'  => false,
+                ];
+            });
 
-            // Adjuntar copropietarios a cada terreno
-            foreach ($terrenos as $t) {
-                $copropietarios = DB::table('Copropietario_Terreno as ct')
-                    ->join('Persona as cp', 'ct.id_persona', '=', 'cp.id_persona')
-                    ->where('ct.id_terreno', $t->id_terreno)
-                    ->select('cp.cedula', DB::raw("CONCAT(cp.nombre, ' ', cp.apellido) as nombre"))
-                    ->get();
-                $t->copropietarios = $copropietarios;
-            }
+            // Buscar también por cédula o nombre de copropietarios
+            $terrenosCopro = DB::table('Copropietario_Terreno as ct')
+                ->join('Persona as cp', 'ct.id_persona', '=', 'cp.id_persona')
+                ->join('Terreno as t2', 'ct.id_terreno', '=', 't2.id_terreno')
+                ->join('Persona as p2', 't2.id_persona', '=', 'p2.id_persona')
+                ->leftJoin('Sector as s2', 'p2.id_sector', '=', 's2.id_sector')
+                ->where(function($q) use ($termino) {
+                    $q->where('cp.cedula', 'LIKE', '%'.$termino.'%')
+                      ->orWhere(DB::raw("CONCAT(cp.nombre, ' ', cp.apellido)"), 'LIKE', '%'.$termino.'%');
+                })
+                ->select(
+                    't2.id_terreno', 't2.clave_catastral', 't2.area_total',
+                    'cp.id_persona as id_copropietario', 'cp.cedula as cedula_copropietario',
+                    DB::raw("CONCAT(cp.nombre, ' ', cp.apellido) as nombre_copropietario"),
+                    'p2.id_persona as id_titular', 'p2.cedula as cedula_titular',
+                    DB::raw("CONCAT(p2.nombre, ' ', p2.apellido) as nombre_titular"),
+                    's2.nombre_sector as sector'
+                )
+                ->get()
+                ->map(function($t) {
+                    return [
+                        'id_terreno'        => $t->id_terreno,
+                        'clave_catastral'   => $t->clave_catastral,
+                        'area_total'        => $t->area_total,
+                        'id_titular'        => $t->id_titular,
+                        'cedula_titular'    => $t->cedula_titular,
+                        'nombre_titular'    => $t->nombre_titular,
+                        'sector'            => $t->sector,
+                        'copropietarios'    => [],
+                        'id_persona_cobro'  => $t->id_copropietario,
+                        'cedula_cobro'      => $t->cedula_copropietario,
+                        'nombre_cobro'      => $t->nombre_copropietario,
+                        'es_copropietario'  => true,
+                    ];
+                });
+
+            // Unir resultados eliminando duplicados (un terreno puede aparecer por titular Y copropietario)
+            $idsYaIncluidos = $terrenosTitular->pluck('id_terreno')->toArray();
+            $terrenosCoproFiltrados = $terrenosCopro->filter(
+                fn($t) => !in_array($t['id_terreno'], $idsYaIncluidos)
+                       || $t['es_copropietario'] // si hay coincidencia en copro y titular, mostrar ambos
+            );
+
+            $terrenos = $terrenosTitular->concat($terrenosCoproFiltrados)->values();
 
             return response()->json(['status' => 'success', 'data' => $terrenos]);
         } catch (\Exception $e) {

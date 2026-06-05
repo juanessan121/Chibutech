@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, ArrowLeft, Plus, History, UserPlus, Save, Search, FileText, Calendar } from 'lucide-react';
+import { Shield, ArrowLeft, History, UserPlus, Save, FileText, Calendar, RefreshCw } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import axios from '../services/axiosConfig';
 import PersonaAutocompleteInput from '../components/PersonaAutocompleteInput';
@@ -32,6 +32,18 @@ export default function DirectivaGestion() {
   });
 
   const [historialPeriodos, setHistorialPeriodos] = useState([]);
+  const [periodoActivando, setPeriodoActivando] = useState(null);
+  const [periodoActivo, setPeriodoActivo] = useState(() => localStorage.getItem('directiva_periodo_firmas') || null);
+
+  const handleActivarPeriodo = (hist) => {
+    if (window.confirm(`¿Usar la directiva del período ${hist.periodo} (Presidente: ${hist.presidente}) para generación de documentos y firmas?\n\nEsto no elimina la directiva actual, solo selecciona cuál aparece en los PDFs.`)) {
+      setPeriodoActivando(hist.periodo);
+      localStorage.setItem('directiva_periodo_firmas', hist.periodo);
+      setPeriodoActivo(hist.periodo);
+      toast.success(`Directiva ${hist.periodo} activada para documentos y firmas.`);
+      setPeriodoActivando(null);
+    }
+  };
 
   useEffect(() => {
     if (activeTab === 'historial') {
@@ -236,25 +248,39 @@ export default function DirectivaGestion() {
               </tr>
             </thead>
             <tbody>
-              {historialPeriodos.map((hist, idx) => (
-                <tr key={idx}>
-                  <td style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>{hist.periodo}</td>
-                  <td>{hist.presidente}</td>
-                  <td><code style={{ fontSize: '0.78rem', color: 'var(--primary)' }}>{hist.resolucion || 'RES-HIST-001'}</code></td>
-                  <td style={{ textAlign: 'center' }}>
-                    <span className="badge badge-user">{hist.estado}</span>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button 
-                      className="btn-secondary" 
-                      onClick={() => navigate(`/dashboard/directiva?periodo=${hist.periodo}`)}
-                      style={{ padding: '0.4rem 1rem', width: 'auto', fontSize: '0.8rem' }}
-                    >
-                      Ver Organigrama Pasado
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {historialPeriodos.map((hist, idx) => {
+                const esActivo = periodoActivo === hist.periodo;
+                return (
+                  <tr key={idx}>
+                    <td style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>
+                      {hist.periodo}
+                      {esActivo && <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', padding: '0.1rem 0.4rem', borderRadius: '1rem' }}>En uso</span>}
+                    </td>
+                    <td>{hist.presidente}</td>
+                    <td><code style={{ fontSize: '0.78rem', color: 'var(--primary)' }}>{hist.resolucion || 'RES-HIST-001'}</code></td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className="badge badge-user">{hist.estado}</span>
+                    </td>
+                    <td style={{ textAlign: 'center', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                      <button
+                        className="btn-secondary"
+                        onClick={() => navigate(`/dashboard/directiva?periodo=${hist.periodo}`)}
+                        style={{ padding: '0.4rem 0.8rem', width: 'auto', fontSize: '0.78rem' }}
+                      >
+                        Ver Organigrama
+                      </button>
+                      <button
+                        className="btn-secondary"
+                        onClick={() => handleActivarPeriodo(hist)}
+                        disabled={periodoActivando === hist.periodo || esActivo}
+                        style={{ padding: '0.4rem 0.8rem', width: 'auto', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem', borderColor: esActivo ? '#10b981' : 'var(--yellow)', color: esActivo ? '#10b981' : 'var(--yellow)' }}
+                      >
+                        <RefreshCw size={13} /> {esActivo ? 'Activa' : 'Usar para Docs'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -8,15 +8,21 @@ use App\Http\Controllers\Api\TerrenoController;
 use App\Http\Controllers\Api\MingaController;
 use App\Http\Controllers\Api\CobroController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DashboardController;
 
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
+Route::middleware('auth:sanctum')->post('/auth/cambiar-rol', [AuthController::class, 'cambiarRol']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+
+// Dashboard — resumen consolidado (reemplaza 4 peticiones por 1)
+Route::get('/dashboard/resumen', [DashboardController::class, 'resumen']);
+Route::get('/dashboard/resumen-comunero', [DashboardController::class, 'resumenComunero']);
 
 // Buscar títulos educativos
 Route::get('/catalogos/titulos/todos', [TituloController::class, 'todos']);
@@ -32,6 +38,9 @@ Route::get('/catalogos/generos', function() {
 Route::get('/catalogos/condiciones', function() {
     return response()->json(['status' => 'ok', 'data' => \App\Models\CatalogoCondicionEspecial::all()]);
 });
+
+// Verificación de correo electrónico (MX check)
+Route::get('/verificar-email', [PersonaController::class, 'verificarEmail']);
 
 // Personas (Búsqueda, Registro, Edición y Eliminación)
 Route::get('/personas', [PersonaController::class, 'buscar']);

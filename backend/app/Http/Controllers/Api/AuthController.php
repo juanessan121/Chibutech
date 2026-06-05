@@ -51,11 +51,12 @@ class AuthController extends Controller
                 'data' => [
                     'token' => $token,
                     'user' => [
-                        'id' => $usuario->id_usuario,
-                        'username' => $usuario->cedula,
-                        'nombre_completo' => $usuario->persona ? $usuario->persona->nombre . ' ' . $usuario->persona->apellido : 'Admin',
-                        'rol' => $usuario->rol,
-                        'permisos' => $permisos
+                        'id'             => $usuario->id_usuario,
+                        'id_persona'     => $usuario->id_persona,
+                        'username'       => $usuario->cedula,
+                        'nombre_completo'=> $usuario->persona ? $usuario->persona->nombre . ' ' . $usuario->persona->apellido : 'Admin',
+                        'rol'            => $usuario->rol,
+                        'permisos'       => $permisos
                     ]
                 ]
             ]);
@@ -99,13 +100,51 @@ class AuthController extends Controller
             'data' => [
                 'token' => $token,
                 'user' => [
-                    'id' => $usuarioExistente->id_usuario,
-                    'username' => $usuarioExistente->cedula,
-                    'nombre_completo' => $persona->nombre . ' ' . $persona->apellido,
-                    'rol' => 'Usuario Regular',
-                    'permisos' => ['ver_dashboard', 'ver_perfil']
+                    'id'             => $usuarioExistente->id_usuario,
+                    'id_persona'     => $persona->id_persona,
+                    'username'       => $usuarioExistente->cedula,
+                    'nombre_completo'=> $persona->nombre . ' ' . $persona->apellido,
+                    'rol'            => 'Usuario Regular',
+                    'permisos'       => ['ver_dashboard', 'ver_perfil']
                 ]
             ]
+        ]);
+    }
+
+    /**
+     * Cambia el rol y la contraseña de un usuario existente (o crea el usuario si no existe).
+     * Solo accesible para Administrador/Presidente.
+     */
+    public function cambiarRol(Request $request): JsonResponse
+    {
+        $request->validate([
+            'id_persona' => 'required|integer|exists:Persona,id_persona',
+            'rol'        => 'required|in:Administrador,Presidente,Vicepresidente,Secretario,Tesorero,Vocal Principal 1,Vocal Principal 2,Vocal Principal 3,Vocal Suplente 1,Vocal Suplente 2,Usuario Regular',
+            'password'   => 'nullable|string|min:4',
+        ]);
+
+        $usuario = Usuario::where('id_persona', $request->id_persona)->first();
+
+        if ($usuario) {
+            $usuario->rol = $request->rol;
+            if (!empty($request->password)) {
+                $usuario->password = Hash::make($request->password);
+            }
+            $usuario->save();
+        } else {
+            $persona = Persona::findOrFail($request->id_persona);
+            $usuario = Usuario::create([
+                'id_persona' => $request->id_persona,
+                'cedula'     => $persona->cedula,
+                'password'   => Hash::make($request->password ?? $persona->cedula),
+                'rol'        => $request->rol,
+            ]);
+        }
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => "Rol actualizado a '{$request->rol}' correctamente.",
+            'data'    => ['id_usuario' => $usuario->id_usuario, 'rol' => $usuario->rol]
         ]);
     }
 
