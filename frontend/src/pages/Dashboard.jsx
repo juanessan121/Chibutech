@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Users, FileText, ShieldAlert, Droplets, ArrowRight,
   User, Banknote, TrendingUp, ClipboardList,
@@ -22,7 +22,7 @@ import bgHeader     from '../assets/bg_header.png';
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { hasPermission } = usePermissions();
-  const { user } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
   const [showStats, setShowStats] = useState(false); // Desplegable para las estadísticas
   const [realData, setRealData] = useState({ comuneros: 0, recaudacion: 0, multasPendientes: null, mingasMes: null, terrenos: null });
@@ -32,10 +32,12 @@ export default function Dashboard() {
   const [loadingComunero, setLoadingComunero] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     if (!isUsuarioBase) {
       const fetchDashboardData = async () => {
         try {
-          const res = await axios.get('/dashboard/resumen');
+          const res = await axios.get('/dashboard/resumen', { signal: controller.signal });
           const d = res.data.data;
           setRealData({
             comuneros:        d.comuneros         ?? 0,
@@ -45,54 +47,52 @@ export default function Dashboard() {
             multasPendientes: d.multas_pendientes ?? 0,
           });
         } catch (error) {
-          console.error('Error cargando datos del dashboard', error);
+          if (!controller.signal.aborted) console.error('Error cargando datos del dashboard', error);
         }
       };
       fetchDashboardData();
     } else {
-      // Cargar datos reales del comunero
       setLoadingComunero(true);
-      axios.get('/dashboard/resumen-comunero')
+      axios.get('/dashboard/resumen-comunero', { signal: controller.signal })
         .then(res => setComuneroData(res.data.data))
-        .catch(err => console.error('Error cargando datos del comunero', err))
+        .catch(err => { if (!controller.signal.aborted) console.error('Error cargando datos del comunero', err); })
         .finally(() => setLoadingComunero(false));
     }
+
+    return () => controller.abort();
   }, [isUsuarioBase]);
 
-  const STATS_ADMIN = [
-    { title: 'Comuneros Registrados', value: realData.comuneros,    icon: Users,         color: '#0ea5e9', trend: 0, trendLabel: 'padrón general',  subtext: 'Padrón activo del sistema' },
-    { title: 'Recaudación del Mes',   value: realData.recaudacion,  icon: Banknote,      color: '#10b981', trend: 0, trendLabel: 'acumulado actual', subtext: 'Planillas + multas cobradas', prefix: '$' },
-    { title: 'Multas Pendientes',     value: realData.multasPendientes ?? '—', icon: ShieldAlert,   color: '#ef4444', subtext: 'Usuarios con deuda activa' },
-    { title: 'Mingas del Mes',        value: realData.mingasMes ?? '—',        icon: ClipboardList, color: '#f59e0b', subtext: 'Jornadas comunitarias programadas' },
-    { title: 'Terrenos Catastrados',  value: realData.terrenos ?? '—',         icon: MapPin,        color: '#8b5cf6', subtext: 'Lotes con derecho a riego' },
-    { title: 'Ingresos del Año',      value: realData.recaudacion,  icon: TrendingUp,    color: '#6366f1', trend: 0, trendLabel: 'acumulado anual', subtext: 'Total recaudado', prefix: '$' },
-  ];
+  // Recalcula solo cuando cambia el rol o llegan datos reales de la API
+  const stats = useMemo(() => {
+    const rol = user?.rol;
+    const STATS_ADMIN = [
+      { title: 'Comuneros Registrados', value: realData.comuneros,    icon: Users,         color: '#0ea5e9', trend: 0, trendLabel: 'padrón general',  subtext: 'Padrón activo del sistema' },
+      { title: 'Recaudación del Mes',   value: realData.recaudacion,  icon: Banknote,      color: '#10b981', trend: 0, trendLabel: 'acumulado actual', subtext: 'Planillas + multas cobradas', prefix: '$' },
+      { title: 'Multas Pendientes',     value: realData.multasPendientes ?? '—', icon: ShieldAlert,   color: '#ef4444', subtext: 'Usuarios con deuda activa' },
+      { title: 'Mingas del Mes',        value: realData.mingasMes ?? '—',        icon: ClipboardList, color: '#f59e0b', subtext: 'Jornadas comunitarias programadas' },
+      { title: 'Terrenos Catastrados',  value: realData.terrenos ?? '—',         icon: MapPin,        color: '#8b5cf6', subtext: 'Lotes con derecho a riego' },
+      { title: 'Ingresos del Año',      value: realData.recaudacion,  icon: TrendingUp,    color: '#6366f1', trend: 0, trendLabel: 'acumulado anual', subtext: 'Total recaudado', prefix: '$' },
+    ];
+    const STATS_TESORERO = [
+      { title: 'Recaudación del Mes',   value: realData.recaudacion,  icon: Banknote,    color: '#10b981', trend: 0, trendLabel: 'acumulado actual', subtext: 'Total cobrado en caja', prefix: '$' },
+      { title: 'Multas Pendientes',     value: realData.multasPendientes ?? '—', icon: ShieldAlert, color: '#ef4444', subtext: 'Requieren cobro inmediato' },
+    ];
+    const STATS_SECRETARIO = [
+      { title: 'Comuneros Registrados', value: realData.comuneros,        icon: Users,         color: '#0ea5e9', subtext: 'En el padrón activo' },
+      { title: 'Mingas Programadas',    value: realData.mingasMes ?? '—', icon: ClipboardList, color: '#f59e0b', subtext: 'Este mes en el calendario' },
+    ];
+    const STATS_USUARIO = [
+      { title: 'Mis Multas Pendientes', value: '—', icon: ShieldAlert,   color: '#ef4444', subtext: 'Cargando...' },
+      { title: 'Total a Pagar',         value: '—', icon: Banknote,      color: '#f59e0b', subtext: 'Cargando...', prefix: '$' },
+      { title: 'Asistencia a Mingas',   value: '—', icon: CalendarCheck, color: '#10b981', subtext: 'Cargando...', suffix: '%' },
+      { title: 'Lotes Registrados',     value: '—', icon: MapPin,        color: '#0ea5e9', subtext: 'Cargando...' },
+    ];
 
-  const STATS_TESORERO = [
-    { title: 'Recaudación del Mes',   value: realData.recaudacion,  icon: Banknote,    color: '#10b981', trend: 0, trendLabel: 'acumulado actual', subtext: 'Total cobrado en caja', prefix: '$' },
-    { title: 'Multas Pendientes',     value: realData.multasPendientes ?? '—', icon: ShieldAlert, color: '#ef4444', subtext: 'Requieren cobro inmediato' },
-  ];
-
-  const STATS_SECRETARIO = [
-    { title: 'Comuneros Registrados', value: realData.comuneros, icon: Users, color: '#0ea5e9', subtext: 'En el padrón activo' },
-    { title: 'Mingas Programadas',    value: realData.mingasMes ?? '—', icon: ClipboardList, color: '#f59e0b', subtext: 'Este mes en el calendario' },
-  ];
-
-  const STATS_USUARIO = [
-    { title: 'Mis Multas Pendientes', value: '—', icon: ShieldAlert,   color: '#ef4444', subtext: 'Cargando...' },
-    { title: 'Total a Pagar',         value: '—', icon: Banknote,      color: '#f59e0b', subtext: 'Cargando...', prefix: '$' },
-    { title: 'Asistencia a Mingas',   value: '—', icon: CalendarCheck, color: '#10b981', subtext: 'Cargando...', suffix: '%' },
-    { title: 'Lotes Registrados',     value: '—', icon: MapPin,        color: '#0ea5e9', subtext: 'Cargando...' },
-  ];
-
-  const getStatsByRole = (rol) => {
     if (rol === 'Administrador' || rol === 'Presidente' || rol === 'Vicepresidente') return STATS_ADMIN;
     if (rol === 'Tesorero') return STATS_TESORERO;
-    if (rol === 'Secretario' || rol === 'Vocal') return STATS_SECRETARIO;
+    if (rol === 'Secretario' || rol?.startsWith('Vocal')) return STATS_SECRETARIO;
     return STATS_USUARIO;
-  };
-
-  const stats = getStatsByRole(user?.rol);
+  }, [user?.rol, realData]);
 
   return (
     <div className="dashboard-page animate-fade-in pb-10">
@@ -270,8 +270,7 @@ export default function Dashboard() {
             const fecha = minga ? new Date(minga.fecha + 'T12:00:00').toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long' }) : null;
             return (
               <div
-                className="glass-card module-card hover-glow cursor-pointer"
-                onClick={() => navigate('/dashboard/mingas')}
+                className="glass-card module-card"
                 style={{ borderTop: `4px solid ${minga ? '#f59e0b' : '#4b5563'}` }}
               >
                 <div className="module-banner" style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.2), rgba(180,83,9,0.2))' }} />
@@ -310,7 +309,7 @@ export default function Dashboard() {
             return (
               <div
                 className="glass-card module-card hover-glow cursor-pointer"
-                onClick={() => navigate('/dashboard/pago-agua')}
+                onClick={() => navigate('/dashboard/mis-deudas')}
                 style={{ borderTop: `4px solid ${sinDeuda ? '#10b981' : '#ef4444'}` }}
               >
                 <div className="module-banner" style={{ background: sinDeuda ? 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.1))' : 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(185,28,28,0.2))' }} />

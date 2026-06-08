@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Map, Search, ExternalLink, Building2, Fence, MapPin, Plus, Edit2, Check, X } from 'lucide-react';
+import { Map, Search, ExternalLink, Building2, Fence, MapPin, Plus, Edit2, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTerrenos, updateEstadoTerreno } from '../services/terrenoService';
 import { toast } from 'sonner';
 
@@ -18,41 +18,59 @@ export default function CatastroGlobal() {
   const navigate = useNavigate();
   const [busqueda, setBusqueda] = useState('');
   const [terrenos, setTerrenos] = useState([]);
+  const [resumenEstados, setResumenEstados] = useState({});
+  const [pagina, setPagina] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [totalTerrenos, setTotalTerrenos] = useState(0);
   const [editandoId, setEditandoId] = useState(null);
   const [nuevoEstado, setNuevoEstado] = useState('');
+  const debounceRef = useRef(null);
 
-  const cargarDatos = async () => {
+  const cargarDatos = async (busq, pag) => {
     try {
-      const data = await getTerrenos();
-      setTerrenos(data || []);
+      const res = await getTerrenos({ busqueda: busq || undefined, page: pag });
+      setTerrenos(res.data || []);
+      setResumenEstados(res.resumen_estados || {});
+      if (res.pagination) {
+        setTotalPaginas(res.pagination.last_page);
+        setTotalTerrenos(res.pagination.total);
+      }
     } catch (error) {
       console.error(error);
     }
   };
 
   useEffect(() => {
-    cargarDatos();
+    cargarDatos('', 1);
   }, []);
+
+  const handleBusqueda = (e) => {
+    const val = e.target.value;
+    setBusqueda(val);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setPagina(1);
+      cargarDatos(val, 1);
+    }, 350);
+  };
+
+  const handlePagina = (nueva) => {
+    setPagina(nueva);
+    cargarDatos(busqueda, nueva);
+  };
 
   const handleGuardarEstado = async (id_terreno) => {
     try {
       const mapVal = {'Lote Baldío': 1, 'En Planificación': 2, 'En Construcción': 3, 'Construida': 4};
       const idEstado = mapVal[nuevoEstado] || 1;
       await updateEstadoTerreno(id_terreno, idEstado);
-      toast.success('Estado actualizado');
+      toast.success('Estado del predio actualizado correctamente.');
       setEditandoId(null);
-      cargarDatos();
+      cargarDatos(busqueda, pagina);
     } catch (e) {
-      toast.error('Error al actualizar estado');
+      toast.error('No se pudo actualizar el estado del predio. Intenta de nuevo.');
     }
   };
-
-  const terrenosFiltrados = terrenos.filter(t =>
-    t.propietario?.toLowerCase().includes(busqueda.toLowerCase()) ||
-    t.cedula?.includes(busqueda) ||
-    t.zona?.toLowerCase().includes(busqueda.toLowerCase()) ||
-    t.sector?.toLowerCase().includes(busqueda.toLowerCase())
-  );
 
   return (
     <div className="animate-fade-in pb-10">
@@ -72,7 +90,7 @@ export default function CatastroGlobal() {
                 className="input-field"
                 placeholder="Buscar por propietario, cédula o zona..."
                 value={busqueda}
-                onChange={e => setBusqueda(e.target.value)}
+                onChange={handleBusqueda}
                 style={{ paddingLeft: '2.25rem', minWidth: '320px' }}
               />
             </div>
@@ -83,12 +101,7 @@ export default function CatastroGlobal() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginTop: '1.5rem', alignItems: 'stretch' }}>
           {/* Tarjetas resumen */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', flex: 1 }}>
-            {Object.entries(
-              terrenos.reduce((acc, t) => {
-                acc[t.estado_construccion] = (acc[t.estado_construccion] || 0) + 1;
-                return acc;
-              }, {})
-            ).map(([estado, count]) => (
+            {Object.entries(resumenEstados).map(([estado, count]) => (
               <div key={estado} className="glass-card" style={{ padding: '0.75rem 1.25rem', borderLeft: `4px solid ${estadoColor[estado] || '#64748b'}`, display: 'flex', alignItems: 'center', gap: '1rem', minWidth: '180px' }}>
                 <Building2 size={24} style={{ color: estadoColor[estado] || '#64748b' }} />
                 <div>
@@ -122,7 +135,7 @@ export default function CatastroGlobal() {
             </tr>
           </thead>
           <tbody>
-            {terrenosFiltrados.map(t => (
+            {terrenos.map(t => (
               <tr key={t.id_terreno}
                 style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s', cursor: 'pointer' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
@@ -191,7 +204,7 @@ export default function CatastroGlobal() {
                 </td>
               </tr>
             ))}
-            {terrenosFiltrados.length === 0 && (
+            {terrenos.length === 0 && (
               <tr>
                 <td colSpan={8} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                   No se encontraron predios para tu búsqueda.
@@ -201,6 +214,33 @@ export default function CatastroGlobal() {
           </tbody>
         </table>
       </div>
+
+      {/* Paginación */}
+      {totalPaginas > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '0 0.5rem' }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            Página {pagina} de {totalPaginas} — {totalTerrenos} predios en total
+          </span>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              className="btn-secondary"
+              style={{ padding: '0.4rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              disabled={pagina === 1}
+              onClick={() => handlePagina(pagina - 1)}
+            >
+              <ChevronLeft size={16} /> Anterior
+            </button>
+            <button
+              className="btn-secondary"
+              style={{ padding: '0.4rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              disabled={pagina === totalPaginas}
+              onClick={() => handlePagina(pagina + 1)}
+            >
+              Siguiente <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

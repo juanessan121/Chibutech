@@ -7,17 +7,25 @@ const useAuthStore = create(
       user: null,
       token: null,
       isAuthenticated: false,
+      passwordTemporal: false,
 
       login: (userData, token) => {
-        set({ user: userData, token, isAuthenticated: true });
+        set({
+          user: userData,
+          token,
+          isAuthenticated: true,
+          passwordTemporal: userData?.password_temporal || false,
+        });
       },
 
+      clearPasswordTemporal: () => set({ passwordTemporal: false }),
+
       logout: () => {
-        set({ user: null, token: null, isAuthenticated: false });
+        set({ user: null, token: null, isAuthenticated: false, passwordTemporal: false });
       },
     }),
     {
-      name: 'auth-storage', // nombre de la key en localStorage
+      name: 'auth-storage',
     }
   )
 );

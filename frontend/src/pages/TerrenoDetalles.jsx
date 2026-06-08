@@ -21,6 +21,7 @@ export default function TerrenoDetalles() {
   const [modalTraspaso, setModalTraspaso] = useState(false);
   const [nuevoDueno, setNuevoDueno] = useState(null);
   const [motivoTraspaso, setMotivoTraspaso] = useState('');
+  const [motivoTouched, setMotivoTouched] = useState(false);
   const [directiva, setDirectiva] = useState([]);
 
   useEffect(() => {
@@ -29,7 +30,7 @@ export default function TerrenoDetalles() {
         const data = await getTerrenoById(id);
         setTerreno(data);
       } catch(e) {
-        toast.error('Error al cargar predio');
+        toast.error('No se pudo cargar la información del predio. Vuelve a intentarlo.');
       } finally {
         setLoading(false);
       }
@@ -44,8 +45,8 @@ export default function TerrenoDetalles() {
   const googleMapsUrl = `https://www.google.com/maps?q=${mapLat},${mapLng}`;
 
   const handleTraspaso = async () => {
-    if (!nuevoDueno || !nuevoDueno.id_persona) return toast.error('Seleccione el nuevo dueño');
-    if (!motivoTraspaso) return toast.error('Ingrese el motivo (Documento legal)');
+    if (!nuevoDueno || !nuevoDueno.id_persona) return toast.error('Debe seleccionar al nuevo propietario del predio antes de continuar.');
+    if (!motivoTraspaso) return toast.error('Debe indicar el documento o motivo legal del traspaso de dominio.');
     try {
       await traspasarDominio(id, nuevoDueno.id_persona, motivoTraspaso);
       toast.success('Traspaso de dominio ejecutado con éxito');
@@ -55,7 +56,7 @@ export default function TerrenoDetalles() {
       setTerreno(data);
       setLoading(false);
     } catch(e) {
-      toast.error(e.response?.data?.message || 'Error en el traspaso');
+      toast.error(e.response?.data?.message || 'No se pudo realizar el traspaso. Verifica los datos e intenta de nuevo.');
     }
   };
 
@@ -562,17 +563,21 @@ export default function TerrenoDetalles() {
 
             <div style={{ marginBottom: '1.5rem' }}>
               <label className="input-label">Motivo o Documento de Respaldo *</label>
-              <textarea 
-                className="input-field" 
+              <textarea
+                className="input-field"
                 placeholder="Ej: Contrato de compra-venta No. 12345, notariado..."
                 value={motivoTraspaso}
                 onChange={e => setMotivoTraspaso(e.target.value)}
+                onBlur={() => setMotivoTouched(true)}
                 rows={3}
               />
+              {motivoTouched && !motivoTraspaso.trim() && (
+                <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El motivo o documento de respaldo es obligatorio.</span>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-              <button className="btn-secondary" onClick={() => setModalTraspaso(false)}>Cancelar</button>
+              <button className="btn-secondary" onClick={() => { setModalTraspaso(false); setMotivoTouched(false); }}>Cancelar</button>
               <button className="btn-primary" style={{ background: 'var(--yellow)', color: '#000' }} onClick={handleTraspaso}>Confirmar Traspaso</button>
             </div>
           </div>

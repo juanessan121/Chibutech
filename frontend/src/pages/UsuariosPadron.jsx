@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { getUsers, deleteUser } from '../services/userService';
-import { Users, Trash2, CheckCircle, XCircle, ArrowLeft, Search, Edit2, ShieldCheck, X } from 'lucide-react';
+import { Users, Trash2, CheckCircle, XCircle, ArrowLeft, Search, Edit2, ShieldCheck, X, ShieldOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/axiosConfig';
+import useAuthStore from '../store/useAuthStore';
 
 const ROLES = [
   'Usuario Regular',
@@ -20,10 +21,20 @@ const ROLES = [
 ];
 
 export default function UsuariosPadron() {
+  const currentUser = useAuthStore((state) => state.user);
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+
+  const usuariosFiltrados = useMemo(() =>
+    users.filter(u =>
+      (u.nombre_completo || `${u.nombre} ${u.apellido || ''}`).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.cedula.includes(searchTerm) ||
+      (u.sector || '').toLowerCase().includes(searchTerm.toLowerCase())
+    ),
+    [users, searchTerm]
+  );
 
   const [modalRol, setModalRol] = useState(null); // { id_persona, nombre, rol_actual }
   const [nuevoRol, setNuevoRol] = useState('');
@@ -38,20 +49,22 @@ export default function UsuariosPadron() {
       const data = await getUsers();
       setUsers(data);
     } catch {
-      toast.error('Error al cargar usuarios');
+      toast.error('No se pudo cargar el padrón de usuarios. Recarga la página.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar este usuario?')) {
+    const usuarioAEliminar = users.find(u => u.id === id);
+    const nombre = usuarioAEliminar?.nombre_completo || 'este usuario';
+    if (window.confirm(`¿Eliminar a ${nombre} del padrón?\n\nEsta acción no se puede deshacer.`)) {
       try {
         await deleteUser(id);
         setUsers(users.filter((u) => u.id !== id));
-        toast.success('Usuario eliminado');
+        toast.success(`${nombre} ha sido eliminado del padrón correctamente.`);
       } catch {
-        toast.error('Error al eliminar');
+        toast.error('No se pudo eliminar al usuario. Intenta de nuevo.');
       }
     }
   };
@@ -75,7 +88,7 @@ export default function UsuariosPadron() {
       setModalRol(null);
       fetchUsers();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al cambiar el rol');
+      toast.error(err.response?.data?.message || 'No se pudo actualizar el rol. Intenta de nuevo.');
     } finally {
       setGuardandoRol(false);
     }
@@ -131,15 +144,18 @@ export default function UsuariosPadron() {
                 </tr>
               </thead>
               <tbody>
-                {users
-                  .filter(u =>
-                    (u.nombre_completo || `${u.nombre} ${u.apellido || ''}`).toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    u.cedula.includes(searchTerm) ||
-                    (u.sector || '').toLowerCase().includes(searchTerm.toLowerCase())
-                  )
-                  .map(user => (
-                    <tr key={user.id}>
-                      <td className="fw-500">{user.cedula}</td>
+                {usuariosFiltrados.map(user => {
+                    const esMiMismoUsuario = user.id_persona === currentUser?.id_persona;
+                    return (
+                    <tr key={user.id} style={esMiMismoUsuario ? { background: 'rgba(14,165,233,0.04)' } : {}}>
+                      <td className="fw-500">
+                        {user.cedula}
+                        {esMiMismoUsuario && (
+                          <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', background: 'rgba(14,165,233,0.15)', color: '#0ea5e9', border: '1px solid rgba(14,165,233,0.3)', padding: '0.1rem 0.4rem', borderRadius: '1rem' }}>
+                            Tú
+                          </span>
+                        )}
+                      </td>
                       <td>{user.nombre_completo || `${user.nombre} ${user.apellido || ''}`}</td>
                       <td>{user.sector}</td>
                       <td>
@@ -160,11 +176,23 @@ export default function UsuariosPadron() {
                       </td>
                       <td className="actions-cell">
                         <button className="btn-icon text-blue" onClick={() => navigate(`/dashboard/usuarios/editar/${user.id}`)} title="Editar datos"><Edit2 size={16} /></button>
-                        <button className="btn-icon" style={{ color: '#a78bfa' }} onClick={() => abrirModalRol(user)} title="Cambiar rol / permisos"><ShieldCheck size={16} /></button>
+                        {esMiMismoUsuario ? (
+                          <button
+                            className="btn-icon"
+                            style={{ color: '#475569', cursor: 'not-allowed', opacity: 0.45 }}
+                            title="No puedes cambiar tu propio rol. Solicita a otro administrador."
+                            disabled
+                          >
+                            <ShieldOff size={16} />
+                          </button>
+                        ) : (
+                          <button className="btn-icon" style={{ color: '#a78bfa' }} onClick={() => abrirModalRol(user)} title="Cambiar rol / permisos"><ShieldCheck size={16} /></button>
+                        )}
                         <button className="btn-icon text-red" onClick={() => handleDelete(user.id)} title="Eliminar"><Trash2 size={16} /></button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
               </tbody>
             </table>
           </div>

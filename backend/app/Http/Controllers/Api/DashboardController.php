@@ -73,7 +73,7 @@ class DashboardController extends Controller
                 ->leftJoin('Sector as sec', 'p.id_sector', '=', 'sec.id_sector')
                 ->where('t.id_persona', $idPersona)
                 ->select('t.id_terreno', 't.clave_catastral', 't.area_total', 'sec.nombre_sector as sector',
-                    DB::raw("CASE t.id_estado_terreno
+                    DB::raw("CASE t.id_estado_construccion
                         WHEN 1 THEN 'Lote Baldío'
                         WHEN 2 THEN 'En Planificación'
                         WHEN 3 THEN 'En Construcción'
@@ -87,7 +87,7 @@ class DashboardController extends Controller
                 ->leftJoin('Sector as sec', 'p.id_sector', '=', 'sec.id_sector')
                 ->where('ct.id_persona', $idPersona)
                 ->select('t.id_terreno', 't.clave_catastral', 't.area_total', 'sec.nombre_sector as sector',
-                    DB::raw("CASE t.id_estado_terreno
+                    DB::raw("CASE t.id_estado_construccion
                         WHEN 1 THEN 'Lote Baldío'
                         WHEN 2 THEN 'En Planificación'
                         WHEN 3 THEN 'En Construcción'
@@ -121,7 +121,7 @@ class DashboardController extends Controller
                 ->where('m.fecha_programada', '>=', date('Y-m-d'))
                 ->orderBy('m.fecha_programada', 'asc')
                 ->select('m.id_minga', 'm.fecha_programada', 'm.lugar_encuentro',
-                         'm.actividad_principal', 'm.valor_multa_inasistencia', 'e.nombre_estado')
+                         'm.motivo_general', 'm.valor_multa_inasistencia', 'e.nombre_estado')
                 ->first();
 
             // Multas pendientes del comunero
@@ -148,7 +148,7 @@ class DashboardController extends Controller
                         'id_minga'    => $mingaProxima->id_minga,
                         'fecha'       => $mingaProxima->fecha_programada,
                         'lugar'       => $mingaProxima->lugar_encuentro,
-                        'actividad'   => $mingaProxima->actividad_principal ?? 'Sin descripción',
+                        'actividad'   => $mingaProxima->motivo_general ?? 'Sin descripción',
                         'multa'       => (float) $mingaProxima->valor_multa_inasistencia,
                         'estado'      => $mingaProxima->nombre_estado,
                     ] : null,

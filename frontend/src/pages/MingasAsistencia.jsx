@@ -36,7 +36,7 @@ export default function MingasAsistencia() {
 
   const handleMarcarTodos = (nuevoEstado) => {
     setAsistencia(prev => prev.map(u => u.estado === 'Pendiente' ? { ...u, estado: nuevoEstado } : u));
-    toast.success(`${pendientesCount} persona(s) marcadas como ${nuevoEstado}`);
+    toast.success(`${pendientesCount} persona(s) marcadas como "${nuevoEstado}" en el registro.`);
   };
 
   const handleGuardarTodo = async () => {
@@ -49,7 +49,7 @@ export default function MingasAsistencia() {
       toast.success('Listado de asistencia guardado correctamente.');
       getConvocados(selectedMinga).then(setAsistencia);
     } catch (e) {
-      toast.error('Error al guardar asistencia');
+      toast.error('No se pudo guardar el listado de asistencia. Intenta de nuevo.');
     }
   };
 
@@ -69,7 +69,7 @@ export default function MingasAsistencia() {
       toast.success('El registro de asistencia ha sido cerrado definitivamente.');
       setTimeout(() => navigate('/dashboard/mingas'), 2500);
     } catch (e) {
-      toast.error('Error al cerrar el registro');
+      toast.error('No se pudo cerrar el registro de asistencia. Intenta de nuevo.');
     }
   };
 

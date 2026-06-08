@@ -15,10 +15,12 @@ class TerrenoController extends Controller
     /**
      * Obtiene el listado completo de predios/terrenos con sus relaciones
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         try {
-            $terrenos = DB::table('Terreno as t')
+            $busqueda = trim($request->query('busqueda', ''));
+
+            $query = DB::table('Terreno as t')
                 ->join('Persona as p', 't.id_persona', '=', 'p.id_persona')
                 ->leftJoin('Sector as s', 'p.id_sector', '=', 's.id_sector')
                 ->leftJoin('Zona as z', 's.id_zona', '=', 'z.id_zona')
@@ -43,16 +45,41 @@ class TerrenoController extends Controller
                     't.url_planimetria',
                     DB::raw('COALESCE(coprodata.total_copros, 0) as total_copropietarios'),
                     'coprodata.nombres_copros'
-                )
-                ->get();
+                );
+
+            if ($busqueda !== '') {
+                $like = '%' . $busqueda . '%';
+                $query->where(function ($w) use ($like) {
+                    $w->whereRaw("CONCAT(p.nombre, ' ', p.apellido) LIKE ?", [$like])
+                      ->orWhere('p.cedula', 'like', $like)
+                      ->orWhere('z.nombre_zona', 'like', $like)
+                      ->orWhere('s.nombre_sector', 'like', $like);
+                });
+            }
+
+            $paginated = $query->paginate(50);
+
+            // Resumen global por estado — siempre refleja toda la tabla, no solo la página actual
+            $resumenEstados = DB::table('Terreno as t')
+                ->join('Catalogo_Estado_Construccion as cec', 't.id_estado_construccion', '=', 'cec.id_estado_construccion')
+                ->select('cec.nombre_estado', DB::raw('COUNT(*) as total'))
+                ->groupBy('cec.nombre_estado')
+                ->pluck('total', 'nombre_estado');
 
             return response()->json([
-                'status' => 'success',
-                'data' => $terrenos
+                'status'          => 'success',
+                'data'            => $paginated->items(),
+                'pagination'      => [
+                    'total'        => $paginated->total(),
+                    'per_page'     => $paginated->perPage(),
+                    'current_page' => $paginated->currentPage(),
+                    'last_page'    => $paginated->lastPage(),
+                ],
+                'resumen_estados' => $resumenEstados,
             ]);
         } catch (Exception $e) {
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Error al obtener catastro: ' . $e->getMessage()
             ], 500);
         }
@@ -66,7 +93,7 @@ class TerrenoController extends Controller
         $data = $request->validate([
             'id_persona' => 'required|integer|exists:Persona,id_persona',
             'terrenos' => 'required|array',
-            'terrenos.*.clave_catastral' => 'required|string|unique:Terreno,clave_catastral',
+            'terrenos.*.clave_catastral' => 'required|string|regex:/^\d{2}-\d{2}-\d{2}-\d{2}-\d{3}-\d{3}$/|unique:Terreno,clave_catastral',
             'terrenos.*.area' => 'required|numeric|min:0.01',
             'terrenos.*.latitud' => 'nullable|numeric',
             'terrenos.*.longitud' => 'nullable|numeric',

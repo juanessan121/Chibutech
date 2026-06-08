@@ -169,6 +169,7 @@ export default function UsuariosAgregar() {
   }, []);
 
   const { register, control, handleSubmit, trigger, watch, reset, formState: { errors } } = useForm({
+    mode: 'onBlur',
     defaultValues: {
       tiene_condicion: false,
       condiciones: [],
@@ -193,7 +194,7 @@ export default function UsuariosAgregar() {
         }
         setPendingReset(data);
       })
-      .catch(() => toast.error('Error al cargar los datos del usuario para editar'));
+      .catch(() => toast.error('No se pudieron cargar los datos del usuario. Recarga la página e intenta de nuevo.'));
   }, [id, isEditMode]);
 
   // Paso 3: hacer reset SOLO después de que el DOM ya tiene los <option> de los catálogos
@@ -268,7 +269,7 @@ export default function UsuariosAgregar() {
       const camposContacto = estadoRegistro === 'Pendiente' ? ['contactos'] : ['contactos', 'correo_electronico'];
       isValid = await trigger(camposContacto);
       if (!isValid) {
-        toast.error('Revisa la información de contacto.');
+        toast.error('Revisa la información de contacto. Hay campos incompletos o con formato incorrecto.');
         return;
       }
     }
@@ -344,7 +345,7 @@ export default function UsuariosAgregar() {
         }
         setTimeout(() => navigate('/dashboard/usuarios/padron'), 2000);
       } catch (error) {
-        toast.error(error.message || 'Error al guardar el usuario');
+        toast.error(error.response?.data?.message || error.message || 'No se pudo guardar el registro. Verifica los datos e intenta de nuevo.');
       } finally {
         setIsSubmitting(false);
       }

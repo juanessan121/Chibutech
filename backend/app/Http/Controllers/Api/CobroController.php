@@ -447,6 +447,227 @@ class CobroController extends Controller
         }
     }
 
+    /**
+     * Consulta o genera planillas para un conjunto de períodos (mes+año).
+     * Usado para pagos trimestrales, semestrales, anuales o personalizados.
+     */
+    public function planillasPeriodo(Request $request, $id_terreno): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'periodos'        => 'required|array|min:1|max:36',
+            'periodos.*.mes'  => 'required|integer|min:1|max:12',
+            'periodos.*.anio' => 'required|integer|min:2020|max:2100',
+        ]);
+
+        try {
+            $config = DB::table('Configuracion_Global')
+                ->whereIn('clave', ['TARIFA_AGUA_VALOR', 'TARIFA_AGUA_METROS'])
+                ->pluck('valor', 'clave');
+            $valor_base  = (float) ($config['TARIFA_AGUA_VALOR']  ?? 5);
+            $metros_base = (float) ($config['TARIFA_AGUA_METROS'] ?? 1000);
+
+            $terreno    = DB::table('Terreno')->where('id_terreno', $id_terreno)->first();
+            if (!$terreno) throw new \Exception('Terreno no encontrado');
+
+            $area       = (float) $terreno->area_total;
+            $fracciones = (int) ceil($area / $metros_base);
+            $subtotal   = $fracciones * $valor_base;
+
+            $resultado = [];
+            DB::beginTransaction();
+
+            // Pre-load all existing planillas for this terreno across all requested periods — 1 query total
+            $clavesPeriodos = array_map(
+                fn($p) => ((int) $p['mes']) . '-' . ((int) $p['anio']),
+                $request->periodos
+            );
+            $planillasCache = DB::table('Planilla_Cabecera as pc')
+                ->join('Planilla_Detalle_Terreno as pd', 'pc.id_planilla', '=', 'pd.id_planilla')
+                ->where('pd.id_terreno', $id_terreno)
+                ->whereIn(DB::raw('CONCAT(pc.mes_fiscal, "-", pc.anio_fiscal)'), $clavesPeriodos)
+                ->select('pc.*')
+                ->get()
+                ->keyBy(fn($p) => $p->mes_fiscal . '-' . $p->anio_fiscal);
+
+            foreach ($request->periodos as $periodo) {
+                $mes  = (int) $periodo['mes'];
+                $anio = (int) $periodo['anio'];
+
+                $planilla = $planillasCache->get("{$mes}-{$anio}");
+
+                if (!$planilla) {
+                    $id_planilla = DB::table('Planilla_Cabecera')->insertGetId([
+                        'id_persona'    => $terreno->id_persona,
+                        'fecha_emision' => now(),
+                        'anio_fiscal'   => $anio,
+                        'mes_fiscal'    => $mes,
+                        'total_pagar'   => $subtotal,
+                        'estado_pago'   => 'Pendiente',
+                    ]);
+                    DB::table('Planilla_Detalle_Terreno')->insert([
+                        'id_planilla'        => $id_planilla,
+                        'id_terreno'         => $id_terreno,
+                        'area_terreno_copia' => $area,
+                        'subtotal_calculado' => $subtotal,
+                    ]);
+                    $planilla = DB::table('Planilla_Cabecera')->where('id_planilla', $id_planilla)->first();
+                }
+
+                $resultado[] = [
+                    'mes'         => $mes,
+                    'anio'        => $anio,
+                    'id_planilla' => $planilla->id_planilla,
+                    'estado'      => $planilla->estado_pago,
+                    'monto'       => (float) $planilla->total_pagar,
+                    'comprobante' => $planilla->numero_comprobante,
+                    'fecha_pago'  => $planilla->fecha_pago ? substr($planilla->fecha_pago, 0, 10) : null,
+                ];
+            }
+
+            DB::commit();
+
+            $pendientes      = array_filter($resultado, fn($r) => $r['estado'] === 'Pendiente');
+            $totalPendiente  = array_sum(array_column(array_values($pendientes), 'monto'));
+            $idsPendientes   = array_column(array_values($pendientes), 'id_planilla');
+
+            return response()->json([
+                'status' => 'ok',
+                'data'   => [
+                    'meses'           => $resultado,
+                    'total_pendiente' => $totalPendiente,
+                    'ids_pendientes'  => $idsPendientes,
+                    'clave_catastral' => $terreno->clave_catastral,
+                    'area_total'      => $area,
+                    'fracciones'      => $fracciones,
+                    'tarifa_fraccion' => $valor_base,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Paga múltiples planillas con un solo comprobante (pago de período).
+     */
+    public function pagarPeriodo(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'id_planillas'       => 'required|array|min:1',
+            'id_planillas.*'     => 'integer|exists:Planilla_Cabecera,id_planilla',
+            'numero_comprobante' => 'required|integer|min:1',
+        ]);
+
+        try {
+            DB::beginTransaction();
+            $pagadas = 0;
+
+            foreach ($request->id_planillas as $id_planilla) {
+                $planilla = DB::table('Planilla_Cabecera')
+                    ->where('id_planilla', $id_planilla)
+                    ->where('estado_pago',  'Pendiente')
+                    ->first();
+
+                if ($planilla) {
+                    DB::table('Planilla_Cabecera')->where('id_planilla', $id_planilla)->update([
+                        'estado_pago'        => 'Pagada',
+                        'numero_comprobante' => $request->numero_comprobante,
+                        'fecha_pago'         => now(),
+                    ]);
+                    DB::table('Caja_Comunitaria')->insert([
+                        'numero_comprobante'   => $request->numero_comprobante,
+                        'tipo_movimiento'      => 'Ingreso',
+                        'concepto'             => 'Pago agua — Mes ' . $planilla->mes_fiscal . '/' . $planilla->anio_fiscal,
+                        'id_planilla'          => $id_planilla,
+                        'monto'                => $planilla->total_pagar,
+                        'responsable_registro' => auth()->id(),
+                    ]);
+                    $pagadas++;
+                }
+            }
+
+            DB::commit();
+            return response()->json([
+                'status'  => 'ok',
+                'message' => "$pagadas planilla(s) pagadas correctamente.",
+                'data'    => ['pagadas' => $pagadas],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Generación manual del mes actual (o del mes/año indicado) — para admin.
+     * Omite terrenos que ya tienen planilla en ese período.
+     */
+    public function generarMesActual(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $mes  = (int) $request->input('mes',  now()->month);
+        $anio = (int) $request->input('anio', now()->year);
+
+        try {
+            $config = DB::table('Configuracion_Global')
+                ->whereIn('clave', ['TARIFA_VALOR_BASE', 'TARIFA_METROS_BASE'])
+                ->pluck('valor', 'clave');
+            $tarifaBase = (float) ($config['TARIFA_VALOR_BASE'] ?? 5.00);
+            $metrosBase = (float) ($config['TARIFA_METROS_BASE'] ?? 1000.00);
+
+            $generadas = 0;
+            $omitidas  = 0;
+
+            DB::beginTransaction();
+
+            // Pre-load all terreno IDs that already have a planilla for this month — 1 query instead of N
+            $existentesSet = array_flip(
+                DB::table('Planilla_Cabecera as pc')
+                    ->join('Planilla_Detalle_Terreno as pd', 'pc.id_planilla', '=', 'pd.id_planilla')
+                    ->where('pc.mes_fiscal', $mes)
+                    ->where('pc.anio_fiscal', $anio)
+                    ->pluck('pd.id_terreno')
+                    ->toArray()
+            );
+
+            DB::table('Terreno')->orderBy('id_terreno')->chunk(200, function ($terrenos) use ($mes, $anio, $tarifaBase, $metrosBase, &$generadas, &$omitidas, $existentesSet) {
+                foreach ($terrenos as $terreno) {
+                    if (isset($existentesSet[$terreno->id_terreno])) { $omitidas++; continue; }
+
+                    $area       = (float) $terreno->area_total;
+                    $fracciones = (int) ceil($area / $metrosBase);
+                    $subtotal   = $fracciones * $tarifaBase;
+
+                    $id_planilla = DB::table('Planilla_Cabecera')->insertGetId([
+                        'id_persona'    => $terreno->id_persona,
+                        'fecha_emision' => now(),
+                        'anio_fiscal'   => $anio,
+                        'mes_fiscal'    => $mes,
+                        'total_pagar'   => $subtotal,
+                        'estado_pago'   => 'Pendiente',
+                    ]);
+                    DB::table('Planilla_Detalle_Terreno')->insert([
+                        'id_planilla'        => $id_planilla,
+                        'id_terreno'         => $terreno->id_terreno,
+                        'area_terreno_copia' => $area,
+                        'subtotal_calculado' => $subtotal,
+                    ]);
+                    $generadas++;
+                }
+            });
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'ok',
+                'message' => "{$generadas} planillas generadas para {$mes}/{$anio}. {$omitidas} ya existían.",
+                'data'    => ['generadas' => $generadas, 'omitidas' => $omitidas],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
     public function consultarMes(Request $request, $id_terreno): \Illuminate\Http\JsonResponse
     {
         try {

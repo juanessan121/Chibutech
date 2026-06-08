@@ -14,6 +14,7 @@ export default function CobrosVentanilla() {
   const [deudasActuales, setDeudasActuales] = useState([]);
   const [deudasSeleccionadas, setDeudasSeleccionadas] = useState([]);
   const [comprobantePago, setComprobantePago] = useState('');
+  const [comprobanteTouched, setComprobanteTouched] = useState(false);
 
   const [buscando, setBuscando] = useState(false);
   const [resultados, setResultados] = useState([]);
@@ -56,7 +57,7 @@ export default function CobrosVentanilla() {
       const deudas = await getDeudasPendientes(userObj.id_persona);
       setDeudasActuales(deudas || []);
     } catch {
-      toast.error('Error al cargar las deudas pendientes.');
+      toast.error('No se pudieron cargar las deudas del comunero. Intenta buscarlo de nuevo.');
       setDeudasActuales([]);
     }
   };
@@ -73,7 +74,7 @@ export default function CobrosVentanilla() {
           m => m.tipo === 'Multa' && !deudasSeleccionadas.some(s => s.id_deuda === m.id_deuda)
         );
         if (multasFaltantes.length > 0) {
-          toast.warning('Se agregaron automáticamente las multas pendientes (obligatorio pagar al 100%).');
+          toast.warning('Se agregaron automáticamente las multas pendientes. Para pagar planillas de agua, todas las multas deben cancelarse también.');
         }
         setDeudasSeleccionadas(prev => [...prev, deuda, ...multasFaltantes]);
       } else {
@@ -94,7 +95,7 @@ export default function CobrosVentanilla() {
   const handleProcesarPago = async () => {
     if (deudasSeleccionadas.length === 0) return;
     if (!comprobantePago.toString().trim()) {
-      toast.error('El N° de Comprobante es obligatorio');
+      toast.error('El número de comprobante es obligatorio para procesar el pago.');
       return;
     }
     if (bloquearPago) {
@@ -109,13 +110,13 @@ export default function CobrosVentanilla() {
 
       await procesarPago({ comprobante: comprobantePago, multas, planillas });
 
-      toast.success(`Pago #${comprobantePago} procesado — $${totalAPagar.toFixed(2)}`);
+      toast.success(`Pago registrado. Comprobante #${comprobantePago} — Total cobrado: $${totalAPagar.toFixed(2)}`);
       const deudasActualizadas = await getDeudasPendientes(selectedUser.id_persona);
       setDeudasActuales(deudasActualizadas || []);
       setDeudasSeleccionadas([]);
       setComprobantePago('');
     } catch {
-      toast.error('Error al procesar el pago.');
+      toast.error('No se pudo procesar el pago. Intenta de nuevo.');
     } finally {
       setIsProcessing(false);
     }
@@ -328,7 +329,11 @@ export default function CobrosVentanilla() {
                   min="1"
                   value={comprobantePago}
                   onChange={(e) => setComprobantePago(e.target.value)}
+                  onBlur={() => setComprobanteTouched(true)}
                 />
+                {comprobanteTouched && !comprobantePago.toString().trim() && (
+                  <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El N° de comprobante es obligatorio.</span>
+                )}
               </div>
 
               <button

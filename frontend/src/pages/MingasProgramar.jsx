@@ -41,7 +41,7 @@ const TIPOS_EVENTO = [
 export default function MingasProgramar() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, control, handleSubmit, watch, formState: { errors } } = useForm();
+  const { register, control, handleSubmit, watch, formState: { errors } } = useForm({ mode: 'onBlur' });
 
   // Progresividad: cada campo se habilita cuando el anterior tiene valor
   const watchFecha  = watch('fecha_hora_programada');
@@ -93,7 +93,7 @@ export default function MingasProgramar() {
       }
 
       if (zonasSeleccionadas.length === 0) {
-        toast.error('Debe seleccionar al menos un sector para la minga');
+        toast.error('Debe seleccionar al menos un sector o zona para la convocatoria.');
         setIsSubmitting(false);
         return;
       }
@@ -114,7 +114,7 @@ export default function MingasProgramar() {
       toast.success('¡Convocatoria de Minga creada exitosamente!');
       setTimeout(() => navigate('/dashboard/mingas'), 2000);
     } catch (error) {
-      const errorMsg = error.response?.data?.message || error.message || 'Error al programar la minga';
+      const errorMsg = error.response?.data?.message || error.message || 'No se pudo crear la convocatoria. Verifica los datos e intenta de nuevo.';
       toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);

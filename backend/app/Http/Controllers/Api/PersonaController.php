@@ -75,7 +75,7 @@ class PersonaController extends Controller
                 'correo_electronico'            => 'nullable|email|max:150',
                 'contactos'                     => 'nullable|array',
                 'contactos.*.id_tipo_contacto'  => 'required_with:contactos|integer',
-                'contactos.*.valor_contacto'    => 'required_with:contactos|string|max:15|regex:/^[0-9]{10}$/',
+                'contactos.*.valor_contacto'    => 'required_with:contactos|string|regex:/^0[2-9][0-9]{8}$/',
                 'contactos.*.id_operadora'      => 'nullable|integer',
                 'nivel_educativo_principal'     => 'nullable|integer',
                 'carreras_principal'            => 'nullable|array',
@@ -91,7 +91,7 @@ class PersonaController extends Controller
                 'fecha_nacimiento.before_or_equal'      => 'La fecha de nacimiento no puede ser en el futuro.',
                 'correo_electronico.required'           => 'El correo electrónico es obligatorio.',
                 'correo_electronico.email'              => 'El formato del correo electrónico no es válido.',
-                'contactos.*.valor_contacto.regex'      => 'El número de teléfono debe tener exactamente 10 dígitos.',
+                'contactos.*.valor_contacto.regex'      => 'El teléfono debe tener 10 dígitos y empezar con 0 (ej: 0991234567 celular, 032123456 fijo).',
             ]
         ];
     }
@@ -122,36 +122,38 @@ class PersonaController extends Controller
     /**
      * Guarda el archivo del carnet CONADIS en base64 y retorna la ruta pública.
      */
+    private function validarMimeBase64(string $base64, array $mimesPermitidos = ['image/jpeg', 'image/png', 'application/pdf']): string
+    {
+        $header = substr($base64, 0, 50);
+        foreach ($mimesPermitidos as $mime) {
+            if (str_contains($header, $mime)) return $mime;
+        }
+        throw new \Exception('Tipo de archivo no permitido. Solo se aceptan: JPG, PNG o PDF.');
+    }
+
     private function guardarArchivoCarnet(string $base64, string $identificador): ?string
     {
+        $mime       = $this->validarMimeBase64($base64, ['image/jpeg', 'image/png', 'application/pdf']);
         $base64data = substr($base64, strpos($base64, ',') + 1);
         $decoded    = base64_decode($base64data);
+        if ($decoded === false) throw new \Exception('El archivo del carnet no es válido.');
 
-        $extension = 'jpg';
-        $header    = substr($base64, 0, 30);
-        if (str_contains($header, 'image/png'))  $extension = 'png';
-        if (str_contains($header, 'application/pdf')) $extension = 'pdf';
-
-        $nombreArchivo = 'carnets/' . uniqid() . '_' . $identificador . '.' . $extension;
+        $extMap        = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'application/pdf' => 'pdf'];
+        $nombreArchivo = 'carnets/' . uniqid() . '_' . preg_replace('/[^a-zA-Z0-9]/', '', $identificador) . '.' . $extMap[$mime];
         Storage::disk('public')->put($nombreArchivo, $decoded);
 
         return '/storage/' . $nombreArchivo;
     }
 
-    /**
-     * Guarda un archivo de título en base64 y retorna la ruta pública.
-     */
     private function guardarArchivoTitulo(string $base64, string $identificador): ?string
     {
+        $mime       = $this->validarMimeBase64($base64, ['image/jpeg', 'image/png', 'application/pdf']);
         $base64data = substr($base64, strpos($base64, ',') + 1);
         $decoded    = base64_decode($base64data);
+        if ($decoded === false) throw new \Exception('El archivo del título no es válido.');
 
-        $extension = 'pdf';
-        $header = substr($base64, 0, 30);
-        if (str_contains($header, 'image/jpeg')) $extension = 'jpg';
-        if (str_contains($header, 'image/png'))  $extension = 'png';
-
-        $nombreArchivo = 'titulos/' . uniqid() . '_' . $identificador . '.' . $extension;
+        $extMap        = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'application/pdf' => 'pdf'];
+        $nombreArchivo = 'titulos/' . uniqid() . '_' . preg_replace('/[^a-zA-Z0-9]/', '', $identificador) . '.' . $extMap[$mime];
         Storage::disk('public')->put($nombreArchivo, $decoded);
 
         return '/storage/' . $nombreArchivo;
@@ -434,27 +436,28 @@ class PersonaController extends Controller
                 return ['nombre' => $p->titulo ? $p->titulo->nombre : ''];
             })->filter(function($c) { return !empty($c['nombre']); })->values()->toArray();
 
-            // Nivel educativo real desde la columna; fallback: 3 si tiene carreras, 0 si no
-            $nivelRaw = $persona->nivel_educativo ?? null;
-            $nivel_educativo_principal = $nivelRaw !== null
-                ? (string) $nivelRaw
-                : (count($carreras_principal) > 0 ? '3' : '0');
+            // Si la columna es 0 (default para registros viejos) pero tiene carreras guardadas,
+            // inferir al menos nivel 3. Si la columna tiene un valor real (>0), usarlo.
+            $nivelRaw = (int) ($persona->nivel_educativo ?? 0);
+            if ($nivelRaw === 0 && count($carreras_principal) > 0) {
+                $nivel_educativo_principal = '3';
+            } else {
+                $nivel_educativo_principal = (string) $nivelRaw;
+            }
 
             $dependientes = $persona->dependientes->map(function($d) {
                 $carreras = $d->perfilEducativo->map(function($p) {
                     return ['nombre' => $p->titulo ? $p->titulo->nombre : ''];
                 })->filter(function($c) { return !empty($c['nombre']); })->values()->toArray();
 
-                $nivelDep = $d->nivel_educativo ?? null;
+                $nivelDep = (int) ($d->nivel_educativo ?? 0);
                 return [
                     'id_persona'      => $d->id_persona,
                     'nombres'         => $d->nombre,
                     'apellidos'       => $d->apellido,
                     'cedula'          => $d->cedula,
                     'id_genero'       => (string) $d->id_genero,
-                    'nivel_educativo' => $nivelDep !== null
-                        ? (string) $nivelDep
-                        : (count($carreras) > 0 ? '3' : '0'),
+                    'nivel_educativo' => ($nivelDep === 0 && count($carreras) > 0) ? '3' : (string) $nivelDep,
                     'carreras'        => $carreras
                 ];
             })->toArray();

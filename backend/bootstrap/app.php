@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Console\Scheduling\Schedule;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -11,6 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withSchedule(function (Schedule $schedule) {
+        // Día 1 de cada mes a las 8:00 AM — generación automática de planillas de agua
+        $schedule->command('planillas:generar-mes')->monthlyOn(1, '08:00');
+    })
     ->withMiddleware(function (Middleware $middleware): void {
         //
     })

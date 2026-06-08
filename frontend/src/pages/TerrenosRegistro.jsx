@@ -32,6 +32,7 @@ const formatClaveCatastral = (value) => {
 export default function TerrenosRegistro() {
   const navigate = useNavigate();
   const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
+    mode: 'onBlur',
     defaultValues: {
       dueno: null,
       terrenos: [

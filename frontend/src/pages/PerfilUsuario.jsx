@@ -4,7 +4,7 @@ import { Toaster, toast } from 'sonner';
 import useAuthStore from '../store/useAuthStore';
 
 export default function PerfilUsuario() {
-  const { user } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
 
   // Estados locales para los formularios interactivos
   const [telefono, setTelefono] = useState('0998765432');
@@ -15,6 +15,9 @@ export default function PerfilUsuario() {
   const [passNew, setPassNew] = useState('');
   const [passConfirm, setPassConfirm] = useState('');
   const [isSavingPass, setIsSavingPass] = useState(false);
+
+  const [touchedInfo, setTouchedInfo] = useState({ telefono: false, correo: false });
+  const [touchedPass, setTouchedPass] = useState({ passCurrent: false, passNew: false, passConfirm: false });
 
   const handleSaveInfo = (e) => {
     e.preventDefault();
@@ -168,9 +171,13 @@ export default function PerfilUsuario() {
                     className="input-field"
                     value={telefono}
                     onChange={(e) => setTelefono(e.target.value)}
+                    onBlur={() => setTouchedInfo(t => ({ ...t, telefono: true }))}
                     placeholder="Ej. 0998765432"
                     required
                   />
+                  {touchedInfo.telefono && !telefono.trim() && (
+                    <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El teléfono es obligatorio.</span>
+                  )}
                 </div>
               </div>
 
@@ -183,9 +190,13 @@ export default function PerfilUsuario() {
                     className="input-field"
                     value={correo}
                     onChange={(e) => setCorreo(e.target.value)}
+                    onBlur={() => setTouchedInfo(t => ({ ...t, correo: true }))}
                     placeholder="correo@ejemplo.com"
                     required
                   />
+                  {touchedInfo.correo && !correo.trim() && (
+                    <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El correo electrónico es obligatorio.</span>
+                  )}
                 </div>
               </div>
 
@@ -211,9 +222,13 @@ export default function PerfilUsuario() {
                     className="input-field"
                     value={passCurrent}
                     onChange={(e) => setPassCurrent(e.target.value)}
+                    onBlur={() => setTouchedPass(t => ({ ...t, passCurrent: true }))}
                     placeholder="••••••••"
                     required
                   />
+                  {touchedPass.passCurrent && !passCurrent && (
+                    <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>La contraseña actual es obligatoria.</span>
+                  )}
                 </div>
               </div>
 
@@ -226,9 +241,16 @@ export default function PerfilUsuario() {
                     className="input-field"
                     value={passNew}
                     onChange={(e) => setPassNew(e.target.value)}
+                    onBlur={() => setTouchedPass(t => ({ ...t, passNew: true }))}
                     placeholder="Mínimo 6 caracteres"
                     required
                   />
+                  {touchedPass.passNew && !passNew && (
+                    <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>La nueva contraseña es obligatoria.</span>
+                  )}
+                  {touchedPass.passNew && passNew && passNew.length < 6 && (
+                    <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>Debe tener al menos 6 caracteres.</span>
+                  )}
                 </div>
               </div>
 
@@ -241,9 +263,16 @@ export default function PerfilUsuario() {
                     className="input-field"
                     value={passConfirm}
                     onChange={(e) => setPassConfirm(e.target.value)}
+                    onBlur={() => setTouchedPass(t => ({ ...t, passConfirm: true }))}
                     placeholder="Repite la contraseña nueva"
                     required
                   />
+                  {touchedPass.passConfirm && !passConfirm && (
+                    <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>Debe confirmar la nueva contraseña.</span>
+                  )}
+                  {touchedPass.passConfirm && passConfirm && passNew !== passConfirm && (
+                    <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>Las contraseñas no coinciden.</span>
+                  )}
                 </div>
               </div>
 

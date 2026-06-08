@@ -82,15 +82,15 @@ export default function ReportesMenu() {
       } else if (activeReport === 'financiero') {
         await generarBalance({ periodo: filtroFinanciero.periodo });
       }
-      toast.success('¡PDF generado exitosamente!', {
+      toast.success('Reporte PDF generado y descargado.', {
         id: toastId,
         description: 'El documento se ha descargado automáticamente.',
         icon: <CheckCircle2 size={18} />,
       });
     } catch (err) {
-      toast.error('Error al generar el PDF', {
+      toast.error('No se pudo generar el reporte PDF.', {
         id: toastId,
-        description: err.message || 'Intenta nuevamente.',
+        description: err.message || 'Intenta de nuevo.',
       });
     }
   };
@@ -113,9 +113,9 @@ export default function ReportesMenu() {
         url = await generarBalance({ periodo: filtroFinanciero.periodo }, 'preview');
       }
       setPreviewUrl(url);
-      toast.success('Vista previa generada', { id: toastId });
+      toast.success('Vista previa lista.', { id: toastId });
     } catch (err) {
-      toast.error('Error al generar vista previa', { id: toastId, description: err.message });
+      toast.error('No se pudo generar la vista previa del reporte.', { id: toastId, description: err.message });
     }
   };
 

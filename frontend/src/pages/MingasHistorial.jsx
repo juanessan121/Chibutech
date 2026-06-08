@@ -5,7 +5,7 @@ import { getMingas, getConvocados } from '../services/mingaService';
 import { toast } from 'sonner';
 
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export default function MingasHistorial() {
   const navigate = useNavigate();
@@ -39,7 +39,7 @@ export default function MingasHistorial() {
       setDetallesModalOpen(true);
       toast.dismiss(toastId);
     } catch (error) {
-      toast.error('Error al cargar detalles', { id: toastId });
+      toast.error('No se pudieron cargar los detalles de la minga. Intenta de nuevo.', { id: toastId });
     }
   };
 
@@ -71,19 +71,19 @@ export default function MingasHistorial() {
         c.estado
       ]);
 
-          doc.autoTable({
+          autoTable(doc, {
             startY: 70,
             head: [['Cédula', 'Nombre', 'Sector', 'Estado']],
             body: tableData,
             theme: 'grid',
             styles: { fontSize: 9 },
-            headStyles: { fillColor: [16, 185, 129] } // Verde
+            headStyles: { fillColor: [16, 185, 129] },
           });
 
           doc.save(`Acta_Minga_${minga.fecha}.pdf`);
-          toast.success('PDF descargado con éxito', { id: toastId });
+          toast.success('Acta PDF descargada correctamente.', { id: toastId });
     } catch (error) {
-      toast.error('Error al generar PDF', { id: toastId });
+      toast.error('No se pudo generar el acta PDF. Intenta de nuevo.', { id: toastId });
     }
   };
 

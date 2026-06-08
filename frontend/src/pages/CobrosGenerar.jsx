@@ -14,6 +14,7 @@ export default function CobrosGenerar() {
   const [motivo, setMotivo] = useState('');
   const [monto, setMonto] = useState('');
   const [urlDocumento, setUrlDocumento] = useState('');
+  const [touched, setTouched] = useState({ motivo: false, monto: false });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [buscando, setBuscando] = useState(false);
@@ -54,8 +55,21 @@ export default function CobrosGenerar() {
 
   const handleGenerarMulta = async (e) => {
     e.preventDefault();
-    if (!selectedUser || !motivo || !monto) {
-      toast.error('Complete todos los campos requeridos.');
+    if (!selectedUser) {
+      toast.error('Debe seleccionar un comunero.');
+      return;
+    }
+    if (!motivo.trim() || motivo.trim().length < 5) {
+      toast.error('El motivo debe tener al menos 5 caracteres.');
+      return;
+    }
+    const montoNum = parseFloat(monto);
+    if (!monto || isNaN(montoNum) || montoNum <= 0) {
+      toast.error('El monto debe ser un valor positivo mayor a $0.00.');
+      return;
+    }
+    if (montoNum > 10000) {
+      toast.error('El monto de la multa no puede exceder $10,000.');
       return;
     }
     
@@ -67,10 +81,10 @@ export default function CobrosGenerar() {
         monto,
         url_documento: urlDocumento
       });
-      toast.success('Multa generada y asignada al agricultor exitosamente.');
+      toast.success('Multa registrada y asignada al comunero correctamente.');
       setTimeout(() => navigate('/dashboard/cobros'), 2000);
     } catch (error) {
-      toast.error('Error al generar la multa.');
+      toast.error('No se pudo registrar la multa. Verifica los datos e intenta de nuevo.');
     } finally {
       setIsSubmitting(false);
     }
@@ -170,14 +184,18 @@ export default function CobrosGenerar() {
             <div className="form-grid full">
               <div className="input-group">
                 <label className="input-label">Motivo o Concepto de la Multa *</label>
-                <textarea 
-                  className="input-field" 
+                <textarea
+                  className="input-field"
                   placeholder="Ej. Desperdicio comprobado de agua potable en riego..."
                   style={{ minHeight: '80px', resize: 'vertical' }}
                   value={motivo}
                   onChange={(e) => setMotivo(allowTextWithPunctuation(e.target.value))}
+                  onBlur={() => setTouched(t => ({ ...t, motivo: true }))}
                   required
                 ></textarea>
+                {touched.motivo && (!motivo.trim() || motivo.trim().length < 5) && (
+                  <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El motivo debe tener al menos 5 caracteres.</span>
+                )}
               </div>
             </div>
 
@@ -186,17 +204,25 @@ export default function CobrosGenerar() {
                 <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <DollarSign size={16} className="text-red" /> Monto a Cobrar ($) *
                 </label>
-                <input 
-                  type="number" 
-                  step="0.01" 
+                <input
+                  type="number"
+                  step="0.01"
                   min="0.01"
-                  className="input-field" 
-                  placeholder="Ej. 25.00" 
+                  className="input-field"
+                  placeholder="Ej. 25.00"
                   value={monto}
                   onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
                   onChange={(e) => setMonto(e.target.value)}
+                  onBlur={() => setTouched(t => ({ ...t, monto: true }))}
                   required
                 />
+                {touched.monto && (() => {
+                  const n = parseFloat(monto);
+                  if (!monto) return <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El monto es obligatorio.</span>;
+                  if (isNaN(n) || n <= 0) return <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El monto debe ser mayor a $0.00.</span>;
+                  if (n > 10000) return <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El monto no puede exceder $10,000.</span>;
+                  return null;
+                })()}
               </div>
             </div>
 
