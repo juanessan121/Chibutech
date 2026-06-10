@@ -72,7 +72,7 @@ export default function Configuracion() {
     const payload = Object.keys(editando).map(k => ({
       clave: k,
       valor: editando[k],
-      tipo_dato: isNaN(editando[k]) ? 'Texto' : 'Decimal'
+      tipo_dato: isNaN(editando[k]) ? 'Texto' : 'Numero'
     }));
 
     if(payload.length === 0) {
