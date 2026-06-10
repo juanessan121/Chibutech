@@ -48,9 +48,10 @@ php artisan config:clear
 php artisan cache:clear
 echo "[6/7] Cache limpiado."
 
-# ── 7. Ejecutar migraciones pendientes ────────────────────────────────────────
+# ── 7. Ejecutar migraciones y seeders iniciales ───────────────────────────────
 php artisan migrate --force
-echo "[7/7] Migraciones aplicadas."
+php artisan db:seed --force
+echo "[7/7] Migraciones y datos iniciales aplicados."
 
 echo ""
 echo "=================================================="

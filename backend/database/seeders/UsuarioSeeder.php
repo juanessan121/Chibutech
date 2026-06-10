@@ -19,7 +19,7 @@ class UsuarioSeeder extends Seeder
                 'cedula' => '0000000000',
                 'nombre' => 'Super',
                 'apellido' => 'Administrador',
-                'id_sector' => 1,
+                'id_sector' => null,
             ]);
         } else {
             $idPersona = $persona->id_persona;
