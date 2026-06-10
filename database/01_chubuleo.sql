@@ -359,10 +359,13 @@ CREATE TABLE Caja_Comunitaria (
     id_planilla INT NULL,
     monto DECIMAL(12, 2) NOT NULL,
     responsable_registro INT NOT NULL,
+    fecha_registro TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_caja_multa FOREIGN KEY (id_multa) REFERENCES Multa(id_multa) ON DELETE SET NULL,
     CONSTRAINT fk_caja_planilla FOREIGN KEY (id_planilla) REFERENCES Planilla_Cabecera(id_planilla) ON DELETE SET NULL,
     CONSTRAINT fk_caja_usuario FOREIGN KEY (responsable_registro) REFERENCES Usuario_Sistema(id_usuario)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX idx_caja_fecha ON Caja_Comunitaria(fecha_registro);
 
 CREATE TABLE Configuracion_Global (
     id_configuracion INT AUTO_INCREMENT PRIMARY KEY,

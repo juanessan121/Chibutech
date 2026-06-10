@@ -32,12 +32,23 @@ import TerrenosRegistro from '../pages/TerrenosRegistro';
 import TerrenosEdicion from '../pages/TerrenosEdicion';
 import PerfilUsuario from '../pages/PerfilUsuario';
 import TerrenoDetalles from '../pages/TerrenoDetalles';
+import ForgotPassword from '../pages/ForgotPassword';
+import CambiarPasswordTemporal from '../pages/CambiarPasswordTemporal';
 import useAuthStore from '../store/useAuthStore';
 
-// Un componente para proteger las rutas privadas
+// Protege rutas que requieren estar autenticado
 const PrivateRoute = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   return isAuthenticated ? children : <Navigate to="/login" />;
+};
+
+// Protege rutas por permiso específico
+const PermissionRoute = ({ permission, children }) => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  if (!user?.permisos?.includes(permission)) return <Navigate to="/dashboard" />;
+  return children;
 };
 
 export default function AppRouter() {
@@ -46,6 +57,8 @@ export default function AppRouter() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/cambiar-password-temporal" element={<PrivateRoute><CambiarPasswordTemporal /></PrivateRoute>} />
         
         {/* Rutas Privadas envueltas en el DashboardLayout */}
         <Route 
@@ -58,65 +71,65 @@ export default function AppRouter() {
         >
           <Route index element={<Dashboard />} />
           
-          {/* Módulo de Usuarios */}
+          {/* Módulo de Usuarios — lectura: ver_usuarios / escritura: crear_usuario */}
           <Route path="usuarios">
-            <Route index element={<PrivateRoute><Usuarios /></PrivateRoute>} />
-            <Route path="buscar" element={<PrivateRoute><UsuariosBuscar /></PrivateRoute>} />
-            <Route path="padron" element={<PrivateRoute><UsuariosPadron /></PrivateRoute>} />
-            <Route path="agregar" element={<PrivateRoute><UsuariosAgregar /></PrivateRoute>} />
-            <Route path="editar/:id" element={<PrivateRoute><UsuariosAgregar /></PrivateRoute>} />
+            <Route index element={<PermissionRoute permission="ver_usuarios"><Usuarios /></PermissionRoute>} />
+            <Route path="buscar" element={<PermissionRoute permission="ver_usuarios"><UsuariosBuscar /></PermissionRoute>} />
+            <Route path="padron" element={<PermissionRoute permission="ver_usuarios"><UsuariosPadron /></PermissionRoute>} />
+            <Route path="agregar" element={<PermissionRoute permission="crear_usuario"><UsuariosAgregar /></PermissionRoute>} />
+            <Route path="editar/:id" element={<PermissionRoute permission="crear_usuario"><UsuariosAgregar /></PermissionRoute>} />
           </Route>
 
-          {/* Módulo de Mingas */}
+          {/* Módulo de Mingas — lectura: ver_mingas / gestión: gestionar_mingas */}
           <Route path="mingas">
-            <Route index element={<PrivateRoute><Mingas /></PrivateRoute>} />
-            <Route path="programar" element={<PrivateRoute><MingasProgramar /></PrivateRoute>} />
-            <Route path="asistencia" element={<PrivateRoute><MingasAsistencia /></PrivateRoute>} />
-            <Route path="historial" element={<PrivateRoute><MingasHistorial /></PrivateRoute>} />
+            <Route index element={<PermissionRoute permission="ver_mingas"><Mingas /></PermissionRoute>} />
+            <Route path="historial" element={<PermissionRoute permission="ver_mingas"><MingasHistorial /></PermissionRoute>} />
+            <Route path="programar" element={<PermissionRoute permission="gestionar_mingas"><MingasProgramar /></PermissionRoute>} />
+            <Route path="asistencia" element={<PermissionRoute permission="gestionar_mingas"><MingasAsistencia /></PermissionRoute>} />
           </Route>
 
-          {/* Módulo de Cobros y Multas */}
+          {/* Módulo de Cobros y Multas — gestionar_multas */}
           <Route path="cobros">
-            <Route index element={<PrivateRoute><Cobros /></PrivateRoute>} />
-            <Route path="ventanilla" element={<PrivateRoute><CobrosVentanilla /></PrivateRoute>} />
-            <Route path="generar" element={<PrivateRoute><CobrosGenerar /></PrivateRoute>} />
-            <Route path="planilla" element={<PrivateRoute><CobrosPlanilla /></PrivateRoute>} />
-            <Route path="egreso" element={<PrivateRoute><CobrosEgreso /></PrivateRoute>} />
-            <Route path="historial" element={<PrivateRoute><CobrosHistorial /></PrivateRoute>} />
+            <Route index element={<PermissionRoute permission="gestionar_multas"><Cobros /></PermissionRoute>} />
+            <Route path="ventanilla" element={<PermissionRoute permission="gestionar_multas"><CobrosVentanilla /></PermissionRoute>} />
+            <Route path="generar" element={<PermissionRoute permission="gestionar_multas"><CobrosGenerar /></PermissionRoute>} />
+            <Route path="planilla" element={<PermissionRoute permission="gestionar_multas"><CobrosPlanilla /></PermissionRoute>} />
+            <Route path="egreso" element={<PermissionRoute permission="gestionar_multas"><CobrosEgreso /></PermissionRoute>} />
+            <Route path="historial" element={<PermissionRoute permission="gestionar_multas"><CobrosHistorial /></PermissionRoute>} />
           </Route>
 
-          {/* Módulo de Reportes */}
-          <Route path="reportes" element={<PrivateRoute><ReportesMenu /></PrivateRoute>} />
+          {/* Módulo de Reportes — ver_reportes */}
+          <Route path="reportes" element={<PermissionRoute permission="ver_reportes"><ReportesMenu /></PermissionRoute>} />
 
-          {/* Módulo para el agricultor normal (Mis Deudas) */}
+          {/* Vistas exclusivas del comunero */}
           <Route path="mis-deudas" element={<PrivateRoute><MisDeudas /></PrivateRoute>} />
           <Route path="mis-terrenos" element={<PrivateRoute><MisTerrenos /></PrivateRoute>} />
 
-          {/* Módulo de Directiva */}
+          {/* Módulo de Directiva — crear_usuario (Admin, Presidente, Secretario) */}
           <Route path="directiva">
-            <Route index element={<PrivateRoute><Directiva /></PrivateRoute>} />
-            <Route path="gestionar" element={<PrivateRoute><DirectivaGestion /></PrivateRoute>} />
+            <Route index element={<PermissionRoute permission="crear_usuario"><Directiva /></PermissionRoute>} />
+            <Route path="gestionar" element={<PermissionRoute permission="crear_usuario"><DirectivaGestion /></PermissionRoute>} />
           </Route>
 
-          {/* Módulo de Catastro */}
+          {/* Módulo de Catastro — lectura: ver_catastro / edición: crear_usuario */}
           <Route path="catastro">
-            <Route index element={<PrivateRoute><CatastrosMenu /></PrivateRoute>} />
-            <Route path="generales" element={<PrivateRoute><CatastroGlobal /></PrivateRoute>} />
+            <Route index element={<PermissionRoute permission="ver_catastro"><CatastrosMenu /></PermissionRoute>} />
+            <Route path="generales" element={<PermissionRoute permission="ver_catastro"><CatastroGlobal /></PermissionRoute>} />
             <Route path="detalles/:id" element={<PrivateRoute><TerrenoDetalles /></PrivateRoute>} />
-            <Route path="editar/:id" element={<PrivateRoute><TerrenosEdicion /></PrivateRoute>} />
+            <Route path="editar/:id" element={<PermissionRoute permission="crear_usuario"><TerrenosEdicion /></PermissionRoute>} />
           </Route>
-          
-          {/* Módulo de Terrenos (Registro) */}
-          <Route path="terrenos" element={<PrivateRoute><TerrenosRegistro /></PrivateRoute>} />
 
-          {/* Perfil de Usuario */}
+          {/* Registro de Terrenos — crear_usuario */}
+          <Route path="terrenos" element={<PermissionRoute permission="crear_usuario"><TerrenosRegistro /></PermissionRoute>} />
+
+          {/* Perfil de Usuario — todos */}
           <Route path="perfil" element={<PrivateRoute><PerfilUsuario /></PrivateRoute>} />
 
-          {/* Módulo de Administración (solo Admin) */}
+          {/* Módulo de Administración — solo Admin y Presidente (eliminar_usuario) */}
           <Route path="administracion">
-            <Route index element={<PrivateRoute><Administracion /></PrivateRoute>} />
-            <Route path="configuracion" element={<PrivateRoute><Configuracion /></PrivateRoute>} />
-            <Route path="bitacora" element={<PrivateRoute><Bitacora /></PrivateRoute>} />
+            <Route index element={<PermissionRoute permission="eliminar_usuario"><Administracion /></PermissionRoute>} />
+            <Route path="configuracion" element={<PermissionRoute permission="eliminar_usuario"><Configuracion /></PermissionRoute>} />
+            <Route path="bitacora" element={<PermissionRoute permission="eliminar_usuario"><Bitacora /></PermissionRoute>} />
           </Route>
           
         </Route>

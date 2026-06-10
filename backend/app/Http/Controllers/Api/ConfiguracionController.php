@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\JsonResponse;
 use Exception;
 
@@ -27,13 +28,33 @@ class ConfiguracionController extends Controller
     {
         try {
             $validated = $request->validate([
-                'configuraciones' => 'required|array',
+                'configuraciones'            => 'required|array',
+                'configuraciones.*.clave'    => 'required|string|max:100|regex:/^[A-Z0-9_]+$/',
+                'configuraciones.*.valor'    => 'required|string|max:255',
+                'configuraciones.*.tipo_dato'=> 'nullable|in:Texto,Numero,Booleano',
+            ], [
+                'configuraciones.*.clave.regex' => 'La clave solo puede contener letras mayúsculas, números y guiones bajos.',
             ]);
+
+            // Validar rangos específicos para claves de tarifa
+            foreach ($validated['configuraciones'] as $item) {
+                $clave = $item['clave'] ?? '';
+                $valor = $item['valor'] ?? '';
+                if (in_array($clave, ['TARIFA_VALOR_BASE', 'TARIFA_AGUA_VALOR'])) {
+                    if (!is_numeric($valor) || (float)$valor < 0.01 || (float)$valor > 1000) {
+                        throw new \Exception("El valor de {$clave} debe estar entre \$0.01 y \$1,000.");
+                    }
+                }
+                if (in_array($clave, ['TARIFA_METROS_BASE', 'TARIFA_AGUA_METROS'])) {
+                    if (!is_numeric($valor) || (float)$valor < 1 || (float)$valor > 100000) {
+                        throw new \Exception("El valor de {$clave} debe estar entre 1 y 100,000 m².");
+                    }
+                }
+            }
 
             DB::beginTransaction();
             foreach ($validated['configuraciones'] as $item) {
                 if (isset($item['clave']) && isset($item['valor'])) {
-                    // Si no existe, lo creamos (Upsert manual)
                     $exists = DB::table('Configuracion_Global')->where('clave', $item['clave'])->first();
                     if ($exists) {
                         DB::table('Configuracion_Global')
@@ -41,8 +62,8 @@ class ConfiguracionController extends Controller
                             ->update(['valor' => $item['valor']]);
                     } else {
                         DB::table('Configuracion_Global')->insert([
-                            'clave' => $item['clave'],
-                            'valor' => $item['valor'],
+                            'clave'     => $item['clave'],
+                            'valor'     => $item['valor'],
                             'tipo_dato' => $item['tipo_dato'] ?? 'Texto'
                         ]);
                     }
@@ -63,19 +84,17 @@ class ConfiguracionController extends Controller
     public function getZonasSectores(): JsonResponse
     {
         try {
-            $zonas = DB::table('Zona')->get();
-            $sectores = DB::table('Sector as s')
-                ->join('Zona as z', 's.id_zona', '=', 'z.id_zona')
-                ->select('s.*', 'z.nombre_zona')
-                ->get();
-                
-            return response()->json([
-                'status' => 'success', 
-                'data' => [
-                    'zonas' => $zonas,
-                    'sectores' => $sectores
-                ]
-            ]);
+            $data = Cache::remember('zonas_sectores', 3600, function () {
+                return [
+                    'zonas'    => DB::table('Zona')->get(),
+                    'sectores' => DB::table('Sector as s')
+                        ->join('Zona as z', 's.id_zona', '=', 'z.id_zona')
+                        ->select('s.*', 'z.nombre_zona')
+                        ->get(),
+                ];
+            });
+
+            return response()->json(['status' => 'success', 'data' => $data]);
         } catch (Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
@@ -90,6 +109,7 @@ class ConfiguracionController extends Controller
             ]);
 
             $id = DB::table('Zona')->insertGetId($validated);
+            Cache::forget('zonas_sectores');
             return response()->json(['status' => 'success', 'data' => ['id_zona' => $id]]);
         } catch (Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
@@ -106,6 +126,7 @@ class ConfiguracionController extends Controller
             ]);
 
             $id = DB::table('Sector')->insertGetId($validated);
+            Cache::forget('zonas_sectores');
             return response()->json(['status' => 'success', 'data' => ['id_sector' => $id]]);
         } catch (Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
@@ -120,6 +141,7 @@ class ConfiguracionController extends Controller
             ]);
 
             DB::table('Zona')->where('id_zona', $id)->update(['nombre_zona' => $validated['nombre_zona']]);
+            Cache::forget('zonas_sectores');
             return response()->json(['status' => 'success']);
         } catch (Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
@@ -134,6 +156,7 @@ class ConfiguracionController extends Controller
             ]);
 
             DB::table('Sector')->where('id_sector', $id)->update(['nombre_sector' => $validated['nombre_sector']]);
+            Cache::forget('zonas_sectores');
             return response()->json(['status' => 'success']);
         } catch (Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);

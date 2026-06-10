@@ -14,72 +14,137 @@ class CobroController extends Controller
 {
     public function deudasPendientes($id)
     {
-        $multas = Multa::where('id_persona', $id)->where('estado_pago', 'Pendiente')->get()->map(function($m) {
-            return [
-                'id_deuda' => 'M-' . $m->id_multa,
-                'id_multa' => $m->id_multa,
-                'motivo' => $m->motivo_multa,
-                'fecha_emision' => substr($m->fecha_emision, 0, 10),
-                'monto' => (float) $m->monto,
-                'tipo' => 'Multa'
-            ];
-        });
+        $multas = Multa::where('id_persona', $id)
+            ->where('estado_pago', 'Pendiente')
+            ->select('id_multa', 'motivo_multa', 'fecha_emision', 'monto')
+            ->get()
+            ->map(function($m) {
+                return [
+                    'id_deuda'      => 'M-' . $m->id_multa,
+                    'id_multa'      => $m->id_multa,
+                    'motivo'        => $m->motivo_multa,
+                    'fecha_emision' => substr($m->fecha_emision, 0, 10),
+                    'monto'         => (float) $m->monto,
+                    'tipo'          => 'Multa',
+                    'compartido'    => false
+                ];
+            });
 
-        $planillas = PlanillaCabecera::where('id_persona', $id)->where('estado_pago', 'Pendiente')->get()->map(function($p) {
-            return [
-                'id_deuda' => 'P-' . $p->id_planilla,
-                'id_planilla' => $p->id_planilla,
-                'motivo' => 'Planilla de Agua - ' . $p->mes_fiscal . '/' . $p->anio_fiscal,
-                'fecha_emision' => $p->fecha_emision,
-                'monto' => (float) $p->total_pagar,
-                'tipo' => 'Planilla'
-            ];
-        });
+        // Planillas propias — con JOIN a detalle para obtener clave catastral del terreno
+        $planillas = DB::table('Planilla_Cabecera as pc')
+            ->leftJoin('Planilla_Detalle_Terreno as pd', 'pc.id_planilla', '=', 'pd.id_planilla')
+            ->leftJoin('Terreno as t', 'pd.id_terreno', '=', 't.id_terreno')
+            ->where('pc.id_persona', $id)
+            ->where('pc.estado_pago', 'Pendiente')
+            ->select('pc.id_planilla', 'pc.mes_fiscal', 'pc.anio_fiscal', 'pc.fecha_emision',
+                     'pc.total_pagar', 't.clave_catastral', 't.area_total')
+            ->get()
+            ->map(function($p) {
+                $terreno = $p->clave_catastral ? " — Predio {$p->clave_catastral}" : '';
+                return [
+                    'id_deuda'        => 'P-' . $p->id_planilla,
+                    'id_planilla'     => $p->id_planilla,
+                    'motivo'          => 'Planilla de Agua ' . $p->mes_fiscal . '/' . $p->anio_fiscal . $terreno,
+                    'fecha_emision'   => $p->fecha_emision,
+                    'monto'           => (float) $p->total_pagar,
+                    'tipo'            => 'Planilla',
+                    'compartido'      => false,
+                    'clave_catastral' => $p->clave_catastral,
+                ];
+            });
+
+        // Planillas de terrenos donde esta persona es COPROPIETARIO
+        $titularesCompartidos = DB::table('Copropietario_Terreno as ct')
+            ->join('Terreno as t', 'ct.id_terreno', '=', 't.id_terreno')
+            ->where('ct.id_persona', $id)
+            ->pluck('t.id_persona')
+            ->unique()
+            ->values()
+            ->toArray();
+
+        $planillasCompartidas = collect();
+        if (!empty($titularesCompartidos)) {
+            $idsYaCargados = $planillas->pluck('id_planilla')->toArray();
+            $planillasCompartidas = DB::table('Planilla_Cabecera as pc')
+                ->leftJoin('Planilla_Detalle_Terreno as pd', 'pc.id_planilla', '=', 'pd.id_planilla')
+                ->leftJoin('Terreno as t', 'pd.id_terreno', '=', 't.id_terreno')
+                ->whereIn('pc.id_persona', $titularesCompartidos)
+                ->where('pc.estado_pago', 'Pendiente')
+                ->whereNotIn('pc.id_planilla', $idsYaCargados)
+                ->select('pc.id_planilla', 'pc.mes_fiscal', 'pc.anio_fiscal', 'pc.fecha_emision',
+                         'pc.total_pagar', 't.clave_catastral')
+                ->get()
+                ->map(function($p) {
+                    $terreno = $p->clave_catastral ? " — Predio {$p->clave_catastral}" : '';
+                    return [
+                        'id_deuda'        => 'P-' . $p->id_planilla,
+                        'id_planilla'     => $p->id_planilla,
+                        'motivo'          => 'Planilla de Agua ' . $p->mes_fiscal . '/' . $p->anio_fiscal . $terreno,
+                        'fecha_emision'   => $p->fecha_emision,
+                        'monto'           => (float) $p->total_pagar,
+                        'tipo'            => 'Planilla',
+                        'compartido'      => true,
+                        'clave_catastral' => $p->clave_catastral,
+                    ];
+                });
+        }
 
         return response()->json([
             'status' => 'ok',
-            'data' => $multas->merge($planillas)->values()
+            'data'   => collect([])->concat($multas)->concat($planillas)->concat($planillasCompartidas)->values()
         ]);
     }
 
     public function procesarPago(Request $request)
     {
+        $request->validate([
+            'comprobante' => 'nullable|integer|min:1',
+            'multas'      => 'nullable|array',
+            'multas.*'    => 'integer|exists:Multa,id_multa',
+            'planillas'   => 'nullable|array',
+            'planillas.*' => 'integer|exists:Planilla_Cabecera,id_planilla',
+        ]);
+
         try {
             DB::beginTransaction();
 
-            $comprobante = $request->comprobante ?: 'REC-' . date('Y') . '-' . time();
+            $comprobante = $request->comprobante ?: (time() % 100000);
 
-            // Pagar Multas
+            // Pagar Multas — se verifica que la multa esté Pendiente
             if (!empty($request->multas)) {
-                foreach ($request->multas as $idx => $id_multa) {
-                    $multa = Multa::find($id_multa);
-                    if ($multa && $multa->estado_pago === 'Pendiente') {
+                foreach ($request->multas as $id_multa) {
+                    $multa = Multa::where('id_multa', $id_multa)
+                        ->where('estado_pago', 'Pendiente')
+                        ->first();
+                    if ($multa) {
                         $multa->update(['estado_pago' => 'Pagada']);
                         CajaComunitaria::create([
                             'numero_comprobante' => $comprobante . '-M' . $id_multa,
-                            'tipo_movimiento' => 'Ingreso',
-                            'concepto' => 'Cobro Multa: ' . $multa->motivo_multa,
-                            'id_multa' => $id_multa,
-                            'monto' => $multa->monto,
-                            'responsable_registro' => 1 // ID harcodeado hasta que haya auth real
+                            'tipo_movimiento'    => 'Ingreso',
+                            'concepto'           => 'Cobro Multa: ' . $multa->motivo_multa,
+                            'id_multa'           => $id_multa,
+                            'monto'              => $multa->monto,
+                            'responsable_registro' => auth()->id()
                         ]);
                     }
                 }
             }
 
-            // Pagar Planillas
+            // Pagar Planillas — se verifica estado Pendiente
             if (!empty($request->planillas)) {
-                foreach ($request->planillas as $idx => $id_planilla) {
-                    $planilla = PlanillaCabecera::find($id_planilla);
-                    if ($planilla && $planilla->estado_pago === 'Pendiente') {
+                foreach ($request->planillas as $id_planilla) {
+                    $planilla = PlanillaCabecera::where('id_planilla', $id_planilla)
+                        ->where('estado_pago', 'Pendiente')
+                        ->first();
+                    if ($planilla) {
                         $planilla->update(['estado_pago' => 'Pagada']);
                         CajaComunitaria::create([
                             'numero_comprobante' => $comprobante . '-P' . $id_planilla,
-                            'tipo_movimiento' => 'Ingreso',
-                            'concepto' => 'Cobro Planilla Agua ' . $planilla->mes_fiscal . '/' . $planilla->anio_fiscal,
-                            'id_planilla' => $id_planilla,
-                            'monto' => $planilla->total_pagar,
-                            'responsable_registro' => 1
+                            'tipo_movimiento'    => 'Ingreso',
+                            'concepto'           => 'Cobro Planilla Agua ' . $planilla->mes_fiscal . '/' . $planilla->anio_fiscal,
+                            'id_planilla'        => $id_planilla,
+                            'monto'              => $planilla->total_pagar,
+                            'responsable_registro' => auth()->id()
                         ]);
                     }
                 }
@@ -95,16 +160,20 @@ class CobroController extends Controller
 
     public function historialTransacciones()
     {
-        $transacciones = CajaComunitaria::orderBy('id_transaccion', 'desc')->get()->map(function($t) {
-            return [
-                'id' => $t->id_transaccion,
-                'fecha' => date('Y-m-d'), // La tabla no tiene fecha_registro nativa por ahora
-                'tipo' => $t->tipo_movimiento,
-                'concepto' => $t->concepto ?: 'Sin concepto',
-                'monto' => (float) $t->monto,
-                'comprobante' => $t->numero_comprobante
-            ];
-        });
+        $transacciones = CajaComunitaria::orderBy('id_transaccion', 'desc')
+            ->select('id_transaccion', 'tipo_movimiento', 'concepto', 'monto', 'numero_comprobante', 'fecha_registro')
+            ->limit(200)
+            ->get()
+            ->map(function($t) {
+                return [
+                    'id' => $t->id_transaccion,
+                    'fecha' => substr($t->fecha_registro, 0, 10),
+                    'tipo' => $t->tipo_movimiento,
+                    'concepto' => $t->concepto ?: 'Sin concepto',
+                    'monto' => (float) $t->monto,
+                    'comprobante' => $t->numero_comprobante
+                ];
+            });
 
         return response()->json([
             'status' => 'ok',
@@ -114,16 +183,30 @@ class CobroController extends Controller
 
     public function generarMulta(Request $request)
     {
+        $validated = $request->validate([
+            'id_persona'   => 'required|integer|exists:Persona,id_persona',
+            'motivo'       => 'required|string|min:5|max:500',
+            'monto'        => 'required|numeric|min:0.01|max:10000',
+            'url_documento'=> 'nullable|url|max:255',
+            'fecha_limite' => 'nullable|date|after_or_equal:today',
+        ], [
+            'id_persona.exists' => 'La persona indicada no existe en el sistema.',
+            'monto.min'         => 'El monto de la multa debe ser mayor a $0.00.',
+            'monto.max'         => 'El monto no puede exceder $10,000.',
+            'motivo.min'        => 'El motivo debe tener al menos 5 caracteres.',
+        ]);
+
         try {
             $multa = Multa::create([
-                'id_persona' => $request->id_persona,
-                'motivo_multa' => $request->motivo,
-                'monto' => $request->monto,
-                'estado_pago' => 'Pendiente',
-                'url_documento_justificativo' => $request->url_documento
+                'id_persona'                  => $validated['id_persona'],
+                'motivo_multa'                => $validated['motivo'],
+                'monto'                       => $validated['monto'],
+                'estado_pago'                 => 'Pendiente',
+                'url_documento_justificativo' => $validated['url_documento'] ?? null,
+                'fecha_emision'               => now(),
             ]);
 
-            return response()->json(['status' => 'ok', 'message' => 'Multa generada', 'data' => $multa]);
+            return response()->json(['status' => 'ok', 'message' => 'Multa generada correctamente', 'data' => $multa]);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
@@ -131,15 +214,26 @@ class CobroController extends Controller
 
     public function registrarEgreso(Request $request)
     {
+        $validated = $request->validate([
+            'comprobante' => 'required|integer|min:1',
+            'concepto'    => 'required|string|min:5|max:500',
+            'monto'       => 'required|numeric|min:0.01|max:100000',
+        ], [
+            'comprobante.required' => 'El número de comprobante es obligatorio.',
+            'comprobante.integer'  => 'El comprobante debe ser un número entero.',
+            'monto.min'            => 'El monto del egreso debe ser mayor a $0.00.',
+            'concepto.min'         => 'El concepto debe tener al menos 5 caracteres.',
+        ]);
+
         try {
             $caja = CajaComunitaria::create([
-                'numero_comprobante' => $request->comprobante,
-                'tipo_movimiento' => 'Egreso',
-                'concepto' => $request->concepto,
-                'monto' => $request->monto,
-                'responsable_registro' => 1
+                'numero_comprobante'  => (string) $validated['comprobante'],
+                'tipo_movimiento'     => 'Egreso',
+                'concepto'            => $validated['concepto'],
+                'monto'               => $validated['monto'],
+                'responsable_registro'=> auth()->id()
             ]);
-            return response()->json(['status' => 'ok', 'message' => 'Egreso registrado', 'data' => $caja]);
+            return response()->json(['status' => 'ok', 'message' => 'Egreso registrado correctamente', 'data' => $caja]);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
@@ -152,35 +246,40 @@ class CobroController extends Controller
 
             $tipo = $request->tipo_emision; // 'masiva' o 'individual'
 
-            // Obtener configuración
-            $tarifaBase = DB::table('Configuracion_Global')->where('clave', 'TARIFA_VALOR_BASE')->value('valor') ?? 5.00;
-            $metrosBase = DB::table('Configuracion_Global')->where('clave', 'TARIFA_METROS_BASE')->value('valor') ?? 1000.00;
-            $tarifaBase = (float) $tarifaBase;
-            $metrosBase = (float) $metrosBase;
+            // Una sola query para ambas configuraciones
+            $config = DB::table('Configuracion_Global')
+                ->whereIn('clave', ['TARIFA_VALOR_BASE', 'TARIFA_METROS_BASE'])
+                ->pluck('valor', 'clave');
+            $tarifaBase = (float) ($config['TARIFA_VALOR_BASE'] ?? 5.00);
+            $metrosBase = (float) ($config['TARIFA_METROS_BASE'] ?? 1000.00);
 
             if ($tipo === 'masiva') {
-                $terrenos = DB::table('Terreno')->get();
-                foreach ($terrenos as $terreno) {
-                    $area = (float) $terreno->area_total;
-                    $fracciones = ceil($area / $metrosBase);
-                    $subtotal = $fracciones * $tarifaBase;
+                DB::table('Terreno')
+                    ->select('id_terreno', 'id_persona', 'area_total')
+                    ->orderBy('id_terreno')
+                    ->chunk(200, function($terrenos) use ($request, $tarifaBase, $metrosBase) {
+                        foreach ($terrenos as $terreno) {
+                            $area = (float) $terreno->area_total;
+                            $fracciones = ceil($area / $metrosBase);
+                            $subtotal = $fracciones * $tarifaBase;
 
-                    $cabecera = PlanillaCabecera::create([
-                        'id_persona' => $terreno->id_persona,
-                        'fecha_emision' => $request->fecha_emision,
-                        'anio_fiscal' => $request->anio,
-                        'mes_fiscal' => $request->mes_correspondiente,
-                        'total_pagar' => $subtotal,
-                        'estado_pago' => 'Pendiente'
-                    ]);
+                            $cabecera = PlanillaCabecera::create([
+                                'id_persona' => $terreno->id_persona,
+                                'fecha_emision' => $request->fecha_emision,
+                                'anio_fiscal' => $request->anio,
+                                'mes_fiscal' => $request->mes_correspondiente,
+                                'total_pagar' => $subtotal,
+                                'estado_pago' => 'Pendiente'
+                            ]);
 
-                    PlanillaDetalle::create([
-                        'id_planilla' => $cabecera->id_planilla,
-                        'id_terreno' => $terreno->id_terreno,
-                        'area_terreno_copia' => $area,
-                        'subtotal_calculado' => $subtotal
-                    ]);
-                }
+                            PlanillaDetalle::create([
+                                'id_planilla' => $cabecera->id_planilla,
+                                'id_terreno' => $terreno->id_terreno,
+                                'area_terreno_copia' => $area,
+                                'subtotal_calculado' => $subtotal
+                            ]);
+                        }
+                    });
             } else {
                 $terreno = DB::table('Terreno')->where('id_terreno', $request->id_terreno)->first();
                 if (!$terreno) {
@@ -222,40 +321,43 @@ class CobroController extends Controller
     public function reporteBalance(Request $request)
     {
         try {
-            $periodo = $request->query('periodo', 'este_mes');
-            
-            $query = DB::table('Caja_Comunitaria');
+            // Calcular totales directamente en la BD, no en PHP
+            $totales = DB::table('Caja_Comunitaria')
+                ->select(
+                    'tipo_movimiento',
+                    DB::raw('SUM(monto) as total'),
+                    DB::raw('COUNT(*) as cantidad')
+                )
+                ->groupBy('tipo_movimiento')
+                ->get()
+                ->keyBy('tipo_movimiento');
 
-            if ($periodo === 'este_mes') {
-                // Suponiendo que hay fecha, sino traemos todo. La tabla no tiene fecha, usamos id para mock si no hay, pero agregaremos filtro WHERE TRUE para que compile y traiga todo por ahora si no hay campo fecha.
-                // Lo ideal: $query->whereMonth('fecha_registro', date('m'))->whereYear('fecha_registro', date('Y'));
-                // Al no tener campo fecha en DB según modelo, lo traemos todo por ahora.
-            }
+            $totalIngresos = (float) ($totales['Ingreso']->total ?? 0);
+            $totalEgresos  = (float) ($totales['Egreso']->total ?? 0);
 
-            $movimientos = $query->get();
+            // Trae los movimientos para el detalle (con límite razonable)
+            $movimientos = DB::table('Caja_Comunitaria')
+                ->orderBy('id_transaccion', 'desc')
+                ->limit(500)
+                ->get();
 
-            $ingresos = $movimientos->where('tipo_movimiento', 'Ingreso')->map(function($i) {
-                return [
-                    'fecha' => date('Y-m-d'), // Simulado porque no hay fecha en DB
-                    'concepto' => $i->concepto,
-                    'monto' => (float) $i->monto
-                ];
-            })->values();
+            $ingresos = $movimientos->where('tipo_movimiento', 'Ingreso')
+                ->map(fn($i) => [
+                    'fecha'    => date('Y-m-d'),
+                    'concepto' => $i->concepto ?? 'Sin concepto',
+                    'monto'    => (float) $i->monto
+                ])->values();
 
-            $egresos = $movimientos->where('tipo_movimiento', 'Egreso')->map(function($e) {
-                return [
-                    'fecha' => date('Y-m-d'),
-                    'concepto' => $e->concepto,
-                    'monto' => (float) $e->monto
-                ];
-            })->values();
-
-            $totalIngresos = $ingresos->sum('monto');
-            $totalEgresos = $egresos->sum('monto');
+            $egresos = $movimientos->where('tipo_movimiento', 'Egreso')
+                ->map(fn($e) => [
+                    'fecha'    => date('Y-m-d'),
+                    'concepto' => $e->concepto ?? 'Sin concepto',
+                    'monto'    => (float) $e->monto
+                ])->values();
 
             return response()->json([
                 'status' => 'success',
-                'data' => [
+                'data'   => [
                     'resumen' => [
                         'ingresos' => $totalIngresos,
                         'egresos'  => $totalEgresos,
@@ -265,7 +367,6 @@ class CobroController extends Controller
                     'egresos'  => $egresos
                 ]
             ]);
-
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
@@ -302,8 +403,11 @@ class CobroController extends Controller
     {
         try {
             $validated = $request->validate([
-                'id_planilla' => 'required|integer',
-                'numero_comprobante' => 'required|string|max:50'
+                'id_planilla'        => 'required|integer|exists:Planilla_Cabecera,id_planilla',
+                'numero_comprobante' => 'required|integer|min:1',
+            ], [
+                'numero_comprobante.integer' => 'El número de comprobante debe ser un número entero.',
+                'numero_comprobante.min'     => 'El número de comprobante debe ser mayor a 0.',
             ]);
 
             DB::beginTransaction();
@@ -332,7 +436,7 @@ class CobroController extends Controller
                 'concepto' => 'Pago de agua (Mes: '.$planilla->mes_fiscal.'/'.$planilla->anio_fiscal.')',
                 'id_planilla' => $planilla->id_planilla,
                 'monto' => $planilla->total_pagar,
-                'responsable_registro' => 1 // Asumiendo ID 1 para el Admin por defecto si no hay auth web
+                'responsable_registro' => auth()->id()
             ]);
 
             DB::commit();
@@ -343,13 +447,256 @@ class CobroController extends Controller
         }
     }
 
+    /**
+     * Consulta o genera planillas para un conjunto de períodos (mes+año).
+     * Usado para pagos trimestrales, semestrales, anuales o personalizados.
+     */
+    public function planillasPeriodo(Request $request, $id_terreno): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'periodos'        => 'required|array|min:1|max:36',
+            'periodos.*.mes'  => 'required|integer|min:1|max:12',
+            'periodos.*.anio' => 'required|integer|min:2020|max:2100',
+        ]);
+
+        try {
+            $config = DB::table('Configuracion_Global')
+                ->whereIn('clave', ['TARIFA_VALOR_BASE', 'TARIFA_METROS_BASE'])
+                ->pluck('valor', 'clave');
+            $valor_base  = (float) ($config['TARIFA_VALOR_BASE']  ?? 5);
+            $metros_base = (float) ($config['TARIFA_METROS_BASE'] ?? 1000);
+
+            $terreno    = DB::table('Terreno')->where('id_terreno', $id_terreno)->first();
+            if (!$terreno) throw new \Exception('Terreno no encontrado');
+
+            $area       = (float) $terreno->area_total;
+            $fracciones = (int) ceil($area / $metros_base);
+            $subtotal   = $fracciones * $valor_base;
+
+            $resultado = [];
+            DB::beginTransaction();
+
+            // Pre-load all existing planillas for this terreno across all requested periods — 1 query total
+            $clavesPeriodos = array_map(
+                fn($p) => ((int) $p['mes']) . '-' . ((int) $p['anio']),
+                $request->periodos
+            );
+            $planillasCache = DB::table('Planilla_Cabecera as pc')
+                ->join('Planilla_Detalle_Terreno as pd', 'pc.id_planilla', '=', 'pd.id_planilla')
+                ->where('pd.id_terreno', $id_terreno)
+                ->whereIn(DB::raw('CONCAT(pc.mes_fiscal, "-", pc.anio_fiscal)'), $clavesPeriodos)
+                ->select('pc.*')
+                ->get()
+                ->keyBy(fn($p) => $p->mes_fiscal . '-' . $p->anio_fiscal);
+
+            foreach ($request->periodos as $periodo) {
+                $mes  = (int) $periodo['mes'];
+                $anio = (int) $periodo['anio'];
+
+                $planilla = $planillasCache->get("{$mes}-{$anio}");
+
+                if (!$planilla) {
+                    $id_planilla = DB::table('Planilla_Cabecera')->insertGetId([
+                        'id_persona'    => $terreno->id_persona,
+                        'fecha_emision' => now(),
+                        'anio_fiscal'   => $anio,
+                        'mes_fiscal'    => $mes,
+                        'total_pagar'   => $subtotal,
+                        'estado_pago'   => 'Pendiente',
+                    ]);
+                    DB::table('Planilla_Detalle_Terreno')->insert([
+                        'id_planilla'        => $id_planilla,
+                        'id_terreno'         => $id_terreno,
+                        'area_terreno_copia' => $area,
+                        'subtotal_calculado' => $subtotal,
+                    ]);
+                    $planilla = DB::table('Planilla_Cabecera')->where('id_planilla', $id_planilla)->first();
+                }
+
+                $resultado[] = [
+                    'mes'         => $mes,
+                    'anio'        => $anio,
+                    'id_planilla' => $planilla->id_planilla,
+                    'estado'      => $planilla->estado_pago,
+                    'monto'       => (float) $planilla->total_pagar,
+                    'comprobante' => $planilla->numero_comprobante,
+                    'fecha_pago'  => $planilla->fecha_pago ? substr($planilla->fecha_pago, 0, 10) : null,
+                ];
+            }
+
+            DB::commit();
+
+            $pendientes      = array_filter($resultado, fn($r) => $r['estado'] === 'Pendiente');
+            $totalPendiente  = array_sum(array_column(array_values($pendientes), 'monto'));
+            $idsPendientes   = array_column(array_values($pendientes), 'id_planilla');
+
+            return response()->json([
+                'status' => 'ok',
+                'data'   => [
+                    'meses'           => $resultado,
+                    'total_pendiente' => $totalPendiente,
+                    'ids_pendientes'  => $idsPendientes,
+                    'clave_catastral' => $terreno->clave_catastral,
+                    'area_total'      => $area,
+                    'fracciones'      => $fracciones,
+                    'metros_base'     => $metros_base,
+                    'tarifa_fraccion' => $valor_base,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Paga múltiples planillas con un solo comprobante (pago de período).
+     */
+    public function pagarPeriodo(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'id_planillas'       => 'required|array|min:1',
+            'id_planillas.*'     => 'integer|exists:Planilla_Cabecera,id_planilla',
+            'numero_comprobante' => 'required|integer|min:1',
+        ]);
+
+        try {
+            DB::beginTransaction();
+            $pagadas = 0;
+
+            foreach ($request->id_planillas as $id_planilla) {
+                $planilla = DB::table('Planilla_Cabecera')
+                    ->where('id_planilla', $id_planilla)
+                    ->where('estado_pago',  'Pendiente')
+                    ->first();
+
+                if ($planilla) {
+                    DB::table('Planilla_Cabecera')->where('id_planilla', $id_planilla)->update([
+                        'estado_pago'        => 'Pagada',
+                        'numero_comprobante' => $request->numero_comprobante,
+                        'fecha_pago'         => now(),
+                    ]);
+                    DB::table('Caja_Comunitaria')->insert([
+                        'numero_comprobante'   => $request->numero_comprobante,
+                        'tipo_movimiento'      => 'Ingreso',
+                        'concepto'             => 'Pago agua — Mes ' . $planilla->mes_fiscal . '/' . $planilla->anio_fiscal,
+                        'id_planilla'          => $id_planilla,
+                        'monto'                => $planilla->total_pagar,
+                        'responsable_registro' => auth()->id(),
+                    ]);
+                    $pagadas++;
+                }
+            }
+
+            DB::commit();
+            return response()->json([
+                'status'  => 'ok',
+                'message' => "$pagadas planilla(s) pagadas correctamente.",
+                'data'    => ['pagadas' => $pagadas],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Generación manual del mes actual (o del mes/año indicado) — para admin.
+     * Omite terrenos que ya tienen planilla en ese período.
+     */
+    public function generarMesActual(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $mes  = (int) $request->input('mes',  now()->month);
+        $anio = (int) $request->input('anio', now()->year);
+
+        try {
+            $config = DB::table('Configuracion_Global')
+                ->whereIn('clave', ['TARIFA_VALOR_BASE', 'TARIFA_METROS_BASE'])
+                ->pluck('valor', 'clave');
+            $tarifaBase = (float) ($config['TARIFA_VALOR_BASE'] ?? 5.00);
+            $metrosBase = (float) ($config['TARIFA_METROS_BASE'] ?? 1000.00);
+
+            $generadas = 0;
+            $omitidas  = 0;
+
+            DB::beginTransaction();
+
+            // Pre-load all terreno IDs that already have a planilla for this month — 1 query instead of N
+            $existentesSet = array_flip(
+                DB::table('Planilla_Cabecera as pc')
+                    ->join('Planilla_Detalle_Terreno as pd', 'pc.id_planilla', '=', 'pd.id_planilla')
+                    ->where('pc.mes_fiscal', $mes)
+                    ->where('pc.anio_fiscal', $anio)
+                    ->pluck('pd.id_terreno')
+                    ->toArray()
+            );
+
+            DB::table('Terreno')->orderBy('id_terreno')->chunk(200, function ($terrenos) use ($mes, $anio, $tarifaBase, $metrosBase, &$generadas, &$omitidas, $existentesSet) {
+                foreach ($terrenos as $terreno) {
+                    if (isset($existentesSet[$terreno->id_terreno])) { $omitidas++; continue; }
+
+                    $area       = (float) $terreno->area_total;
+                    $fracciones = (int) ceil($area / $metrosBase);
+                    $subtotal   = $fracciones * $tarifaBase;
+
+                    $id_planilla = DB::table('Planilla_Cabecera')->insertGetId([
+                        'id_persona'    => $terreno->id_persona,
+                        'fecha_emision' => now(),
+                        'anio_fiscal'   => $anio,
+                        'mes_fiscal'    => $mes,
+                        'total_pagar'   => $subtotal,
+                        'estado_pago'   => 'Pendiente',
+                    ]);
+                    DB::table('Planilla_Detalle_Terreno')->insert([
+                        'id_planilla'        => $id_planilla,
+                        'id_terreno'         => $terreno->id_terreno,
+                        'area_terreno_copia' => $area,
+                        'subtotal_calculado' => $subtotal,
+                    ]);
+                    $generadas++;
+                }
+            });
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'ok',
+                'message' => "{$generadas} planillas generadas para {$mes}/{$anio}. {$omitidas} ya existían.",
+                'data'    => ['generadas' => $generadas, 'omitidas' => $omitidas],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
     public function consultarMes(Request $request, $id_terreno): \Illuminate\Http\JsonResponse
     {
         try {
-            $mes = $request->query('mes');
+            $mes  = $request->query('mes');
             $anio = $request->query('anio');
 
-            // Buscar si ya existe la planilla
+            $config = DB::table('Configuracion_Global')
+                ->whereIn('clave', ['TARIFA_VALOR_BASE', 'TARIFA_METROS_BASE'])
+                ->pluck('valor', 'clave');
+            $valor_base  = (float) ($config['TARIFA_VALOR_BASE']  ?? 5);
+            $metros_base = (float) ($config['TARIFA_METROS_BASE'] ?? 1000);
+
+            $terreno = DB::table('Terreno')->where('id_terreno', $id_terreno)->first();
+            if (!$terreno) throw new \Exception('Terreno no encontrado');
+
+            $area      = (float) $terreno->area_total;
+            $fracciones = (int) ceil($area / $metros_base);
+            $subtotal  = $fracciones * $valor_base;
+
+            $extra = [
+                'clave_catastral' => $terreno->clave_catastral,
+                'area_total'      => $area,
+                'fracciones'      => $fracciones,
+                'metros_base'     => $metros_base,
+                'tarifa_fraccion' => $valor_base,
+            ];
+
+            // Buscar si ya existe la planilla para este terreno/mes/año
             $planilla = DB::table('Planilla_Cabecera as pc')
                 ->join('Planilla_Detalle_Terreno as pd', 'pc.id_planilla', '=', 'pd.id_planilla')
                 ->where('pd.id_terreno', $id_terreno)
@@ -359,45 +706,82 @@ class CobroController extends Controller
                 ->first();
 
             if ($planilla) {
-                return response()->json(['status' => 'success', 'data' => $planilla]);
+                return response()->json([
+                    'status' => 'success',
+                    'data'   => array_merge((array) $planilla, $extra)
+                ]);
             }
-
-            // Si no existe, generarla al vuelo usando el parámetro global de tarifa (ej. $5 por cada 1000m2)
-            // 1. Obtener tarifa
-            $valor_base = DB::table('Configuracion_Global')->where('clave', 'TARIFA_AGUA_VALOR')->value('valor') ?? 5;
-            $metros_base = DB::table('Configuracion_Global')->where('clave', 'TARIFA_AGUA_METROS')->value('valor') ?? 1000;
-
-            // 2. Obtener terreno y titular
-            $terreno = DB::table('Terreno')->where('id_terreno', $id_terreno)->first();
-            if (!$terreno) throw new \Exception('Terreno no encontrado');
-
-            // 3. Calcular
-            $subtotal = ($terreno->area_total / $metros_base) * $valor_base;
 
             DB::beginTransaction();
             $id_planilla = DB::table('Planilla_Cabecera')->insertGetId([
-                'id_persona' => $terreno->id_persona,
+                'id_persona'    => $terreno->id_persona,
                 'fecha_emision' => now(),
-                'anio_fiscal' => $anio,
-                'mes_fiscal' => $mes,
-                'total_pagar' => $subtotal,
-                'estado_pago' => 'Pendiente'
+                'anio_fiscal'   => $anio,
+                'mes_fiscal'    => $mes,
+                'total_pagar'   => $subtotal,
+                'estado_pago'   => 'Pendiente'
             ]);
-
             DB::table('Planilla_Detalle_Terreno')->insert([
-                'id_planilla' => $id_planilla,
-                'id_terreno' => $id_terreno,
-                'area_terreno_copia' => $terreno->area_total,
+                'id_planilla'        => $id_planilla,
+                'id_terreno'         => $id_terreno,
+                'area_terreno_copia' => $area,
                 'subtotal_calculado' => $subtotal
             ]);
             DB::commit();
 
             $nuevaPlanilla = DB::table('Planilla_Cabecera')->where('id_planilla', $id_planilla)->first();
-            return response()->json(['status' => 'success', 'data' => $nuevaPlanilla, 'message' => 'Planilla generada automáticamente.']);
+            return response()->json([
+                'status'  => 'success',
+                'data'    => array_merge((array) $nuevaPlanilla, $extra),
+                'message' => 'Planilla generada automáticamente.'
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Busca personas que NO tienen terreno registrado (ni como titular ni copropietario).
+     * Complementa buscar-universal para que Ventanilla pueda atender a cualquier comunero.
+     */
+    public function buscarDeudorSinTerreno(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $termino = trim($request->query('termino', ''));
+        if (mb_strlen($termino) < 3) {
+            return response()->json(['status' => 'ok', 'data' => []]);
+        }
+
+        $personas = DB::table('Persona as p')
+            ->leftJoin('Sector as s', 'p.id_sector', '=', 's.id_sector')
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                  ->from('Terreno as t')
+                  ->whereColumn('t.id_persona', 'p.id_persona');
+            })
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                  ->from('Copropietario_Terreno as ct')
+                  ->whereColumn('ct.id_persona', 'p.id_persona');
+            })
+            ->where('p.estado_vital', 'Vivo')
+            ->where(function ($q) use ($termino) {
+                $q->where('p.cedula', 'like', "%{$termino}%")
+                  ->orWhere(DB::raw("CONCAT(p.nombre, ' ', p.apellido)"), 'like', "%{$termino}%");
+            })
+            ->select(
+                'p.id_persona as id_titular',
+                'p.cedula as cedula_titular',
+                DB::raw("CONCAT(p.nombre, ' ', p.apellido) as nombre_titular"),
+                's.nombre_sector as sector',
+                DB::raw('0 as es_copropietario'),
+                DB::raw('NULL as clave_catastral'),
+                DB::raw('1 as sin_terreno')
+            )
+            ->limit(10)
+            ->get();
+
+        return response()->json(['status' => 'ok', 'data' => $personas]);
     }
 }
 

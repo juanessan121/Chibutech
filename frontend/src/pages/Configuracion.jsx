@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, RefreshCw, Layers, MapPin, GraduationCap, Plus } from 'lucide-react';
+import { Settings, Save, RefreshCw, Layers, MapPin, GraduationCap, Plus, Calculator } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import axios from '../services/axiosConfig';
 import { allowTextWithPunctuation, allowOnlyLetters } from '../utils/validators';
@@ -20,6 +20,11 @@ export default function Configuracion() {
   const [nuevaZona, setNuevaZona] = useState('');
   const [nuevoSector, setNuevoSector] = useState({ id_zona: '', nombre_sector: '' });
   const [nuevoTitulo, setNuevoTitulo] = useState('');
+
+  // Touched para validación inline
+  const [touchedZona, setTouchedZona] = useState(false);
+  const [touchedSector, setTouchedSector] = useState({ id_zona: false, nombre_sector: false });
+  const [touchedTitulo, setTouchedTitulo] = useState(false);
 
   // Edición
   const [editingZona, setEditingZona] = useState(null);
@@ -49,7 +54,7 @@ export default function Configuracion() {
       setTitulos(resTitulos.data.data);
     } catch (err) {
       console.error(err);
-      toast.error('Error cargando datos de configuración');
+      toast.error('No se pudieron cargar los parámetros del sistema. Recarga la página.');
     }
   };
 
@@ -67,21 +72,21 @@ export default function Configuracion() {
     const payload = Object.keys(editando).map(k => ({
       clave: k,
       valor: editando[k],
-      tipo_dato: isNaN(editando[k]) ? 'Texto' : 'Decimal'
+      tipo_dato: isNaN(editando[k]) ? 'Texto' : 'Numero'
     }));
 
     if(payload.length === 0) {
       setIsSubmitting(false);
-      return toast.info('No hay cambios para guardar');
+      return toast.warning('No hay cambios pendientes para guardar.');
     }
 
     try {
       await axios.put('/configuracion', { configuraciones: payload });
-      toast.success('Parámetros actualizados');
+      toast.success('Parámetros del sistema actualizados correctamente.');
       setEditando({});
       loadData();
     } catch (err) {
-      toast.error('Error guardando parámetros');
+      toast.error('No se pudieron guardar los parámetros. Intenta de nuevo.');
     } finally {
       setIsSubmitting(false);
     }
@@ -92,11 +97,11 @@ export default function Configuracion() {
     e.preventDefault();
     try {
       await axios.post('/configuracion/zonas', { nombre_zona: nuevaZona });
-      toast.success('Zona agregada');
+      toast.success('Zona registrada correctamente.');
       setNuevaZona('');
       loadData();
     } catch (err) {
-      toast.error('Error al agregar Zona (¿Quizás ya existe?)');
+      toast.error('No se pudo agregar la zona. Es posible que ya exista con ese nombre.');
     }
   };
 
@@ -108,11 +113,11 @@ export default function Configuracion() {
         id_zona: nuevoSector.id_zona, 
         nombre_sector: nuevoSector.nombre_sector 
       });
-      toast.success('Sector agregado');
+      toast.success('Sector registrado correctamente.');
       setNuevoSector({ id_zona: '', nombre_sector: '' });
       loadData();
     } catch (err) {
-      toast.error('Error al agregar Sector');
+      toast.error('No se pudo agregar el sector. Verifica que no exista ya.');
     }
   };
 
@@ -120,11 +125,11 @@ export default function Configuracion() {
   const handleUpdateZona = async (id_zona, nombre_zona) => {
     try {
       await axios.put(`/configuracion/zonas/${id_zona}`, { nombre_zona });
-      toast.success('Zona actualizada');
+      toast.success('Zona actualizada correctamente.');
       setEditingZona(null);
       loadData();
     } catch (err) {
-      toast.error('Error al actualizar Zona');
+      toast.error('No se pudo actualizar la zona. Intenta de nuevo.');
     }
   };
 
@@ -132,11 +137,11 @@ export default function Configuracion() {
   const handleUpdateSector = async (id_sector, nombre_sector) => {
     try {
       await axios.put(`/configuracion/sectores/${id_sector}`, { nombre_sector });
-      toast.success('Sector actualizado');
+      toast.success('Sector actualizado correctamente.');
       setEditingSector(null);
       loadData();
     } catch (err) {
-      toast.error('Error al actualizar Sector');
+      toast.error('No se pudo actualizar el sector. Intenta de nuevo.');
     }
   };
 
@@ -145,11 +150,11 @@ export default function Configuracion() {
     e.preventDefault();
     try {
       await axios.post('/configuracion/titulos', { nombre_titulo: nuevoTitulo });
-      toast.success('Título Universitario agregado');
+      toast.success('Título universitario registrado correctamente.');
       setNuevoTitulo('');
       loadData();
     } catch (err) {
-      toast.error('Error al agregar Título');
+      toast.error('No se pudo registrar el título. Verifica que no esté duplicado.');
     }
   };
 
@@ -202,7 +207,7 @@ export default function Configuracion() {
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {config.map((item, idx) => (
               <div key={item.clave} style={{
-                  display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '1.5rem', 
+                  display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '1.5rem',
                   padding: '1.2rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.05)'
                 }}>
                 <div>
@@ -222,6 +227,39 @@ export default function Configuracion() {
               </div>
             ))}
           </div>
+
+          {/* Panel de vista previa de la tarifa vigente */}
+          {(() => {
+            const getVal = (clave, fallback) => parseFloat(editando[clave] ?? config.find(c => c.clave === clave)?.valor ?? fallback) || fallback;
+            const metrosBase = getVal('TARIFA_METROS_BASE', 1000);
+            const valorBase  = getVal('TARIFA_VALOR_BASE', 5);
+            const ejemplos = [500, 1000, 2500, 5000];
+            const hayPendientes = Object.keys(editando).length > 0;
+            return (
+              <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.2)', borderRadius: '1rem' }}>
+                <p style={{ margin: '0 0 1rem 0', fontWeight: 600, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+                  <Calculator size={16} />
+                  {hayPendientes ? 'Vista previa (pendiente de guardar)' : 'Tarifa vigente'}
+                </p>
+                <p style={{ margin: '0 0 1rem 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  Fórmula: ⌈ Área ÷ {metrosBase.toLocaleString('es-EC')} m² ⌉ × ${valorBase.toFixed(2)} = cuota mensual
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+                  {ejemplos.map(area => {
+                    const fracs = Math.ceil(area / metrosBase);
+                    const cuota = fracs * valorBase;
+                    return (
+                      <div key={area} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '0.65rem', padding: '0.75rem 1rem' }}>
+                        <p style={{ margin: '0 0 0.2rem 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{area.toLocaleString('es-EC')} m²</p>
+                        <p style={{ margin: '0 0 0.1rem 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>${cuota.toFixed(2)}<span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>/mes</span></p>
+                        <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>{fracs} fracción{fracs !== 1 ? 'es' : ''}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -231,9 +269,22 @@ export default function Configuracion() {
           
           <div className="glass-card" style={{ padding: '2rem' }}>
             <h3 className="text-yellow" style={{ marginBottom: '1.5rem' }}>Zonas</h3>
-            <form onSubmit={handleAddZona} style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-              <input type="text" className="input-field" placeholder="Nombre de nueva Zona..." required value={nuevaZona} onChange={e => setNuevaZona(allowOnlyLetters(e.target.value))} />
-              <button type="submit" className="btn-primary" style={{ width: 'auto' }}><Plus size={18}/></button>
+            <form onSubmit={handleAddZona} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Nombre de nueva Zona..."
+                  required
+                  value={nuevaZona}
+                  onChange={e => setNuevaZona(allowOnlyLetters(e.target.value))}
+                  onBlur={() => setTouchedZona(true)}
+                />
+                <button type="submit" className="btn-primary" style={{ width: 'auto' }}><Plus size={18}/></button>
+              </div>
+              {touchedZona && !nuevaZona.trim() && (
+                <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El nombre de la zona es obligatorio.</span>
+              )}
             </form>
             <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }}>
               {zonas.map(z => (
@@ -267,13 +318,37 @@ export default function Configuracion() {
 
           <div className="glass-card" style={{ padding: '2rem' }}>
             <h3 className="text-blue" style={{ marginBottom: '1.5rem' }}>Sectores</h3>
-            <form onSubmit={handleAddSector} style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-              <select className="input-field" required value={nuevoSector.id_zona} onChange={e => setNuevoSector({...nuevoSector, id_zona: e.target.value})} style={{ flex: 1, minWidth: '150px' }}>
-                <option value="">Seleccione Zona...</option>
-                {zonas.map(z => <option key={z.id_zona} value={z.id_zona}>{z.nombre_zona}</option>)}
-              </select>
-              <input type="text" className="input-field" placeholder="Nuevo Sector..." required value={nuevoSector.nombre_sector} onChange={e => setNuevoSector({...nuevoSector, nombre_sector: allowTextWithPunctuation(e.target.value)})} style={{ flex: 2, minWidth: '200px' }} />
-              <button type="submit" className="btn-primary" style={{ width: 'auto' }}><Plus size={18}/></button>
+            <form onSubmit={handleAddSector} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <select
+                  className="input-field"
+                  required
+                  value={nuevoSector.id_zona}
+                  onChange={e => setNuevoSector({...nuevoSector, id_zona: e.target.value})}
+                  onBlur={() => setTouchedSector(t => ({ ...t, id_zona: true }))}
+                  style={{ flex: 1, minWidth: '150px' }}
+                >
+                  <option value="">Seleccione Zona...</option>
+                  {zonas.map(z => <option key={z.id_zona} value={z.id_zona}>{z.nombre_zona}</option>)}
+                </select>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Nuevo Sector..."
+                  required
+                  value={nuevoSector.nombre_sector}
+                  onChange={e => setNuevoSector({...nuevoSector, nombre_sector: allowTextWithPunctuation(e.target.value)})}
+                  onBlur={() => setTouchedSector(t => ({ ...t, nombre_sector: true }))}
+                  style={{ flex: 2, minWidth: '200px' }}
+                />
+                <button type="submit" className="btn-primary" style={{ width: 'auto' }}><Plus size={18}/></button>
+              </div>
+              {touchedSector.id_zona && !nuevoSector.id_zona && (
+                <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>Debe seleccionar una zona.</span>
+              )}
+              {touchedSector.nombre_sector && !nuevoSector.nombre_sector.trim() && (
+                <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El nombre del sector es obligatorio.</span>
+              )}
             </form>
             <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }}>
               {sectores.map(s => (
@@ -315,9 +390,22 @@ export default function Configuracion() {
         <div className="glass-card animate-fade-in" style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
           <h3 className="text-primary" style={{ marginBottom: '1.5rem' }}>Catálogo de Títulos Universitarios / Educativos</h3>
           
-          <form onSubmit={handleAddTitulo} style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-            <input type="text" className="input-field" placeholder="Ej. Ingeniero Agrónomo..." required value={nuevoTitulo} onChange={e => setNuevoTitulo(allowTextWithPunctuation(e.target.value))} />
-            <button type="submit" className="btn-primary" style={{ width: 'auto', gap: '0.5rem' }}><Plus size={18}/> Agregar Título</button>
+          <form onSubmit={handleAddTitulo} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="Ej. Ingeniero Agrónomo..."
+                required
+                value={nuevoTitulo}
+                onChange={e => setNuevoTitulo(allowTextWithPunctuation(e.target.value))}
+                onBlur={() => setTouchedTitulo(true)}
+              />
+              <button type="submit" className="btn-primary" style={{ width: 'auto', gap: '0.5rem' }}><Plus size={18}/> Agregar Título</button>
+            </div>
+            {touchedTitulo && !nuevoTitulo.trim() && (
+              <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El nombre del título es obligatorio.</span>
+            )}
           </form>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>

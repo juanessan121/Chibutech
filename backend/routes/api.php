@@ -8,15 +8,23 @@ use App\Http\Controllers\Api\TerrenoController;
 use App\Http\Controllers\Api\MingaController;
 use App\Http\Controllers\Api\CobroController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DashboardController;
 
-Route::post('/auth/login', [AuthController::class, 'login']);
+Route::middleware('throttle:10,1')->post('/auth/login', [AuthController::class, 'login']);
+Route::middleware('throttle:5,1')->post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
+Route::middleware('auth:sanctum')->post('/auth/cambiar-rol', [AuthController::class, 'cambiarRol']);
+Route::middleware('auth:sanctum')->post('/auth/cambiar-password-temporal', [AuthController::class, 'cambiarPasswordTemporal']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+
+// Dashboard — resumen consolidado (reemplaza 4 peticiones por 1)
+Route::get('/dashboard/resumen', [DashboardController::class, 'resumen']);
+Route::get('/dashboard/resumen-comunero', [DashboardController::class, 'resumenComunero']);
 
 // Buscar títulos educativos
 Route::get('/catalogos/titulos/todos', [TituloController::class, 'todos']);
@@ -32,6 +40,9 @@ Route::get('/catalogos/generos', function() {
 Route::get('/catalogos/condiciones', function() {
     return response()->json(['status' => 'ok', 'data' => \App\Models\CatalogoCondicionEspecial::all()]);
 });
+
+// Verificación de correo electrónico (MX check)
+Route::get('/verificar-email', [PersonaController::class, 'verificarEmail']);
 
 // Personas (Búsqueda, Registro, Edición y Eliminación)
 Route::get('/personas', [PersonaController::class, 'buscar']);
@@ -60,9 +71,13 @@ Route::post('/mingas', [MingaController::class, 'store']);
 Route::get('/cobros/deudas/{id}', [CobroController::class, 'deudasPendientes']);
 Route::get('/cobros/terreno/{id}/deudas', [CobroController::class, 'deudas']);
 Route::get('/cobros/terreno/{id}/consultar-mes', [CobroController::class, 'consultarMes']);
+Route::post('/cobros/terreno/{id}/periodo', [CobroController::class, 'planillasPeriodo']);
+Route::post('/cobros/pagar-periodo', [CobroController::class, 'pagarPeriodo']);
+Route::post('/cobros/planillas/auto-generar', [CobroController::class, 'generarMesActual']);
 Route::post('/cobros/pagar', [CobroController::class, 'procesarPago']);
 Route::post('/cobros/pagar-agua', [CobroController::class, 'pagarAgua']);
 Route::get('/cobros/historial', [CobroController::class, 'historialTransacciones']);
+Route::get('/cobros/buscar-deudor', [CobroController::class, 'buscarDeudorSinTerreno']);
 Route::post('/cobros/multa', [CobroController::class, 'generarMulta']);
 Route::post('/cobros/egreso', [CobroController::class, 'registrarEgreso']);
 Route::post('/cobros/planillas', [CobroController::class, 'generarPlanillas']);
@@ -76,6 +91,8 @@ Route::get('/reportes/balance',  [CobroController::class,   'reporteBalance']);
 Route::get('/directiva/actual', [\App\Http\Controllers\Api\DirectivaController::class, 'actual']);
 Route::get('/directiva/historial', [\App\Http\Controllers\Api\DirectivaController::class, 'historial']);
 Route::post('/directiva', [\App\Http\Controllers\Api\DirectivaController::class, 'store']);
+Route::post('/directiva/reactivar', [\App\Http\Controllers\Api\DirectivaController::class, 'reactivar']);
+Route::patch('/directiva/miembro', [\App\Http\Controllers\Api\DirectivaController::class, 'cambiarMiembro']);
 
 // Auditoría
 Route::get('/auditoria', [\App\Http\Controllers\Api\AuditoriaController::class, 'index']);

@@ -32,6 +32,7 @@ const formatClaveCatastral = (value) => {
 export default function TerrenosRegistro() {
   const navigate = useNavigate();
   const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
+    mode: 'onBlur',
     defaultValues: {
       dueno: null,
       terrenos: [
@@ -41,8 +42,8 @@ export default function TerrenosRegistro() {
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "terrenos" });
-  
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const dueno = watch('dueno');
 
   const user = useAuthStore(state => state.user);
   const isComunero = !user || user?.id_rol === 1;
@@ -146,10 +147,12 @@ export default function TerrenosRegistro() {
           </div>
 
           {/* SECCIÓN TERRENOS MÚLTIPLES */}
-          <h3 className="text-primary" style={{ fontSize: '1.25rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
+          <h3 className="text-primary" style={{ fontSize: '1.25rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             2. Lista de Terrenos
+            {!dueno && <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 'normal', background: 'rgba(245,158,11,0.1)', padding: '0.2rem 0.6rem', borderRadius: '1rem', border: '1px solid rgba(245,158,11,0.3)' }}>Seleccione primero el titular</span>}
           </h3>
 
+          <div style={{ opacity: dueno ? 1 : 0.4, pointerEvents: dueno ? 'auto' : 'none', transition: 'opacity 0.3s' }}>
           {fields.map((item, index) => (
             <div key={item.id} className="glass-card" style={{ padding: '1.5rem', marginBottom: '2rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -310,14 +313,16 @@ export default function TerrenosRegistro() {
             </div>
           ))}
 
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => append({ clave_catastral: '', area: '', estado_terreno: '', latitud: '', longitud: '', copropietarios: [] })}
-            className="btn-secondary" 
+            className="btn-secondary"
             style={{ width: '100%', display: 'flex', justifyContent: 'center', marginBottom: '3rem', borderStyle: 'dashed' }}
+            disabled={!dueno}
           >
             <Plus size={18} /> Añadir Otro Terreno al Mismo Dueño
           </button>
+          </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button type="submit" className="btn-primary" disabled={isSubmitting} style={{ padding: '1rem 2.5rem', fontSize: '1.1rem' }}>

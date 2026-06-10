@@ -12,28 +12,35 @@ class MingaController extends Controller
 {
     public function index()
     {
+        // Una sola query con conteos agregados — elimina el N+1 anterior
         $mingas = DB::table('Minga as m')
             ->join('Catalogo_Estado_Minga as e', 'm.id_estado_minga', '=', 'e.id_estado_minga')
-            ->select('m.*', 'e.nombre_estado')
+            ->leftJoin(DB::raw('(SELECT id_minga, SUM(id_estado_asistencia = 2) as total_presentes, SUM(id_estado_asistencia IN (3,4)) as total_faltos FROM Asistencia_Minga GROUP BY id_minga) as stats'), 'stats.id_minga', '=', 'm.id_minga')
+            ->select(
+                'm.id_minga',
+                'm.fecha_programada',
+                'm.motivo_general',
+                'm.lugar_encuentro',
+                'e.nombre_estado',
+                'm.valor_multa_inasistencia',
+                'm.observacion_estado',
+                DB::raw('COALESCE(stats.total_presentes, 0) as asistentes'),
+                DB::raw('COALESCE(stats.total_faltos, 0) as faltos')
+            )
             ->orderBy('m.id_minga', 'desc')
             ->get();
 
-        $data = $mingas->map(function ($m) {
-            $asistentes = DB::table('Asistencia_Minga')->where('id_minga', $m->id_minga)->where('id_estado_asistencia', 2)->count(); // 2 = Presente
-            $faltos = DB::table('Asistencia_Minga')->where('id_minga', $m->id_minga)->whereIn('id_estado_asistencia', [3, 4])->count(); // 3 = Faltó, 4 = Justificado
-
-            return [
-                'id' => $m->id_minga,
-                'fecha' => $m->fecha_programada,
-                'motivo' => $m->motivo_general,
-                'lugar' => $m->lugar_encuentro,
-                'estado' => $m->nombre_estado,
-                'asistentes' => $asistentes,
-                'faltos' => $faltos,
-                'multa' => (float)$m->valor_multa_inasistencia,
-                'obs' => $m->observacion_estado
-            ];
-        });
+        $data = $mingas->map(fn($m) => [
+            'id'         => $m->id_minga,
+            'fecha'      => $m->fecha_programada,
+            'motivo'     => $m->motivo_general,
+            'lugar'      => $m->lugar_encuentro,
+            'estado'     => $m->nombre_estado,
+            'asistentes' => (int) $m->asistentes,
+            'faltos'     => (int) $m->faltos,
+            'multa'      => (float) $m->valor_multa_inasistencia,
+            'obs'        => $m->observacion_estado
+        ]);
 
         return response()->json(['status' => 'ok', 'data' => $data]);
     }

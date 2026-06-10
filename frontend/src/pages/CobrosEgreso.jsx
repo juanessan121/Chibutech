@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wallet, ArrowLeft, DollarSign, FileText, Save } from 'lucide-react';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
 import { registrarEgreso } from '../services/cobroService';
 import { allowTextWithPunctuation } from '../utils/validators';
 import axios from '../services/axiosConfig';
@@ -14,6 +14,7 @@ export default function CobrosEgreso() {
   const [concepto, setConcepto] = useState('');
   const [monto, setMonto] = useState('');
   const [comprobante, setComprobante] = useState('');
+  const [touched, setTouched] = useState({ concepto: false, monto: false, comprobante: false });
 
   useEffect(() => {
     const fetchBalance = async () => {
@@ -29,12 +30,24 @@ export default function CobrosEgreso() {
 
   const handleRegistrarEgreso = async (e) => {
     e.preventDefault();
-    if (!concepto || !monto) {
+    if (!concepto.trim() || !monto) {
       toast.error('El concepto y el monto son obligatorios.');
       return;
     }
-
-    if (saldoCaja !== null && parseFloat(monto) > saldoCaja) {
+    if (concepto.trim().length < 5) {
+      toast.error('El concepto debe tener al menos 5 caracteres.');
+      return;
+    }
+    const montoNum = parseFloat(monto);
+    if (isNaN(montoNum) || montoNum <= 0) {
+      toast.error('El monto debe ser un valor mayor a $0.00.');
+      return;
+    }
+    if (!comprobante || !/^\d+$/.test(comprobante.toString().trim())) {
+      toast.error('El número de comprobante es obligatorio y debe ser numérico.');
+      return;
+    }
+    if (saldoCaja !== null && montoNum > saldoCaja) {
       toast.error('El egreso no puede ser mayor al saldo disponible en caja.');
       return;
     }
@@ -49,7 +62,7 @@ export default function CobrosEgreso() {
       toast.success('Gasto registrado correctamente en el Arqueo de Caja.');
       setTimeout(() => navigate('/dashboard/cobros/historial'), 2000);
     } catch (error) {
-      toast.error('Error al registrar el gasto.');
+      toast.error('No se pudo registrar el gasto. Verifica la conexión e intenta de nuevo.');
     } finally {
       setIsSubmitting(false);
     }
@@ -94,14 +107,18 @@ export default function CobrosEgreso() {
           <div className="form-grid full">
             <div className="input-group">
               <label className="input-label">Concepto o Detalle del Gasto *</label>
-              <textarea 
-                className="input-field" 
+              <textarea
+                className="input-field"
                 placeholder="Ej. Compra de tubería PVC de 2 pulgadas para reparación en San Luis..."
                 style={{ minHeight: '80px', resize: 'vertical' }}
                 value={concepto}
                 onChange={(e) => setConcepto(allowTextWithPunctuation(e.target.value))}
+                onBlur={() => setTouched(t => ({ ...t, concepto: true }))}
                 required
               ></textarea>
+              {touched.concepto && (!concepto.trim() || concepto.trim().length < 5) && (
+                <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El concepto debe tener al menos 5 caracteres.</span>
+              )}
             </div>
           </div>
 
@@ -110,31 +127,47 @@ export default function CobrosEgreso() {
               <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <DollarSign size={16} className="text-red" /> Monto del Gasto ($) *
               </label>
-              <input 
-                type="number" 
-                step="0.01" 
+              <input
+                type="number"
+                step="0.01"
                 min="0.01"
-                className="input-field" 
-                placeholder="Ej. 150.50" 
+                className="input-field"
+                placeholder="Ej. 150.50"
                 value={monto}
                 onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
                 onChange={(e) => setMonto(e.target.value)}
+                onBlur={() => setTouched(t => ({ ...t, monto: true }))}
                 required
               />
+              {touched.monto && (() => {
+                const n = parseFloat(monto);
+                if (!monto) return <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El monto es obligatorio.</span>;
+                if (isNaN(n) || n <= 0) return <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El monto debe ser mayor a $0.00.</span>;
+                return null;
+              })()}
             </div>
-            
+
             <div className="input-group">
               <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <FileText size={16} className="text-muted" /> Nro. Factura / Comprobante
+                <FileText size={16} className="text-muted" /> Nro. Comprobante *
               </label>
-              <input 
-                type="text" 
-                className="input-field" 
-                placeholder="Ej. FAC-001-002-123456" 
+              <input
+                type="number"
+                className="input-field"
+                placeholder="Ej. 1001"
+                min="1"
                 value={comprobante}
-                onChange={(e) => setComprobante(allowTextWithPunctuation(e.target.value))}
+                onKeyDown={(e) => ['e', 'E', '+', '-', '.'].includes(e.key) && e.preventDefault()}
+                onChange={(e) => setComprobante(e.target.value)}
+                onBlur={() => setTouched(t => ({ ...t, comprobante: true }))}
+                required
               />
-              <span className="text-muted" style={{fontSize: '0.75rem'}}>Opcional, pero recomendado para auditorías.</span>
+              {touched.comprobante && (!comprobante || !/^\d+$/.test(comprobante.toString().trim())) && (
+                <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El comprobante es obligatorio y debe ser numérico.</span>
+              )}
+              {!touched.comprobante && (
+                <span className="text-muted" style={{ fontSize: '0.75rem' }}>Solo números enteros. Obligatorio para auditorías.</span>
+              )}
             </div>
           </div>
 

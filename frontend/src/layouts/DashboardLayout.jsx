@@ -7,7 +7,8 @@ import { Toaster } from 'sonner';
 import bgLayout from '../assets/bg_layout.png';
 
 export default function DashboardLayout() {
-  const { user, logout } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
   const { hasPermission, isRole } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,33 +47,36 @@ export default function DashboardLayout() {
 
   const menuItems = [
     { name: 'Panel Principal', path: '/dashboard', icon: LayoutDashboard, show: true },
-    { 
-      name: 'Usuarios', icon: Users, show: hasPermission('crear_usuario'),
+    {
+      name: 'Usuarios', icon: Users,
+      show: hasPermission('ver_usuarios') || hasPermission('crear_usuario'),
       activePaths: ['/dashboard/usuarios'],
       subItems: [
         { name: 'Padrón General', path: '/dashboard/usuarios/padron' },
-        { name: 'Agregar Usuario', path: '/dashboard/usuarios/agregar' }
+        { name: 'Agregar Usuario', path: '/dashboard/usuarios/agregar', show: hasPermission('crear_usuario') }
       ]
     },
-    { 
-      name: 'Mingas', icon: Users, show: hasPermission('gestionar_mingas'),
+    {
+      name: 'Mingas', icon: Users,
+      show: hasPermission('gestionar_mingas') || hasPermission('ver_mingas'),
       activePaths: ['/dashboard/mingas'],
       subItems: [
         { name: 'Control de Mingas', path: '/dashboard/mingas' },
         { name: 'Historial de Mingas', path: '/dashboard/mingas/historial' },
-        { name: 'Programar Minga', path: '/dashboard/mingas/programar' },
-        { name: 'Tomar Asistencia', path: '/dashboard/mingas/asistencia' }
+        { name: 'Programar Minga', path: '/dashboard/mingas/programar', show: hasPermission('gestionar_mingas') },
+        { name: 'Tomar Asistencia', path: '/dashboard/mingas/asistencia', show: hasPermission('gestionar_mingas') }
       ]
     },
-    { 
-      name: 'Catastros', icon: Map, show: hasPermission('gestionar_mingas') || hasPermission('crear_usuario'),
+    {
+      name: 'Catastros', icon: Map,
+      show: hasPermission('ver_catastro') || hasPermission('gestionar_mingas') || hasPermission('crear_usuario'),
       activePaths: ['/dashboard/catastro', '/dashboard/terrenos'],
       subItems: [
         { name: 'Catastro de Predios', path: '/dashboard/catastro/generales' },
-        { name: 'Registrar Terreno', path: '/dashboard/terrenos' }
+        { name: 'Registrar Terreno', path: '/dashboard/terrenos', show: hasPermission('crear_usuario') }
       ]
     },
-    { 
+    {
       name: 'Multas y Cobros', icon: ShieldAlert, show: hasPermission('gestionar_multas'),
       activePaths: ['/dashboard/cobros'],
       subItems: [
@@ -85,16 +89,16 @@ export default function DashboardLayout() {
       ]
     },
     { name: 'Reportes', path: '/dashboard/reportes', icon: FileText, show: hasPermission('ver_reportes') },
-    { 
-      name: 'Directiva', icon: Award, show: true,
+    {
+      name: 'Directiva', icon: Award, show: hasPermission('crear_usuario'),
       activePaths: ['/dashboard/directiva'],
       subItems: [
         { name: 'Directiva Actual', path: '/dashboard/directiva' },
         { name: 'Gestionar', path: '/dashboard/directiva/gestionar' }
       ]
     },
-    { 
-      name: 'Administración', icon: Settings, show: hasPermission('gestionar_multas'),
+    {
+      name: 'Administración', icon: Settings, show: hasPermission('eliminar_usuario'),
       activePaths: ['/dashboard/administracion'],
       subItems: [
         { name: 'Panel Admin', path: '/dashboard/administracion' },
@@ -102,7 +106,7 @@ export default function DashboardLayout() {
       ]
     },
     { name: 'Mis Deudas', path: '/dashboard/mis-deudas', icon: Droplet, show: isRole('Usuario Regular') },
-    { name: 'Mi Predio', path: '/dashboard/catastro/detalles/1', icon: MapPin, show: isRole('Usuario Regular') },
+    { name: 'Mis Terrenos', path: '/dashboard/mis-terrenos', icon: MapPin, show: isRole('Usuario Regular') },
   ];
 
   // Sincronizar automáticamente el submenú abierto (accordion) con la ruta actual
@@ -206,7 +210,7 @@ export default function DashboardLayout() {
                     >
                       <div style={{ overflow: 'hidden' }}>
                         <div className="sidebar-subitems" style={{ paddingLeft: '2.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem', paddingBottom: '0.5rem' }}>
-                          {item.subItems.map(subItem => {
+                          {item.subItems.filter(sub => sub.show !== false).map(subItem => {
                             const isSubActive = location.pathname === subItem.path;
                             return (
                               <button 
@@ -314,12 +318,12 @@ export default function DashboardLayout() {
               navigate('/dashboard/perfil');
               setIsSidebarOpen(false);
             }}
-            title={isCollapsed ? `${user?.username} (${user?.rol})` : ''}
+            title={isCollapsed ? `${user?.nombre_completo || user?.username} (${user?.rol})` : ''}
           >
             <UserCircle size={32} color="var(--primary)" />
             {!isCollapsed && (
               <div className="user-info">
-                <span className="user-name">{user?.username}</span>
+                <span className="user-name" style={{ fontSize: '0.82rem' }}>{user?.nombre_completo || user?.username}</span>
                 <span className="user-role">{user?.rol}</span>
               </div>
             )}
@@ -492,7 +496,7 @@ export default function DashboardLayout() {
               onClick={() => navigate('/dashboard/perfil')}
             >
               <User size={16} />
-              <span style={{ fontSize: '0.85rem' }}>{user?.username}</span>
+              <span style={{ fontSize: '0.85rem' }}>{user?.nombre_completo || user?.username}</span>
             </button>
           </div>
         </div>

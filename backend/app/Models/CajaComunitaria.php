@@ -17,6 +17,7 @@ class CajaComunitaria extends Model
         'id_multa',
         'id_planilla',
         'monto',
-        'responsable_registro'
+        'responsable_registro',
+        'fecha_registro'
     ];
 }

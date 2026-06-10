@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import useAuthStore from '../store/useAuthStore';
 import { login as authLogin } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
@@ -11,10 +11,11 @@ export default function Login() {
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
   
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [usernameTouched, setUsernameTouched] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,12 +39,12 @@ export default function Login() {
       // Nielsen 1: Feedback on success
       toast.success('¡Bienvenido al sistema!');
       
-      // Slight delay to show the success animation before redirect
-      setTimeout(() => navigate('/dashboard'), 800);
+      // Si tiene contraseña temporal, redirigir a cambio de contraseña
+      const destino = data.user?.password_temporal ? '/cambiar-password-temporal' : '/dashboard';
+      setTimeout(() => navigate(destino), 800);
     } catch (error) {
       // Nielsen 9: Help users recognize, diagnose, and recover from errors
       setErrorMsg(error.message || 'Credenciales incorrectas. Intenta de nuevo.');
-      toast.error('Error de autenticación');
     } finally {
       setIsLoading(false);
     }
@@ -101,18 +102,22 @@ export default function Login() {
             <label htmlFor="username" className="input-label">Cédula de Identidad</label>
             <div className="input-wrapper">
               <User className="input-icon" size={20} aria-hidden="true" />
-              <input 
+              <input
                 id="username"
-                type="text" 
-                className="input-field" 
+                type="text"
+                className="input-field"
                 placeholder="Ingresa tu número de cédula"
                 value={username}
                 onChange={(e) => setUsername(allowAlphanumeric(e.target.value))}
+                onBlur={() => setUsernameTouched(true)}
                 disabled={isLoading}
                 aria-required="true"
                 aria-invalid={errorMsg ? "true" : "false"}
                 autoComplete="username"
               />
+              {usernameTouched && !username.trim() && (
+                <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>Ingresa tu número de cédula.</span>
+              )}
             </div>
           </div>
 
@@ -120,16 +125,25 @@ export default function Login() {
             <label htmlFor="password" className="input-label">Contraseña <span style={{fontSize:'0.8em', color:'var(--text-muted)'}}>(Opcional para comuneros)</span></label>
             <div className="input-wrapper">
               <Lock className="input-icon" size={20} aria-hidden="true" />
-              <input 
+              <input
                 id="password"
-                type="password" 
-                className="input-field" 
+                type="password"
+                className="input-field"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
                 autoComplete="current-password"
               />
+            </div>
+            <div style={{ textAlign: 'right', marginTop: '0.4rem' }}>
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
+                style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.82rem', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
             </div>
           </div>
 
@@ -155,70 +169,6 @@ export default function Login() {
           </button>
         </form>
         
-        {/* Test Credentials Hint */}
-        <div className="animate-fade-in" style={{ animationDelay: '0.4s', maxWidth: '800px', width: '100%' }}>
-          <h3 style={{ textAlign: 'center', marginBottom: '1rem', color: 'var(--text-main)', fontSize: '1.1rem' }}>Cuentas de Acceso al Sistema</h3>
-          <table className="credentials-table" style={{ fontSize: '0.85rem' }}>
-            <thead>
-              <tr>
-                <th>Cargo / Rol</th>
-                <th>Usuario</th>
-                <th>Contraseña</th>
-                <th>Nivel de Acceso (Permisos)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* ADMINISTRACIÓN */}
-              <tr style={{ background: 'rgba(245, 158, 11, 0.1)' }}>
-                <td style={{ fontWeight: 'bold', color: '#f59e0b' }}>Administrador del Sistema</td>
-                <td><code style={{color: '#f59e0b'}}>admin</code></td>
-                <td><code style={{color: '#f59e0b'}}>admin</code></td>
-                <td><span className="badge" style={{ background: '#f59e0b20', color: '#f59e0b', fontSize: '0.7rem' }}>ACCESO TOTAL</span> (Configuración, Todo)</td>
-              </tr>
-              
-              {/* DIRECTIVA */}
-              <tr>
-                <td style={{ fontWeight: 'bold' }}>Presidente</td>
-                <td><code style={{color: 'var(--primary)'}}>presidente</code></td>
-                <td><code style={{color: 'var(--primary)'}}>admin123</code></td>
-                <td>Gestión total (Multas, Mingas, Reportes, Usuarios)</td>
-              </tr>
-              <tr>
-                <td style={{ fontWeight: 'bold' }}>Vicepresidente</td>
-                <td><code style={{color: 'var(--primary)'}}>vicepresidente</code></td>
-                <td><code style={{color: 'var(--primary)'}}>chibuleo2024</code></td>
-                <td>Solo Lectura (Reportes, Usuarios)</td>
-              </tr>
-              <tr>
-                <td style={{ fontWeight: 'bold' }}>Tesorero</td>
-                <td><code style={{color: 'var(--primary)'}}>tesorero</code></td>
-                <td><code style={{color: 'var(--primary)'}}>caja2024</code></td>
-                <td>Finanzas (Multas, Cobros, Reportes Económicos)</td>
-              </tr>
-              <tr>
-                <td style={{ fontWeight: 'bold' }}>Secretario</td>
-                <td><code style={{color: 'var(--primary)'}}>secretario</code></td>
-                <td><code style={{color: 'var(--primary)'}}>actas2024</code></td>
-                <td>Operativo (Mingas, Asistencia, Padrón de Usuarios)</td>
-              </tr>
-              <tr>
-                <td style={{ fontWeight: 'bold' }}>Vocal</td>
-                <td><code style={{color: 'var(--primary)'}}>vocal</code></td>
-                <td><code style={{color: 'var(--primary)'}}>vocal2024</code></td>
-                <td>Solo Lectura (Apoyo en Mingas, Búsqueda Básica)</td>
-              </tr>
-
-              {/* USUARIO BASE */}
-              <tr style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
-                <td style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>Usuario / Comunero</td>
-                <td><code style={{color: 'var(--text-muted)'}}>usuario</code></td>
-                <td><code style={{color: 'var(--text-muted)'}}>usuario</code></td>
-                <td>Solo ver su perfil personal y sus deudas.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
         <div className="login-footer" style={{ marginTop: '1rem' }}>
           <p>© {new Date().getFullYear()} Proyecto Bienestar. Todos los derechos reservados.</p>
         </div>

@@ -1,9 +1,9 @@
 import api from './axiosConfig';
 
-export const getTerrenos = async () => {
+export const getTerrenos = async (params = {}) => {
     try {
-        const response = await api.get('/terrenos');
-        return response.data.data; // .data is the array
+        const response = await api.get('/terrenos', { params });
+        return response.data; // { status, data, pagination, resumen_estados }
     } catch (error) {
         console.error('Error fetching terrenos:', error);
         throw error;

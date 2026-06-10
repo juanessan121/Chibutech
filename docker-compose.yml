@@ -1,5 +1,3 @@
-version: '3.8'
-
 # =============================================================================
 # ERP CHIBUTECH - Entorno de Desarrollo Local
 # =============================================================================
@@ -26,6 +24,15 @@ services:
     image: mariadb:10.6.25-jammy
     container_name: chibutech_db
     restart: always
+    command:
+      - --innodb-buffer-pool-size=256M
+      - --innodb-log-file-size=64M
+      - --innodb-flush-log-at-trx-commit=2
+      - --query-cache-type=0
+      - --max-connections=50
+      - --tmp-table-size=32M
+      - --max-heap-table-size=32M
+      - --skip-name-resolve
     environment:
       MYSQL_ROOT_PASSWORD: root_super_secreto
       MYSQL_DATABASE: basechi

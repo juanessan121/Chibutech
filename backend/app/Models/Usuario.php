@@ -17,10 +17,15 @@ class Usuario extends Authenticatable
         'cedula',
         'password',
         'rol',
+        'password_temporal',
     ];
 
     protected $hidden = [
         'password',
+    ];
+
+    protected $casts = [
+        'password_temporal' => 'boolean',
     ];
 
     public function persona()

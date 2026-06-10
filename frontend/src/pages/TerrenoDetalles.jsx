@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Map, MapPin, ArrowLeft, Calendar, FileText, Info, Compass, HelpCircle, FileDown, Droplet, Edit2, ArrowRightLeft, X } from 'lucide-react';
+import { Map, MapPin, ArrowLeft, Calendar, FileText, Info, Compass, FileDown, Edit2, ArrowRightLeft, X, ExternalLink } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import useAuthStore from '../store/useAuthStore';
 
 import { getTerrenoById, traspasarDominio } from '../services/terrenoService';
 import { toast } from 'sonner';
 import PersonaAutocompleteInput from '../components/PersonaAutocompleteInput';
+import api from '../services/axiosConfig';
 
 export default function TerrenoDetalles() {
   const { id } = useParams();
@@ -20,6 +21,9 @@ export default function TerrenoDetalles() {
   const [modalTraspaso, setModalTraspaso] = useState(false);
   const [nuevoDueno, setNuevoDueno] = useState(null);
   const [motivoTraspaso, setMotivoTraspaso] = useState('');
+  const [motivoTouched, setMotivoTouched] = useState(false);
+  const [directiva, setDirectiva] = useState([]);
+  const [tarifas, setTarifas] = useState({ metrosBase: 1000, valorBase: 5 });
 
   useEffect(() => {
     const fetch = async () => {
@@ -27,35 +31,30 @@ export default function TerrenoDetalles() {
         const data = await getTerrenoById(id);
         setTerreno(data);
       } catch(e) {
-        toast.error('Error al cargar predio');
+        toast.error('No se pudo cargar la información del predio. Vuelve a intentarlo.');
       } finally {
         setLoading(false);
       }
     };
     fetch();
+    api.get('/directiva/actual').then(res => setDirectiva(res.data.data || [])).catch(() => {});
+    api.get('/configuracion').then(res => {
+      const cfg = Object.fromEntries((res.data.data || []).map(c => [c.clave, parseFloat(c.valor)]));
+      setTarifas({
+        metrosBase: cfg['TARIFA_METROS_BASE'] || 1000,
+        valorBase:  cfg['TARIFA_VALOR_BASE']  || 5,
+      });
+    }).catch(() => {});
   }, [id]);
 
-  // Estado del mapa interactivo
-  const [hoveredNode, setHoveredNode] = useState(null);
-  const [selectedElement, setSelectedElement] = useState('Polígono del Terreno');
-
-  // Polígono SVG basado en coordenadas simuladas o reales
-  const baseLat = parseFloat(terreno?.latitud) || -1.3281;
-  const baseLng = parseFloat(terreno?.longitud) || -78.5528;
-  const nodes = [
-    { id: 'A', name: 'Vértice Norte', x: 250, y: 50,  lat: baseLat + 0.0005, lng: baseLng + 0.0003 },
-    { id: 'B', name: 'Vértice Este',  x: 380, y: 150, lat: baseLat + 0.0002, lng: baseLng + 0.0007 },
-    { id: 'C', name: 'Vértice Sur',   x: 300, y: 280, lat: baseLat - 0.0004, lng: baseLng + 0.0004 },
-    { id: 'D', name: 'Vértice Oeste', x: 120, y: 220, lat: baseLat - 0.0001, lng: baseLng - 0.0006 },
-  ];
-
-
-  // Concatenar puntos para el polygon SVG
-  const polygonPoints = nodes.map(n => `${n.x},${n.y}`).join(' ');
+  const mapLat = parseFloat(terreno?.latitud) || -1.3281;
+  const mapLng = parseFloat(terreno?.longitud) || -78.5528;
+  const googleMapsEmbedUrl = `https://maps.google.com/maps?q=${mapLat},${mapLng}&z=17&output=embed`;
+  const googleMapsUrl = `https://www.google.com/maps?q=${mapLat},${mapLng}`;
 
   const handleTraspaso = async () => {
-    if (!nuevoDueno || !nuevoDueno.id_persona) return toast.error('Seleccione el nuevo dueño');
-    if (!motivoTraspaso) return toast.error('Ingrese el motivo (Documento legal)');
+    if (!nuevoDueno || !nuevoDueno.id_persona) return toast.error('Debe seleccionar al nuevo propietario del predio antes de continuar.');
+    if (!motivoTraspaso) return toast.error('Debe indicar el documento o motivo legal del traspaso de dominio.');
     try {
       await traspasarDominio(id, nuevoDueno.id_persona, motivoTraspaso);
       toast.success('Traspaso de dominio ejecutado con éxito');
@@ -65,178 +64,207 @@ export default function TerrenoDetalles() {
       setTerreno(data);
       setLoading(false);
     } catch(e) {
-      toast.error(e.response?.data?.message || 'Error en el traspaso');
+      toast.error(e.response?.data?.message || 'No se pudo realizar el traspaso. Verifica los datos e intenta de nuevo.');
     }
   };
 
   if (loading) return <div style={{padding: '3rem', textAlign: 'center', color: 'var(--text-main)'}}>Cargando información del predio...</div>;
   if (!terreno) return <div style={{padding: '3rem', textAlign: 'center', color: 'var(--red)'}}>No se encontró el terreno</div>;
 
-  // Descarga del Certificado de Derechos de Agua con jsPDF
-  const handleDownloadPDF = () => {
+  // Genera el Certificado de Catastro con jsPDF — abre en nueva pestaña (preview) o descarga
+  const handleDownloadPDF = (preview = false) => {
     const doc = new jsPDF();
 
-    // Fondo / Borde elegante
-    doc.setDrawColor(14, 165, 233); // Color azul principal
+    // Cálculo de cuota real (misma fórmula que en backend generarPlanillas)
+    const areaM2 = parseFloat(terreno.area_m2) || 0;
+    const metrosBase = tarifas.metrosBase;
+    const tarifaBase = tarifas.valorBase;
+    const fracciones = Math.ceil(areaM2 / metrosBase);
+    const cuotaMensual = fracciones * tarifaBase;
+    const cuotaAnual = cuotaMensual * 12;
+
+    // Miembros de la directiva para firmas
+    const presidente = directiva.find(m => m.cargo === 'Presidente');
+    const secretario = directiva.find(m => m.cargo === 'Secretario');
+    const periodoDirectiva = directiva[0]?.periodo || new Date().getFullYear();
+
+    // ── Bordes ────────────────────────────────────────────────────────────────
+    doc.setDrawColor(14, 165, 233);
     doc.setLineWidth(1.5);
     doc.rect(5, 5, 200, 287);
-
-    doc.setDrawColor(245, 158, 11); // Color amarillo tierra
+    doc.setDrawColor(245, 158, 11);
     doc.setLineWidth(0.5);
     doc.rect(8, 8, 194, 281);
 
-    // Encabezado
+    // ── Encabezado ────────────────────────────────────────────────────────────
     doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.setTextColor(15, 23, 42); // Deep dark
-    doc.text('JUNTA DE AGUA DE RIEGO CHIBULEO', 105, 25, { align: 'center' });
-    
+    doc.setFontSize(16);
+    doc.setTextColor(15, 23, 42);
+    doc.text('JUNTA DE AGUA DE RIEGO CHIBULEO', 105, 24, { align: 'center' });
+
     doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setTextColor(100, 116, 139);
-    doc.text('Sistema de Gestión e Información Hídrica - ERP Chibutech', 105, 30, { align: 'center' });
-    doc.text('RUC: 1891000000001 | Tungurahua - Ecuador', 105, 35, { align: 'center' });
+    doc.text('Sistema de Gestión Comunitaria - ERP Chibutech', 105, 30, { align: 'center' });
+    doc.text('Tungurahua - Ecuador', 105, 35, { align: 'center' });
 
     doc.setLineWidth(0.8);
     doc.setDrawColor(226, 232, 240);
-    doc.line(15, 42, 195, 42);
+    doc.line(15, 41, 195, 41);
 
-    // Título del documento
+    // ── Título ────────────────────────────────────────────────────────────────
     doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(13);
+    doc.setFontSize(12);
     doc.setTextColor(2, 132, 199);
-    doc.text('CERTIFICADO OFICIAL DE CATASTRO Y DERECHOS DE AGUA', 105, 52, { align: 'center' });
+    doc.text('CERTIFICADO OFICIAL DE CATASTRO DE PREDIO', 105, 50, { align: 'center' });
 
-    // Código y Fecha
+    // Número y fecha
     const certificadoNo = `CERT-${terreno.clave_catastral.replace(/-/g, '')}`;
     doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(148, 163, 184);
-    doc.text(`Certificado No: ${certificadoNo}`, 15, 63);
-    doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString('es-EC')}`, 195, 63, { align: 'right' });
-
-    // Introducción
-    doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(10.5);
-    doc.setTextColor(30, 41, 59);
-    const introText = `La Directiva de la Junta de Agua de Riego Chibuleo hace constar y certifica que, según los registros vigentes del catastro global de la organización, el predio detallado a continuación se encuentra inscrito y cuenta con la asignación activa del recurso hídrico para fines agrícolas.`;
-    const splitIntro = doc.splitTextToSize(introText, 180);
-    doc.text(splitIntro, 15, 73);
-
-    // Sección 1: Información del Propietario
-    doc.setFillColor(248, 250, 252);
-    doc.rect(15, 92, 180, 28, 'F');
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(15, 23, 42);
-    doc.text('DATOS DEL COMUNERO TITULAR:', 20, 98);
-    doc.setFont('Helvetica', 'normal');
-    doc.text(`Nombre Completo: ${terreno.propietario}`, 20, 104);
-    doc.text(`Cédula de Identidad: ${terreno.cedula}`, 20, 110);
-
-    if (terreno.copropietarios && terreno.copropietarios.length > 0) {
-      doc.setFont('Helvetica', 'bold');
-      doc.text('Copropietarios:', 20, 116);
-      doc.setFont('Helvetica', 'normal');
-      const copText = terreno.copropietarios.map(c => `${c.nombre} (${c.cedula})`).join(', ');
-      doc.text(doc.splitTextToSize(copText, 140), 50, 116);
-    }
-
-    // Sección 2: Ficha Catastral del Lote
-    doc.setFont('Helvetica', 'bold');
-    doc.setTextColor(2, 132, 199);
-    doc.text('INFORMACIÓN CATASTRAL DEL PREDIO:', 15, 128);
-    
-    // Tabla básica manual
-    doc.setLineWidth(0.3);
-    doc.setDrawColor(226, 232, 240);
-    doc.line(15, 132, 195, 132);
-
-    doc.setFont('Helvetica', 'normal');
-    doc.setTextColor(71, 85, 105);
-    doc.text('Clave Catastral:', 20, 138);
-    doc.setFont('Helvetica', 'bold');
-    doc.setTextColor(15, 23, 42);
-    doc.text(terreno.clave_catastral, 70, 138);
-
-    doc.setFont('Helvetica', 'normal');
-    doc.setTextColor(71, 85, 105);
-    doc.text('Ubicación / Sector:', 20, 144);
-    doc.setFont('Helvetica', 'bold');
-    doc.setTextColor(15, 23, 42);
-    doc.text(terreno.zona, 70, 144);
-
-    doc.setFont('Helvetica', 'normal');
-    doc.setTextColor(71, 85, 105);
-    doc.text('Área Concedida:', 20, 150);
-    doc.setFont('Helvetica', 'bold');
-    doc.setTextColor(15, 23, 42);
-    doc.text(`${terreno.area_m2} m² (${(terreno.area_m2 / 10000).toFixed(4)} Ha)`, 70, 150);
-
-    doc.setFont('Helvetica', 'normal');
-    doc.setTextColor(71, 85, 105);
-    doc.text('Estado del Lote:', 20, 156);
-    doc.setFont('Helvetica', 'bold');
-    doc.setTextColor(15, 23, 42);
-    doc.text(terreno.estado_construccion, 70, 156);
-
-    doc.line(15, 162, 195, 162);
-
-    // Sección 3: Concesión Hídrica
-    doc.setFont('Helvetica', 'bold');
-    doc.setTextColor(2, 132, 199);
-    doc.text('DETALLE DEL DERECHO DE AGUA ASIGNADO:', 15, 175);
-    doc.line(15, 179, 195, 179);
-
-    doc.setFont('Helvetica', 'normal');
-    doc.setTextColor(71, 85, 105);
-    doc.text('Ramal de Conexión:', 20, 185);
-    doc.setFont('Helvetica', 'bold');
-    doc.setTextColor(15, 23, 42);
-    doc.text(terreno.acequia, 70, 185);
-
-    doc.setFont('Helvetica', 'normal');
-    doc.setTextColor(71, 85, 105);
-    doc.text('Caudal Autorizado:', 20, 191);
-    doc.setFont('Helvetica', 'bold');
-    doc.setTextColor(15, 23, 42);
-    doc.text(`${terreno.caudal_ls} Litros por segundo (L/s)`, 70, 191);
-
-    doc.setFont('Helvetica', 'normal');
-    doc.setTextColor(71, 85, 105);
-    doc.text('Turno de Agua Semanal:', 20, 197);
-    doc.setFont('Helvetica', 'bold');
-    doc.setTextColor(15, 23, 42);
-    doc.text(terreno.turno, 70, 197);
-
-    doc.line(15, 203, 195, 203);
-
-    // Nota de Validez
-    doc.setFont('Helvetica', 'italic');
     doc.setFontSize(8.5);
     doc.setTextColor(148, 163, 184);
-    const notaText = 'Este certificado tiene una validez de 90 días a partir de la fecha de emisión. Está prohibida la venta, transferencia o fraccionamiento de los derechos de agua sin la previa autorización escrita de la Asamblea General de la Junta de Agua Chibuleo.';
-    const splitNota = doc.splitTextToSize(notaText, 180);
-    doc.text(splitNota, 15, 212);
+    doc.text(`No: ${certificadoNo}`, 15, 58);
+    doc.text(`Emisión: ${new Date().toLocaleDateString('es-EC')}`, 195, 58, { align: 'right' });
 
-    // Firmas
-    doc.setDrawColor(203, 213, 225);
-    doc.line(35, 260, 95, 260);
-    doc.line(115, 260, 175, 260);
+    // ── Texto introductorio ───────────────────────────────────────────────────
+    doc.setFont('Helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
+    const introText = `La Directiva de la Junta de Agua de Riego Chibuleo, período ${periodoDirectiva}, hace constar y certifica que, según los registros vigentes del catastro comunitario, el predio detallado a continuación se encuentra inscrito y tiene asignada su cuota de agua correspondiente.`;
+    doc.text(doc.splitTextToSize(introText, 180), 15, 68);
+
+    // ── Sección 1: Propietario ────────────────────────────────────────────────
+    doc.setFillColor(240, 249, 255);
+    doc.rect(15, 86, 180, terreno.copropietarios?.length > 0 ? 26 : 20, 'F');
 
     doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(15, 23, 42);
-    doc.text('PRESIDENTE JUNTA DE AGUA', 65, 265, { align: 'center' });
-    doc.text('SECRETARIO JUNTA DE AGUA', 145, 265, { align: 'center' });
+    doc.setFontSize(9.5);
+    doc.setTextColor(2, 132, 199);
+    doc.text('DATOS DEL COMUNERO TITULAR', 20, 93);
 
     doc.setFont('Helvetica', 'normal');
-    doc.setTextColor(100, 116, 139);
-    doc.text('Ing. Franklin Masaquiza', 65, 270, { align: 'center' });
-    doc.text('', 145, 270, { align: 'center' });
+    doc.setFontSize(9.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Nombre Completo:`, 20, 100);
+    doc.setFont('Helvetica', 'bold');
+    doc.text(`${terreno.propietario}`, 70, 100);
 
-    // Descargar
-    doc.save(`Certificado_Riego_${terreno.clave_catastral}.pdf`);
+    doc.setFont('Helvetica', 'normal');
+    doc.text(`Cédula de Identidad:`, 20, 106);
+    doc.setFont('Helvetica', 'bold');
+    doc.text(`${terreno.cedula}`, 70, 106);
+
+    let yPos = 115;
+    if (terreno.copropietarios && terreno.copropietarios.length > 0) {
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Copropietarios:', 20, yPos - 3);
+      doc.setTextColor(15, 23, 42);
+      const copText = terreno.copropietarios.map(c => `${c.nombre} (C.I: ${c.cedula})`).join(' • ');
+      doc.text(doc.splitTextToSize(copText, 145), 55, yPos - 3);
+      yPos = 118;
+    }
+
+    // ── Sección 2: Ficha Catastral ────────────────────────────────────────────
+    doc.setLineWidth(0.3);
+    doc.setDrawColor(226, 232, 240);
+    doc.line(15, yPos, 195, yPos);
+
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(2, 132, 199);
+    doc.text('INFORMACIÓN CATASTRAL DEL PREDIO', 15, yPos + 8);
+    doc.line(15, yPos + 11, 195, yPos + 11);
+
+    const camposCatastrales = [
+      ['Clave Catastral:', terreno.clave_catastral],
+      ['Sector / Zona:', `${terreno.sector || ''} (${terreno.zona || 'Sin zona'})`],
+      ['Área del Predio:', `${parseFloat(terreno.area_m2).toLocaleString('es-EC')} m²  |  ${(areaM2/10000).toFixed(4)} Hectáreas`],
+      ['Estado del Lote:', terreno.estado_construccion || 'Sin especificar'],
+      ['Coordenadas GPS:', terreno.latitud ? `Lat ${terreno.latitud}, Lng ${terreno.longitud}` : 'No registradas'],
+    ];
+
+    let y = yPos + 18;
+    camposCatastrales.forEach(([label, valor]) => {
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text(label, 20, y);
+      doc.setFont('Helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text(String(valor), 75, y);
+      y += 7;
+    });
+
+    doc.line(15, y + 2, 195, y + 2);
+
+    // ── Sección 3: Cuota Mensual (datos reales calculados) ────────────────────
+    y += 12;
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(2, 132, 199);
+    doc.text('CUOTA DE AGUA MENSUAL ASIGNADA', 15, y);
+    doc.line(15, y + 3, 195, y + 3);
+    y += 11;
+
+    const camposCuota = [
+      ['Área del predio:', `${parseFloat(terreno.area_m2).toLocaleString('es-EC')} m²`],
+      ['Tarifa base:', `$${tarifaBase.toFixed(2)} por cada ${metrosBase} m² o fracción`],
+      [`Fracciones (ceil(${parseFloat(terreno.area_m2).toLocaleString('es-EC')}÷${metrosBase})):`, `${fracciones} unidades`],
+      ['Cuota Mensual:', `$${cuotaMensual.toFixed(2)}`],
+      ['Cuota Anual Estimada:', `$${cuotaAnual.toFixed(2)} (12 meses)`],
+    ];
+
+    camposCuota.forEach(([label, valor], i) => {
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text(label, 20, y);
+      doc.setFont('Helvetica', 'bold');
+      doc.setTextColor(i >= 3 ? 16 : 15, i >= 3 ? 185 : 23, i >= 3 ? 129 : 42);
+      doc.text(String(valor), 110, y);
+      y += 7;
+    });
+
+    doc.line(15, y + 2, 195, y + 2);
+
+    // ── Nota de validez ───────────────────────────────────────────────────────
+    y += 10;
+    doc.setFont('Helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    const notaText = 'Este certificado tiene validez de 90 días a partir de la fecha de emisión. Está prohibida la transferencia o fraccionamiento de los derechos de agua sin autorización escrita de la Asamblea General de la Junta de Agua de Riego Chibuleo.';
+    doc.text(doc.splitTextToSize(notaText, 180), 15, y);
+
+    // ── Firmas (nombres reales de la directiva) ───────────────────────────────
+    const firmaY = 258;
+    doc.setDrawColor(203, 213, 225);
+    doc.line(25, firmaY, 95, firmaY);
+    doc.line(115, firmaY, 185, firmaY);
+
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text('PRESIDENTE', 60, firmaY + 5, { align: 'center' });
+    doc.text('SECRETARIO/A', 150, firmaY + 5, { align: 'center' });
+
+    doc.setFont('Helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text(presidente?.nombre || 'Junta de Agua de Riego Chibuleo', 60, firmaY + 10, { align: 'center' });
+    doc.text(secretario?.nombre || 'Junta de Agua de Riego Chibuleo', 150, firmaY + 10, { align: 'center' });
+
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Junta de Agua de Riego Chibuleo', 60, firmaY + 15, { align: 'center' });
+    doc.text('Junta de Agua de Riego Chibuleo', 150, firmaY + 15, { align: 'center' });
+
+    if (preview) {
+      window.open(doc.output('bloburl'), '_blank');
+    } else {
+      doc.save(`Certificado_Catastro_${terreno.clave_catastral}.pdf`);
+    }
   };
 
   return (
@@ -277,10 +305,17 @@ export default function TerrenoDetalles() {
                 </button>
               </>
             )}
-            <button 
-              className="btn-primary" 
+            <button
+              className="btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+              onClick={() => handleDownloadPDF(true)}
+            >
+              <ExternalLink size={18} /> Vista Previa PDF
+            </button>
+            <button
+              className="btn-primary"
               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem' }}
-              onClick={handleDownloadPDF}
+              onClick={() => handleDownloadPDF(false)}
             >
               <FileDown size={18} /> Descargar PDF
             </button>
@@ -296,11 +331,11 @@ export default function TerrenoDetalles() {
         >
           <Info size={16} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> Ficha Catastral
         </button>
-        <button 
+        <button
           className={`tab-btn ${activeTab === 'mapa' ? 'active' : ''}`}
           onClick={() => setActiveTab('mapa')}
         >
-          <Compass size={16} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> Plano del Lote (SVG)
+          <Compass size={16} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> Vista en Google Maps
         </button>
         <button 
           className={`tab-btn ${activeTab === 'turno' ? 'active' : ''}`}
@@ -409,102 +444,32 @@ export default function TerrenoDetalles() {
           </div>
         )}
 
-        {/* TAB 2: MAPA DEL LOTE (SVG INTERACTIVO) */}
+        {/* TAB 2: VISTA EN GOOGLE MAPS */}
         {activeTab === 'mapa' && (
-          <div className="details-grid animate-fade-in" style={{ alignItems: 'center' }}>
-            {/* Visor SVG del Mapa */}
-            <div className="svg-map-container">
-              <svg className="map-svg" viewBox="0 0 500 400">
-                {/* Cuadrícula de coordenadas de fondo */}
-                <defs>
-                  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255, 255, 255, 0.03)" strokeWidth="1"/>
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#grid)" />
-
-                {/* Canal de Agua adyacente */}
-                <path 
-                  d="M -10,350 C 150,340 300,380 510,360" 
-                  className="map-water-channel" 
-                  onClick={() => setSelectedElement('Acequia de Riego R1')}
-                />
-                <text x="350" y="340" fill="var(--primary)" fontSize="10" fontWeight="bold">Canal Acequia Principal</text>
-
-                {/* Polígono del Lote */}
-                <polygon 
-                  points={polygonPoints} 
-                  className="map-lot"
-                  onClick={() => setSelectedElement('Polígono del Terreno')}
-                />
-
-                {/* Líneas de cota (Líneas divisorias ficticias) */}
-                <line x1="250" y1="50" x2="300" y2="280" stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
-                <line x1="380" y1="150" x2="120" y2="220" stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
-
-                {/* Nodos (Vértices) */}
-                {nodes.map((node) => (
-                  <circle
-                    key={node.id}
-                    cx={node.x}
-                    cy={node.y}
-                    r="8"
-                    className="map-node"
-                    onMouseEnter={() => {
-                      setHoveredNode(node);
-                      setSelectedElement(`Vértice ${node.id}: ${node.name}`);
-                    }}
-                    onMouseLeave={() => setHoveredNode(null)}
-                  />
-                ))}
-
-                {/* Etiquetas de nodos */}
-                {nodes.map((node) => (
-                  <text 
-                    key={`text-${node.id}`}
-                    x={node.x + 12}
-                    y={node.y + 4}
-                    fill="var(--text-main)"
-                    fontSize="11"
-                    fontWeight="bold"
-                  >
-                    {node.id}
-                  </text>
-                ))}
-              </svg>
+          <div className="animate-fade-in">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div>
+                <h3 style={{ margin: 0, color: 'var(--primary)', fontSize: '1.1rem' }}>Ubicación del Predio en Mapa</h3>
+                {terreno.latitud
+                  ? <p className="text-muted" style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem' }}>Coordenadas: {terreno.latitud}, {terreno.longitud}</p>
+                  : <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#f59e0b' }}>Sin coordenadas GPS registradas — mostrando zona aproximada</p>
+                }
+              </div>
+              <a href={googleMapsUrl} target="_blank" rel="noreferrer" className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', textDecoration: 'none', fontSize: '0.85rem' }}>
+                <ExternalLink size={14} /> Abrir en Google Maps
+              </a>
             </div>
-
-            {/* Información del Elemento Seleccionado / Hovered */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div className="glass-card" style={{ padding: '1.5rem', borderLeft: '4px solid var(--green)' }}>
-                <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '1rem', fontWeight: 700 }}>
-                  Visor de Vértices y Límites
-                </h4>
-                <p className="text-muted" style={{ fontSize: '0.85rem', margin: 0 }}>
-                  Pasa el mouse sobre los nodos (<strong style={{ color: 'var(--green)' }}>A, B, C, D</strong>) en el plano para leer los datos GPS del polígono catastrado.
-                </p>
-              </div>
-
-              <div className="glass-card" style={{ padding: '1.5rem', background: 'rgba(255, 255, 255, 0.02)' }}>
-                <h4 style={{ margin: '0 0 0.75rem 0', color: 'var(--primary)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Elemento Activo:
-                </h4>
-                <p style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: 'bold' }}>{selectedElement}</p>
-                
-                {hoveredNode ? (
-                  <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.85rem' }}>
-                    <div><span className="text-muted">Nombre:</span> <strong>{hoveredNode.name}</strong></div>
-                    <div><span className="text-muted">Latitud GPS:</span> <strong>{hoveredNode.lat.toFixed(6)}</strong></div>
-                    <div><span className="text-muted">Longitud GPS:</span> <strong>{hoveredNode.lng.toFixed(6)}</strong></div>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.85rem' }}>
-                    <div><span className="text-muted">Área Catastrada:</span> <strong>{terreno.area_m2} m²</strong></div>
-                    <div><span className="text-muted">Perímetro Aprox:</span> <strong>85.4 metros</strong></div>
-                    <div><span className="text-muted">Colindante Norte:</span> <strong>Ramal Acequia Alta</strong></div>
-                  </div>
-                )}
-              </div>
+            <div style={{ borderRadius: '0.75rem', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', height: '420px' }}>
+              <iframe
+                title="Ubicación del predio"
+                src={googleMapsEmbedUrl}
+                width="100%"
+                height="100%"
+                style={{ border: 0, display: 'block' }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
             </div>
           </div>
         )}
@@ -512,8 +477,8 @@ export default function TerrenoDetalles() {
         {/* TAB 3: CUOTA DE PAGO */}
         {activeTab === 'turno' && (() => {
           const areaMz = parseFloat(terreno.area_m2) || 0;
-          const fracciones = Math.ceil(areaMz / 1000);
-          const cuotaMensual = fracciones * 5;
+          const fracciones = Math.ceil(areaMz / tarifas.metrosBase);
+          const cuotaMensual = fracciones * tarifas.valorBase;
           const cuotaAnual = cuotaMensual * 12;
           return (
           <div className="animate-fade-in">
@@ -521,7 +486,7 @@ export default function TerrenoDetalles() {
               Cuota de Pago por Predio
             </h3>
             <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              Calculado en base al área catastrada. Cada 1000 m² o fracción corresponde a <strong style={{ color: 'var(--text-main)' }}>$5.00 / mes</strong>.
+              Calculado en base al área catastrada. Cada {tarifas.metrosBase.toLocaleString('es-EC')} m² o fracción corresponde a <strong style={{ color: 'var(--text-main)' }}>${tarifas.valorBase.toFixed(2)} / mes</strong>.
             </p>
 
             <div style={{
@@ -541,12 +506,12 @@ export default function TerrenoDetalles() {
               </div>
 
               <div style={{ borderLeft: '1px solid rgba(255,255,255,0.08)', paddingLeft: '1.5rem' }}>
-                <p style={{ margin: '0 0 0.4rem 0', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Fracciones de 1000 m²</p>
+                <p style={{ margin: '0 0 0.4rem 0', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Fracciones de {tarifas.metrosBase.toLocaleString('es-EC')} m²</p>
                 <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                  {fracciones} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>× $5.00</span>
+                  {fracciones} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>× ${tarifas.valorBase.toFixed(2)}</span>
                 </p>
                 <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
-                  Cada 1000 m² o fracción = $5/mes
+                  Cada {tarifas.metrosBase.toLocaleString('es-EC')} m² o fracción = ${tarifas.valorBase.toFixed(2)}/mes
                 </p>
               </div>
 
@@ -606,17 +571,21 @@ export default function TerrenoDetalles() {
 
             <div style={{ marginBottom: '1.5rem' }}>
               <label className="input-label">Motivo o Documento de Respaldo *</label>
-              <textarea 
-                className="input-field" 
+              <textarea
+                className="input-field"
                 placeholder="Ej: Contrato de compra-venta No. 12345, notariado..."
                 value={motivoTraspaso}
                 onChange={e => setMotivoTraspaso(e.target.value)}
+                onBlur={() => setMotivoTouched(true)}
                 rows={3}
               />
+              {motivoTouched && !motivoTraspaso.trim() && (
+                <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El motivo o documento de respaldo es obligatorio.</span>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-              <button className="btn-secondary" onClick={() => setModalTraspaso(false)}>Cancelar</button>
+              <button className="btn-secondary" onClick={() => { setModalTraspaso(false); setMotivoTouched(false); }}>Cancelar</button>
               <button className="btn-primary" style={{ background: 'var(--yellow)', color: '#000' }} onClick={handleTraspaso}>Confirmar Traspaso</button>
             </div>
           </div>

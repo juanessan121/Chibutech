@@ -66,13 +66,16 @@ class PersonaController extends Controller
                 'condiciones'                   => 'nullable|array',
                 'condiciones.*.id_condicion'    => 'required_with:condiciones|integer',
                 'condiciones.*.porcentaje'      => 'nullable|numeric|min:0|max:100',
-                'condiciones.*.codigo'          => 'nullable|string',
+                'condiciones.*.codigo'          => 'nullable|string|max:50',
                 'condiciones.*.observacion'     => 'nullable|string',
+                'condiciones.*.archivo_carnet_base64' => 'nullable|string',
                 'estado_vital'                  => 'nullable|in:Vivo,Fallecido',
+                'estado_registro'               => 'nullable|in:Activo,Pendiente',
                 'id_sector'                     => 'nullable|integer',
+                'correo_electronico'            => 'nullable|email|max:150',
                 'contactos'                     => 'nullable|array',
                 'contactos.*.id_tipo_contacto'  => 'required_with:contactos|integer',
-                'contactos.*.valor_contacto'    => 'required_with:contactos|string|regex:/^[0-9A-Za-z@._-]+$/',
+                'contactos.*.valor_contacto'    => 'required_with:contactos|string|regex:/^0[2-9][0-9]{8}$/',
                 'contactos.*.id_operadora'      => 'nullable|integer',
                 'nivel_educativo_principal'     => 'nullable|integer',
                 'carreras_principal'            => 'nullable|array',
@@ -86,25 +89,71 @@ class PersonaController extends Controller
                 'apellidos.regex'                       => 'Los apellidos solo pueden contener letras.',
                 'fecha_nacimiento.after_or_equal'       => 'La edad no puede ser mayor a 120 años.',
                 'fecha_nacimiento.before_or_equal'      => 'La fecha de nacimiento no puede ser en el futuro.',
-                'contactos.*.valor_contacto.regex'      => 'El formato del contacto no es válido.',
+                'correo_electronico.required'           => 'El correo electrónico es obligatorio.',
+                'correo_electronico.email'              => 'El formato del correo electrónico no es válido.',
+                'contactos.*.valor_contacto.regex'      => 'El teléfono debe tener 10 dígitos y empezar con 0 (ej: 0991234567 celular, 032123456 fijo).',
             ]
         ];
     }
 
     /**
-     * Guarda un archivo de título en base64 y retorna la ruta pública.
+     * Verifica si el dominio del correo tiene registros MX activos.
+     * GET /api/verificar-email?correo=xxx@dominio.com
      */
-    private function guardarArchivoTitulo(string $base64, string $identificador): ?string
+    public function verificarEmail(Request $request): \Illuminate\Http\JsonResponse
     {
+        $correo = trim($request->query('correo', ''));
+
+        if (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+            return response()->json(['valido' => false, 'mensaje' => 'Formato de correo inválido.']);
+        }
+
+        $dominio = substr(strrchr($correo, '@'), 1);
+        $tieneMX = checkdnsrr($dominio, 'MX') || checkdnsrr($dominio, 'A');
+
+        return response()->json([
+            'valido'  => $tieneMX,
+            'mensaje' => $tieneMX
+                ? 'Dominio de correo verificado correctamente.'
+                : 'El dominio del correo no tiene registros activos. Verifique que el correo sea válido.',
+        ]);
+    }
+
+    /**
+     * Guarda el archivo del carnet CONADIS en base64 y retorna la ruta pública.
+     */
+    private function validarMimeBase64(string $base64, array $mimesPermitidos = ['image/jpeg', 'image/png', 'application/pdf']): string
+    {
+        $header = substr($base64, 0, 50);
+        foreach ($mimesPermitidos as $mime) {
+            if (str_contains($header, $mime)) return $mime;
+        }
+        throw new \Exception('Tipo de archivo no permitido. Solo se aceptan: JPG, PNG o PDF.');
+    }
+
+    private function guardarArchivoCarnet(string $base64, string $identificador): ?string
+    {
+        $mime       = $this->validarMimeBase64($base64, ['image/jpeg', 'image/png', 'application/pdf']);
         $base64data = substr($base64, strpos($base64, ',') + 1);
         $decoded    = base64_decode($base64data);
+        if ($decoded === false) throw new \Exception('El archivo del carnet no es válido.');
 
-        $extension = 'pdf';
-        $header = substr($base64, 0, 30);
-        if (str_contains($header, 'image/jpeg')) $extension = 'jpg';
-        if (str_contains($header, 'image/png'))  $extension = 'png';
+        $extMap        = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'application/pdf' => 'pdf'];
+        $nombreArchivo = 'carnets/' . uniqid() . '_' . preg_replace('/[^a-zA-Z0-9]/', '', $identificador) . '.' . $extMap[$mime];
+        Storage::disk('public')->put($nombreArchivo, $decoded);
 
-        $nombreArchivo = 'titulos/' . uniqid() . '_' . $identificador . '.' . $extension;
+        return '/storage/' . $nombreArchivo;
+    }
+
+    private function guardarArchivoTitulo(string $base64, string $identificador): ?string
+    {
+        $mime       = $this->validarMimeBase64($base64, ['image/jpeg', 'image/png', 'application/pdf']);
+        $base64data = substr($base64, strpos($base64, ',') + 1);
+        $decoded    = base64_decode($base64data);
+        if ($decoded === false) throw new \Exception('El archivo del título no es válido.');
+
+        $extMap        = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'application/pdf' => 'pdf'];
+        $nombreArchivo = 'titulos/' . uniqid() . '_' . preg_replace('/[^a-zA-Z0-9]/', '', $identificador) . '.' . $extMap[$mime];
         Storage::disk('public')->put($nombreArchivo, $decoded);
 
         return '/storage/' . $nombreArchivo;
@@ -176,7 +225,13 @@ class PersonaController extends Controller
 
         $query = DB::table('Persona as p')
             ->leftJoin('Sector as s', 'p.id_sector', '=', 's.id_sector')
-            ->select('p.id_persona', 'p.cedula', 'p.nombre', 'p.apellido', 'p.estado_vital', 's.nombre_sector');
+            ->leftJoin('usuarios as u', 'p.id_persona', '=', 'u.id_persona')
+            ->select(
+                'p.id_persona', 'p.cedula', 'p.nombre', 'p.apellido',
+                'p.estado_vital', 'p.estado_registro',
+                's.nombre_sector',
+                'u.rol as rol_sistema'
+            );
 
         if (!$request->query('include_dependents')) {
             $query->whereNull('p.id_representante_familia');
@@ -191,6 +246,18 @@ class PersonaController extends Controller
         }
 
         $personas = $query->limit(50)->get()->map(function($p) {
+            // Estado: Fallecido > Pendiente > Activo
+            if ($p->estado_vital === 'Fallecido') {
+                $estado = 'Suspendido';
+            } elseif ($p->estado_registro === 'Pendiente') {
+                $estado = 'Pendiente';
+            } else {
+                $estado = 'Activo';
+            }
+
+            // Rol real desde tabla usuarios, o Comunero si no tiene usuario
+            $rol = $p->rol_sistema ?? 'Comunero';
+
             return [
                 'id'             => $p->id_persona,
                 'id_persona'     => $p->id_persona,
@@ -199,8 +266,8 @@ class PersonaController extends Controller
                 'apellido'       => $p->apellido,
                 'nombre_completo'=> trim($p->nombre . ' ' . $p->apellido),
                 'sector'         => $p->nombre_sector ?? 'No Asignado',
-                'rol'            => 'Usuario',
-                'estado'         => $p->estado_vital === 'Fallecido' ? 'Suspendido' : 'Activo'
+                'rol'            => $rol,
+                'estado'         => $estado
             ];
         });
 
@@ -229,29 +296,36 @@ class PersonaController extends Controller
 
             // 1. Guardar Titular
             $titular = Persona::create([
-                'cedula'         => $data['cedula'],
-                'nombre'         => $data['nombres'],
-                'apellido'       => $data['apellidos'],
-                'fecha_nacimiento'=> $data['fecha_nacimiento'] ?? null,
-                'id_genero'      => $data['id_genero'] ?? null,
-                'id_sector'      => $data['id_sector'] ?? null,
-                'estado_vital'   => $data['estado_vital'] ?? 'Vivo',
+                'cedula'            => $data['cedula'],
+                'nombre'            => $data['nombres'],
+                'apellido'          => $data['apellidos'],
+                'fecha_nacimiento'  => $data['fecha_nacimiento'] ?? null,
+                'id_genero'         => $data['id_genero'] ?? null,
+                'id_sector'         => $data['id_sector'] ?? null,
+                'nivel_educativo'   => $data['nivel_educativo_principal'] ?? 0,
+                'estado_vital'      => $data['estado_vital'] ?? 'Vivo',
+                'estado_registro'   => $data['estado_registro'] ?? 'Activo',
             ]);
 
             // 2. Guardar Condiciones Especiales
             if (!empty($data['tiene_condicion']) && !empty($data['condiciones'])) {
                 foreach ($data['condiciones'] as $cond) {
+                    $rutaCarnet = null;
+                    if (!empty($cond['archivo_carnet_base64'])) {
+                        $rutaCarnet = $this->guardarArchivoCarnet($cond['archivo_carnet_base64'], $data['cedula']);
+                    }
                     CondicionPersona::create([
                         'id_persona'             => $titular->id_persona,
                         'id_condicion'           => $cond['id_condicion'],
                         'porcentaje_discapacidad'=> $cond['porcentaje'] ?? null,
                         'codigo_carnet'          => $cond['codigo'] ?? null,
+                        'archivo_carnet'         => $rutaCarnet,
                         'observacion'            => $cond['observacion'] ?? null,
                     ]);
                 }
             }
 
-            // 3. Guardar Contactos del Titular
+            // 3. Guardar Contactos del Titular (teléfono + correo)
             if (!empty($data['contactos'])) {
                 foreach ($data['contactos'] as $contacto) {
                     if (!empty($contacto['valor_contacto'])) {
@@ -264,6 +338,16 @@ class PersonaController extends Controller
                         ]);
                     }
                 }
+            }
+            // 3b. Guardar correo electrónico como contacto tipo 3
+            if (!empty($data['correo_electronico'])) {
+                ContactoPersona::create([
+                    'id_persona'      => $titular->id_persona,
+                    'id_tipo_contacto'=> 3,
+                    'valor_contacto'  => $data['correo_electronico'],
+                    'id_operadora'    => null,
+                    'es_principal'    => 0
+                ]);
             }
 
             // 4. Guardar Títulos del Titular
@@ -281,6 +365,7 @@ class PersonaController extends Controller
                         'nombre'                  => $dep['nombres'],
                         'apellido'                => $dep['apellidos'],
                         'id_genero'               => $dep['id_genero'] ?? null,
+                        'nivel_educativo'         => $dep['nivel_educativo'] ?? 0,
                         'id_representante_familia'=> $titular->id_persona,
                         'estado_vital'            => 'Vivo',
                     ]);
@@ -332,13 +417,16 @@ class PersonaController extends Controller
                 ];
             })->toArray();
 
-            $contactos = $persona->contactos->map(function($c) {
+            $correoContacto = $persona->contactos->firstWhere('id_tipo_contacto', 3);
+            $correo_electronico = $correoContacto ? $correoContacto->valor_contacto : '';
+
+            $contactos = $persona->contactos->filter(fn($c) => $c->id_tipo_contacto != 3)->map(function($c) {
                 return [
                     'id_tipo_contacto' => (string) $c->id_tipo_contacto,
                     'valor_contacto'   => $c->valor_contacto,
                     'id_operadora'     => $c->id_operadora ? (string) $c->id_operadora : ''
                 ];
-            })->toArray();
+            })->values()->toArray();
 
             if (empty($contactos)) {
                 $contactos = [['id_tipo_contacto' => '1', 'valor_contacto' => '', 'id_operadora' => '']];
@@ -348,31 +436,37 @@ class PersonaController extends Controller
                 return ['nombre' => $p->titulo ? $p->titulo->nombre : ''];
             })->filter(function($c) { return !empty($c['nombre']); })->values()->toArray();
 
-            $nivel_educativo_principal = count($carreras_principal) > 0 ? '3' : '1';
+            // Si la columna es 0 (default para registros viejos) pero tiene carreras guardadas,
+            // inferir al menos nivel 3. Si la columna tiene un valor real (>0), usarlo.
+            $nivelRaw = (int) ($persona->nivel_educativo ?? 0);
+            if ($nivelRaw === 0 && count($carreras_principal) > 0) {
+                $nivel_educativo_principal = '3';
+            } else {
+                $nivel_educativo_principal = (string) $nivelRaw;
+            }
 
             $dependientes = $persona->dependientes->map(function($d) {
                 $carreras = $d->perfilEducativo->map(function($p) {
                     return ['nombre' => $p->titulo ? $p->titulo->nombre : ''];
                 })->filter(function($c) { return !empty($c['nombre']); })->values()->toArray();
 
+                $nivelDep = (int) ($d->nivel_educativo ?? 0);
                 return [
                     'id_persona'      => $d->id_persona,
                     'nombres'         => $d->nombre,
                     'apellidos'       => $d->apellido,
                     'cedula'          => $d->cedula,
                     'id_genero'       => (string) $d->id_genero,
-                    'nivel_educativo' => count($carreras) > 0 ? '3' : '1',
+                    'nivel_educativo' => ($nivelDep === 0 && count($carreras) > 0) ? '3' : (string) $nivelDep,
                     'carreras'        => $carreras
                 ];
             })->toArray();
 
-            // Obtener la zona real desde la BD usando el sector de la persona
             $id_zona = '';
             if ($persona->id_sector) {
-                $sector = DB::table('Sector')->where('id_sector', $persona->id_sector)->first();
-                if ($sector && isset($sector->id_zona)) {
-                    $id_zona = (string) $sector->id_zona;
-                }
+                $id_zona = (string) DB::table('Sector')
+                    ->where('id_sector', $persona->id_sector)
+                    ->value('id_zona') ?? '';
             }
 
             $data = [
@@ -384,10 +478,12 @@ class PersonaController extends Controller
                 'id_genero'                 => (string) $persona->id_genero,
                 'id_zona'                   => $id_zona,
                 'id_sector'                 => (string) $persona->id_sector,
+                'estado_registro'           => $persona->estado_registro ?? 'Activo',
                 'nivel_educativo_principal' => $nivel_educativo_principal,
                 'tiene_condicion'           => $tiene_condicion,
                 'condiciones'               => $condiciones,
                 'contactos'                 => $contactos,
+                'correo_electronico'        => $correo_electronico,
                 'carreras_principal'        => $carreras_principal,
                 'numero_hijos'              => count($dependientes),
                 'dependientes'              => $dependientes
@@ -422,31 +518,38 @@ class PersonaController extends Controller
 
             $titular = Persona::findOrFail($id);
             $titular->update([
-                'cedula'          => $data['cedula'],
-                'nombre'          => $data['nombres'],
-                'apellido'        => $data['apellidos'],
-                'fecha_nacimiento'=> $data['fecha_nacimiento'] ?? null,
-                'id_genero'       => $data['id_genero'] ?? null,
-                'id_sector'       => $data['id_sector'] ?? null,
-                'estado_vital'    => $data['estado_vital'] ?? 'Vivo',
+                'cedula'            => $data['cedula'],
+                'nombre'            => $data['nombres'],
+                'apellido'          => $data['apellidos'],
+                'fecha_nacimiento'  => $data['fecha_nacimiento'] ?? null,
+                'id_genero'         => $data['id_genero'] ?? null,
+                'id_sector'         => $data['id_sector'] ?? null,
+                'nivel_educativo'   => $data['nivel_educativo_principal'] ?? 0,
+                'estado_vital'      => $data['estado_vital'] ?? 'Vivo',
+                'estado_registro'   => $data['estado_registro'] ?? 'Activo',
             ]);
 
             // Sync Condiciones
             CondicionPersona::where('id_persona', $id)->delete();
             if (!empty($data['tiene_condicion']) && !empty($data['condiciones'])) {
                 foreach ($data['condiciones'] as $cond) {
+                    $rutaCarnet = null;
+                    if (!empty($cond['archivo_carnet_base64'])) {
+                        $rutaCarnet = $this->guardarArchivoCarnet($cond['archivo_carnet_base64'], $data['cedula']);
+                    }
                     CondicionPersona::create([
                         'id_persona'             => $id,
                         'id_condicion'           => $cond['id_condicion'],
                         'porcentaje_discapacidad'=> $cond['porcentaje'] ?? null,
                         'codigo_carnet'          => $cond['codigo'] ?? null,
+                        'archivo_carnet'         => $rutaCarnet,
                         'observacion'            => $cond['observacion'] ?? null,
                     ]);
                 }
             }
 
-            // Sync Contactos
-            ContactoPersona::where('id_persona', $id)->delete();
+            // Sync Contactos (teléfonos)
+            ContactoPersona::where('id_persona', $id)->where('id_tipo_contacto', '!=', 3)->delete();
             if (!empty($data['contactos'])) {
                 foreach ($data['contactos'] as $contacto) {
                     if (!empty($contacto['valor_contacto'])) {
@@ -459,6 +562,17 @@ class PersonaController extends Controller
                         ]);
                     }
                 }
+            }
+            // Sync correo electrónico (tipo 3)
+            ContactoPersona::where('id_persona', $id)->where('id_tipo_contacto', 3)->delete();
+            if (!empty($data['correo_electronico'])) {
+                ContactoPersona::create([
+                    'id_persona'      => $id,
+                    'id_tipo_contacto'=> 3,
+                    'valor_contacto'  => $data['correo_electronico'],
+                    'id_operadora'    => null,
+                    'es_principal'    => 0
+                ]);
             }
 
             // Sync Perfil Educativo Titular
@@ -482,10 +596,11 @@ class PersonaController extends Controller
                     $dependiente = Persona::find($dep['id_persona']);
                     if ($dependiente) {
                         $dependiente->update([
-                            'cedula'   => !empty($dep['cedula']) ? $dep['cedula'] : null,
-                            'nombre'   => $dep['nombres'],
-                            'apellido' => $dep['apellidos'],
-                            'id_genero'=> $dep['id_genero'] ?? null,
+                            'cedula'          => !empty($dep['cedula']) ? $dep['cedula'] : null,
+                            'nombre'          => $dep['nombres'],
+                            'apellido'        => $dep['apellidos'],
+                            'id_genero'       => $dep['id_genero'] ?? null,
+                            'nivel_educativo' => $dep['nivel_educativo'] ?? 0,
                         ]);
                     }
                 } else {
@@ -494,6 +609,7 @@ class PersonaController extends Controller
                         'nombre'                  => $dep['nombres'],
                         'apellido'                => $dep['apellidos'],
                         'id_genero'               => $dep['id_genero'] ?? null,
+                        'nivel_educativo'         => $dep['nivel_educativo'] ?? 0,
                         'id_representante_familia'=> $id,
                         'estado_vital'            => 'Vivo',
                     ]);

@@ -13,6 +13,7 @@ export default function TerrenosEdicion() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { register, control, handleSubmit, setValue, watch, formState: { errors } } = useForm({
+    mode: 'onBlur',
     defaultValues: {
       clave_catastral: '',
       area_total: '',
@@ -34,7 +35,7 @@ export default function TerrenosEdicion() {
         setValue('longitud', data.longitud || '');
         setValue('propietario', `${data.propietario} (C.I: ${data.cedula})`);
       } catch (error) {
-        toast.error('Error al cargar datos del terreno');
+        toast.error('No se pudo cargar la ficha del predio. Vuelve a intentarlo.');
         navigate('/dashboard/catastro');
       } finally {
         setLoading(false);
@@ -57,7 +58,7 @@ export default function TerrenosEdicion() {
       toast.success('Predio actualizado con éxito');
       setTimeout(() => navigate(`/dashboard/catastro/detalles/${id}`), 1000);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Error al actualizar el predio');
+      toast.error(error.response?.data?.message || 'No se pudieron guardar los cambios del predio. Intenta de nuevo.');
     } finally {
       setIsSubmitting(false);
     }

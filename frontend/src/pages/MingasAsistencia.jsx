@@ -27,23 +27,37 @@ export default function MingasAsistencia() {
     }
   }, [selectedMinga]);
 
+  const pendientesCount = asistencia.filter(u => u.estado === 'Pendiente').length;
+  const totalConvocados = asistencia.length;
+
   const handleMarcar = (id, nuevoEstado) => {
     setAsistencia(prev => prev.map(u => u.id === id ? { ...u, estado: nuevoEstado } : u));
-    toast(`Asistencia actualizada a: ${nuevoEstado}`);
+  };
+
+  const handleMarcarTodos = (nuevoEstado) => {
+    setAsistencia(prev => prev.map(u => u.estado === 'Pendiente' ? { ...u, estado: nuevoEstado } : u));
+    toast.success(`${pendientesCount} persona(s) marcadas como "${nuevoEstado}" en el registro.`);
   };
 
   const handleGuardarTodo = async () => {
+    if (pendientesCount > 0) {
+      toast.error(`Hay ${pendientesCount} persona(s) sin marcar. Debe definir si asistió o no para cada una antes de guardar.`);
+      return;
+    }
     try {
       await registrarAsistencia(selectedMinga, { asistencias: asistencia, cerrar_registro: false });
-      toast.success('Listado de asistencia guardado correctamente en la base de datos.');
-      // Refrescar la lista para que el usuario note la acción
+      toast.success('Listado de asistencia guardado correctamente.');
       getConvocados(selectedMinga).then(setAsistencia);
     } catch (e) {
-      toast.error('Error al guardar asistencia');
+      toast.error('No se pudo guardar el listado de asistencia. Intenta de nuevo.');
     }
   };
 
   const handleCerrarRegistro = () => {
+    if (pendientesCount > 0) {
+      toast.error(`No puede cerrar el registro: ${pendientesCount} persona(s) aún están en estado Pendiente. Marque a todos antes de cerrar.`);
+      return;
+    }
     setShowConfirmModal(true);
   };
 
@@ -55,7 +69,7 @@ export default function MingasAsistencia() {
       toast.success('El registro de asistencia ha sido cerrado definitivamente.');
       setTimeout(() => navigate('/dashboard/mingas'), 2500);
     } catch (e) {
-      toast.error('Error al cerrar el registro');
+      toast.error('No se pudo cerrar el registro de asistencia. Intenta de nuevo.');
     }
   };
 
@@ -108,16 +122,79 @@ export default function MingasAsistencia() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem', flex: '0 0 auto' }}>
-          <button className="btn-primary" onClick={handleGuardarTodo} disabled={!selectedMinga || isClosed} style={{ background: '#10b981', opacity: (!selectedMinga || isClosed) ? 0.5 : 1 }}>
-            <Save size={18} /> Guardar Cambios
+        <div style={{ display: 'flex', gap: '0.5rem', flex: '0 0 auto', flexWrap: 'wrap' }}>
+          {/* Acciones masivas para pendientes */}
+          {selectedMinga && !isClosed && pendientesCount > 0 && (
+            <>
+              <button
+                className="btn-secondary"
+                onClick={() => handleMarcarTodos('Presente')}
+                style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid #10b981', width: 'auto', fontSize: '0.82rem', padding: '0.5rem 0.9rem' }}
+                title={`Marcar los ${pendientesCount} pendientes como Presente`}
+              >
+                <CheckCircle size={16} /> Todos Presente
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={() => handleMarcarTodos('Faltó')}
+                style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid #ef4444', width: 'auto', fontSize: '0.82rem', padding: '0.5rem 0.9rem' }}
+                title={`Marcar los ${pendientesCount} pendientes como Faltó`}
+              >
+                <XCircle size={16} /> Todos Faltó
+              </button>
+            </>
+          )}
+
+          <button
+            className="btn-primary"
+            onClick={handleGuardarTodo}
+            disabled={!selectedMinga || isClosed || pendientesCount > 0}
+            style={{ background: pendientesCount > 0 ? '#4b5563' : '#10b981', opacity: (!selectedMinga || isClosed) ? 0.5 : 1, cursor: pendientesCount > 0 ? 'not-allowed' : 'pointer' }}
+            title={pendientesCount > 0 ? `${pendientesCount} persona(s) sin marcar` : 'Guardar asistencia'}
+          >
+            <Save size={18} /> {pendientesCount > 0 ? `${pendientesCount} sin marcar` : 'Guardar Cambios'}
           </button>
-          
-          <button className="btn-primary" onClick={handleCerrarRegistro} disabled={!selectedMinga || isClosed} style={{ background: '#ef4444', opacity: (!selectedMinga || isClosed) ? 0.5 : 1 }}>
+
+          <button
+            className="btn-primary"
+            onClick={handleCerrarRegistro}
+            disabled={!selectedMinga || isClosed || pendientesCount > 0}
+            style={{ background: pendientesCount > 0 ? '#4b5563' : '#ef4444', opacity: (!selectedMinga || isClosed) ? 0.5 : 1, cursor: pendientesCount > 0 ? 'not-allowed' : 'pointer' }}
+            title={pendientesCount > 0 ? `Primero marque los ${pendientesCount} pendientes` : 'Cerrar registro definitivamente'}
+          >
             <Lock size={18} /> Cerrar Registro
           </button>
         </div>
       </div>
+
+      {/* Barra de progreso de asistencia */}
+      {selectedMinga && totalConvocados > 0 && (
+        <div className="glass-card animate-fade-in" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.82rem' }}>
+              <span className="text-muted">Progreso del registro</span>
+              <span style={{ fontWeight: '600', color: pendientesCount > 0 ? '#f59e0b' : '#10b981' }}>
+                {totalConvocados - pendientesCount} / {totalConvocados} marcados
+              </span>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '999px', height: '8px', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${((totalConvocados - pendientesCount) / totalConvocados) * 100}%`,
+                background: pendientesCount > 0 ? 'linear-gradient(90deg, #f59e0b, #10b981)' : '#10b981',
+                borderRadius: '999px',
+                transition: 'width 0.4s ease'
+              }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '1rem', fontSize: '0.82rem', flexWrap: 'wrap' }}>
+            <span style={{ color: '#10b981' }}>✓ {asistencia.filter(u => u.estado === 'Presente').length} Presentes</span>
+            <span style={{ color: '#ef4444' }}>✗ {asistencia.filter(u => u.estado === 'Faltó' || u.estado === 'Faltó (Pagado)').length} Faltas</span>
+            <span style={{ color: '#f59e0b' }}>⚡ {asistencia.filter(u => u.estado === 'Justificado').length} Justificados</span>
+            {pendientesCount > 0 && <span style={{ color: '#94a3b8', fontWeight: '600' }}>⏳ {pendientesCount} Pendientes</span>}
+          </div>
+        </div>
+      )}
 
       {/* Tabla de Asistencia (Solo visible si hay minga seleccionada) */}
       {selectedMinga ? (
