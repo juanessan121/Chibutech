@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     cron \
+    dos2unix \
     && docker-php-ext-install pdo_mysql zip opcache
 
 # Configuración OPcache optimizada para producción/dev con volumen
@@ -46,8 +47,10 @@ RUN echo "* * * * * www-data cd /var/www/html && php artisan schedule:run >> /va
     > /etc/cron.d/laravel-scheduler \
     && chmod 0644 /etc/cron.d/laravel-scheduler
 
-# Entrypoint: inicia cron y luego Apache en foreground
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Launcher: lee el entrypoint desde el volumen (se actualiza con git pull sin rebuild)
+# dos2unix previene errores de CRLF si el archivo fue editado en Windows
+RUN printf '#!/bin/bash\ndos2unix /var/www/html/docker-entrypoint.sh 2>/dev/null || true\nexec bash /var/www/html/docker-entrypoint.sh\n' \
+    > /usr/local/bin/launcher.sh \
+    && chmod +x /usr/local/bin/launcher.sh
 
-CMD ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["/usr/local/bin/launcher.sh"]
