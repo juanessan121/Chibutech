@@ -17,7 +17,7 @@ RUN { \
     echo 'opcache.interned_strings_buffer=16'; \
     echo 'opcache.max_accelerated_files=10000'; \
     echo 'opcache.revalidate_freq=0'; \
-    echo 'opcache.validate_timestamps=0'; \
+    echo 'opcache.validate_timestamps=1'; \
     echo 'opcache.fast_shutdown=1'; \
     echo 'opcache.jit=1255'; \
     echo 'opcache.jit_buffer_size=64M'; \
