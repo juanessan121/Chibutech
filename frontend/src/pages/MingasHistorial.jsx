@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { History, ArrowLeft, Search, Calendar, FileText, Download, Users, X } from 'lucide-react';
 import { getMingas, getConvocados } from '../services/mingaService';

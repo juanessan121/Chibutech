@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, MapPin, User, CheckCircle, AlertCircle, FileText, AlertTriangle, ArrowLeft, Zap, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -253,7 +253,7 @@ export default function PagoAgua() {
         {resultados.length > 0 && (
           <div style={{
             position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000,
-            background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+            background: 'rgba(15,23,42,0.98)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: '0.75rem', maxHeight: '340px', overflowY: 'auto', marginTop: '0.5rem',
             boxShadow: '0 20px 40px rgba(0,0,0,0.7)'
           }}>

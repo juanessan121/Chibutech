@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wallet, ArrowLeft, DollarSign, FileText, Save } from 'lucide-react';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
 import { registrarEgreso } from '../services/cobroService';
 import { allowTextWithPunctuation } from '../utils/validators';
 import axios from '../services/axiosConfig';

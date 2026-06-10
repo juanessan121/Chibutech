@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart3, ArrowLeft, ArrowUpRight, ArrowDownRight, Search, FileText, Wallet } from 'lucide-react';
 import { getHistorialCaja } from '../services/cobroService';

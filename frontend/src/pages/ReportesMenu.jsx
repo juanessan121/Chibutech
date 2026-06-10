@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { FileText, Users, AlertCircle, BarChart3, Filter, CheckCircle2, XCircle } from 'lucide-react';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
 import { usePDF } from '../hooks/usePDF';
 import PDFDownloadButton from '../components/pdf/PDFDownloadButton';
 import PageHeader from '../components/ui/PageHeader';
