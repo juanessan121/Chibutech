@@ -63,7 +63,7 @@ Route::put('/terrenos/{id}/traspaso', [TerrenoController::class, 'traspasoDomini
 // Mingas
 Route::get('/mingas', [MingaController::class, 'index']);
 Route::get('/mingas/activas', [MingaController::class, 'activas']);
-Route::get('/mingas/activas-detalle', [MingaController::class, 'activasDetalle']);
+Route::get('/mingas/activas/detalle', [MingaController::class, 'activasDetalle']);
 Route::get('/mingas/{id}/convocados', [MingaController::class, 'convocados']);
 Route::post('/mingas/{id}/asistencia', [MingaController::class, 'registrarAsistencia']);
 Route::post('/mingas', [MingaController::class, 'store']);
