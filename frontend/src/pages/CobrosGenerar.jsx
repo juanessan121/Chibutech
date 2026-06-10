@@ -143,13 +143,13 @@ export default function CobrosGenerar() {
                 </div>
 
                 {buscando && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', marginTop: '0.5rem', padding: '1rem', zIndex: 10, textAlign: 'center' }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'rgba(15,23,42,0.98)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.5rem', marginTop: '0.5rem', padding: '1rem', zIndex: 100, textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.6)' }}>
                     <span className="text-muted">Buscando...</span>
                   </div>
                 )}
 
                 {!buscando && resultados.length > 0 && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', marginTop: '0.5rem', maxHeight: '300px', overflowY: 'auto', zIndex: 10, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'rgba(15,23,42,0.98)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.5rem', marginTop: '0.5rem', maxHeight: '300px', overflowY: 'auto', zIndex: 100, display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.6)' }}>
                     {resultados.map(r => (
                       <div 
                         key={r.id_terreno}

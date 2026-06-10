@@ -91,7 +91,7 @@ class CobroController extends Controller
 
         return response()->json([
             'status' => 'ok',
-            'data'   => $multas->merge($planillas)->merge($planillasCompartidas)->values()
+            'data'   => collect([])->concat($multas)->concat($planillas)->concat($planillasCompartidas)->values()
         ]);
     }
 

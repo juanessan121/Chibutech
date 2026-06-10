@@ -121,6 +121,12 @@ export default function DirectivaGestion() {
     setPeriodoActivando(null);
   };
 
+  const handleDesactivarPeriodo = () => {
+    localStorage.removeItem('directiva_periodo_firmas');
+    setPeriodoActivo(null);
+    toast.success('Directiva desactivada. Los documentos usarán la directiva actual del sistema.');
+  };
+
   const handleConfirmarReactivar = async () => {
     if (!modalReactivar) return;
     setReactivando(true);
@@ -412,14 +418,25 @@ export default function DirectivaGestion() {
                       >
                         Ver Organigrama
                       </button>
-                      <button
-                        className="btn-secondary"
-                        onClick={() => handleActivarPeriodo(hist)}
-                        disabled={periodoActivando === hist.periodo || esActivo}
-                        style={{ padding: '0.4rem 0.8rem', width: 'auto', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem', borderColor: esActivo ? '#10b981' : 'var(--yellow)', color: esActivo ? '#10b981' : 'var(--yellow)' }}
-                      >
-                        <RefreshCw size={13} /> {esActivo ? 'Activa' : 'Usar para Docs'}
-                      </button>
+                      {esActivo ? (
+                        <button
+                          className="btn-secondary"
+                          onClick={handleDesactivarPeriodo}
+                          style={{ padding: '0.4rem 0.8rem', width: 'auto', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem', borderColor: '#f87171', color: '#f87171' }}
+                          title="Dejar de usar esta directiva para documentos"
+                        >
+                          <X size={13} /> Desactivar
+                        </button>
+                      ) : (
+                        <button
+                          className="btn-secondary"
+                          onClick={() => handleActivarPeriodo(hist)}
+                          disabled={periodoActivando === hist.periodo}
+                          style={{ padding: '0.4rem 0.8rem', width: 'auto', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem', borderColor: 'var(--yellow)', color: 'var(--yellow)' }}
+                        >
+                          <RefreshCw size={13} /> Usar para Docs
+                        </button>
+                      )}
                       <button
                         className="btn-secondary"
                         onClick={() => setModalReactivar(hist)}
