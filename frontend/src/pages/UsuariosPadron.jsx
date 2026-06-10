@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/axiosConfig';
 import useAuthStore from '../store/useAuthStore';
+import ConfirmModal from '../components/ConfirmModal';
 
 const ROLES = [
   'Usuario Regular',
@@ -55,17 +56,23 @@ export default function UsuariosPadron() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const [confirmDelete, setConfirmDelete] = useState(null); // { id, nombre }
+
+  const handleDelete = (id) => {
     const usuarioAEliminar = users.find(u => u.id === id);
     const nombre = usuarioAEliminar?.nombre_completo || 'este usuario';
-    if (window.confirm(`¿Eliminar a ${nombre} del padrón?\n\nEsta acción no se puede deshacer.`)) {
-      try {
-        await deleteUser(id);
-        setUsers(users.filter((u) => u.id !== id));
-        toast.success(`${nombre} ha sido eliminado del padrón correctamente.`);
-      } catch {
-        toast.error('No se pudo eliminar al usuario. Intenta de nuevo.');
-      }
+    setConfirmDelete({ id, nombre });
+  };
+
+  const handleConfirmarEliminar = async () => {
+    const { id, nombre } = confirmDelete;
+    setConfirmDelete(null);
+    try {
+      await deleteUser(id);
+      setUsers(users.filter((u) => u.id !== id));
+      toast.success(`${nombre} ha sido eliminado del padrón correctamente.`);
+    } catch {
+      toast.error('No se pudo eliminar al usuario. Intenta de nuevo.');
     }
   };
 
@@ -253,6 +260,17 @@ export default function UsuariosPadron() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        variant="danger"
+        title="Eliminar del padrón"
+        message={`¿Eliminar a ${confirmDelete?.nombre} del padrón?`}
+        detail="Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        onConfirm={handleConfirmarEliminar}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

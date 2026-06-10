@@ -4,6 +4,7 @@ import { Shield, ArrowLeft, History, UserPlus, Save, FileText, Calendar, Refresh
 import { toast } from 'sonner';
 import axios from '../services/axiosConfig';
 import PersonaAutocompleteInput from '../components/PersonaAutocompleteInput';
+import ConfirmModal from '../components/ConfirmModal';
 
 // Catálogo fijo que refleja la tabla Catalogo_Cargo_Directivo de la BD
 const CARGOS_DIRECTIVA = [
@@ -104,14 +105,20 @@ export default function DirectivaGestion() {
   const [modalReactivar, setModalReactivar] = useState(null); // { periodo, presidente }
   const [reactivando, setReactivando] = useState(false);
 
+  const [confirmActivar, setConfirmActivar] = useState(null);
+
   const handleActivarPeriodo = (hist) => {
-    if (window.confirm(`¿Usar la directiva del período ${hist.periodo} (Presidente: ${hist.presidente}) para generación de documentos y firmas?\n\nEsto no elimina la directiva actual, solo selecciona cuál aparece en los PDFs.`)) {
-      setPeriodoActivando(hist.periodo);
-      localStorage.setItem('directiva_periodo_firmas', hist.periodo);
-      setPeriodoActivo(hist.periodo);
-      toast.success(`Directiva ${hist.periodo} activada para documentos y firmas.`);
-      setPeriodoActivando(null);
-    }
+    setConfirmActivar(hist);
+  };
+
+  const handleConfirmarActivar = () => {
+    const hist = confirmActivar;
+    setConfirmActivar(null);
+    setPeriodoActivando(hist.periodo);
+    localStorage.setItem('directiva_periodo_firmas', hist.periodo);
+    setPeriodoActivo(hist.periodo);
+    toast.success(`Directiva ${hist.periodo} activada para documentos y firmas.`);
+    setPeriodoActivando(null);
   };
 
   const handleConfirmarReactivar = async () => {
@@ -581,6 +588,17 @@ export default function DirectivaGestion() {
         </div>
       )}
 
+      <ConfirmModal
+        isOpen={!!confirmActivar}
+        variant="info"
+        title={`Usar directiva del período ${confirmActivar?.periodo}`}
+        message={`Presidente: ${confirmActivar?.presidente}`}
+        detail="Esto no elimina la directiva actual, solo selecciona cuál aparece en los PDFs y documentos generados."
+        confirmText="Usar esta directiva"
+        onConfirm={handleConfirmarActivar}
+        onCancel={() => setConfirmActivar(null)}
+      />
     </div>
   );
 }
+
