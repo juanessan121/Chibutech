@@ -454,18 +454,18 @@ export default function UsuariosAgregar() {
                             <>
                               <div className="input-group animate-fade-in">
                                 <label className="input-label" style={{ fontSize: '0.7rem' }}>% Discapacidad</label>
-                                <input type="number" className="input-field" placeholder="0-100" min="0" max="100" {...register(`condiciones.${index}.porcentaje`)} />
+                                <input type="number" className="input-field" placeholder="0-100" min="0" max="100" style={{ paddingLeft: '0.75rem' }} {...register(`condiciones.${index}.porcentaje`)} />
                               </div>
                               <div className="input-group animate-fade-in">
                                 <label className="input-label" style={{ fontSize: '0.7rem' }}>Código Carnet CONADIS</label>
-                                <input type="text" className="input-field" placeholder="Ej. 0102-123456" maxLength="20" {...register(`condiciones.${index}.codigo`)} />
+                                <input type="text" className="input-field" placeholder="Ej. 0102-123456" maxLength="20" style={{ paddingLeft: '0.75rem' }} {...register(`condiciones.${index}.codigo`)} />
                               </div>
                             </>
                           )}
                           {!isNinguna && (
                             <div className="input-group animate-fade-in">
                               <label className="input-label" style={{ fontSize: '0.7rem' }}>Observación</label>
-                              <input type="text" className="input-field" placeholder="Detalles..." {...register(`condiciones.${index}.observacion`)} />
+                              <input type="text" className="input-field" placeholder="Detalles..." style={{ paddingLeft: '0.75rem' }} {...register(`condiciones.${index}.observacion`)} />
                             </div>
                           )}
                           {condicionesFields.length > 1 && (
