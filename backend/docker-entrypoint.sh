@@ -16,6 +16,15 @@ else
     echo "[1/7] .env ya existe — OK"
 fi
 
+# Sincronizar credenciales DB desde variables de docker-compose (fuente unica de verdad).
+# Corrige .env viejos con credenciales placeholder sin borrar el resto del archivo.
+sed -i "s|^DB_HOST=.*|DB_HOST=${DB_HOST:-db}|"             .env
+sed -i "s|^DB_PORT=.*|DB_PORT=${DB_PORT:-3306}|"           .env
+sed -i "s|^DB_DATABASE=.*|DB_DATABASE=${DB_DATABASE:-basechi}|"       .env
+sed -i "s|^DB_USERNAME=.*|DB_USERNAME=${DB_USERNAME:-ChibuleoP2026}|" .env
+sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${DB_PASSWORD:-Chibutech2026}|" .env
+echo "[1/7] Credenciales DB sincronizadas."
+
 # ── 2. Instalar / actualizar dependencias Composer ───────────────────────────
 # Siempre se ejecuta: si vendor/ no existe lo instala (~60s), si ya existe solo
 # verifica que este al dia (~2s). Garantiza que git pull con nuevos paquetes funcione.

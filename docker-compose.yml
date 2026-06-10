@@ -58,6 +58,12 @@ services:
     restart: always
     ports:
       - "8080:80"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: basechi
+      DB_USERNAME: ChibuleoP2026
+      DB_PASSWORD: Chibutech2026
     volumes:
       - ./backend:/var/www/html
     depends_on:
