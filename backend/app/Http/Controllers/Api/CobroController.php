@@ -461,10 +461,10 @@ class CobroController extends Controller
 
         try {
             $config = DB::table('Configuracion_Global')
-                ->whereIn('clave', ['TARIFA_AGUA_VALOR', 'TARIFA_AGUA_METROS'])
+                ->whereIn('clave', ['TARIFA_VALOR_BASE', 'TARIFA_METROS_BASE'])
                 ->pluck('valor', 'clave');
-            $valor_base  = (float) ($config['TARIFA_AGUA_VALOR']  ?? 5);
-            $metros_base = (float) ($config['TARIFA_AGUA_METROS'] ?? 1000);
+            $valor_base  = (float) ($config['TARIFA_VALOR_BASE']  ?? 5);
+            $metros_base = (float) ($config['TARIFA_METROS_BASE'] ?? 1000);
 
             $terreno    = DB::table('Terreno')->where('id_terreno', $id_terreno)->first();
             if (!$terreno) throw new \Exception('Terreno no encontrado');
@@ -539,6 +539,7 @@ class CobroController extends Controller
                     'clave_catastral' => $terreno->clave_catastral,
                     'area_total'      => $area,
                     'fracciones'      => $fracciones,
+                    'metros_base'     => $metros_base,
                     'tarifa_fraccion' => $valor_base,
                 ],
             ]);
@@ -675,10 +676,10 @@ class CobroController extends Controller
             $anio = $request->query('anio');
 
             $config = DB::table('Configuracion_Global')
-                ->whereIn('clave', ['TARIFA_AGUA_VALOR', 'TARIFA_AGUA_METROS'])
+                ->whereIn('clave', ['TARIFA_VALOR_BASE', 'TARIFA_METROS_BASE'])
                 ->pluck('valor', 'clave');
-            $valor_base  = (float) ($config['TARIFA_AGUA_VALOR']  ?? 5);
-            $metros_base = (float) ($config['TARIFA_AGUA_METROS'] ?? 1000);
+            $valor_base  = (float) ($config['TARIFA_VALOR_BASE']  ?? 5);
+            $metros_base = (float) ($config['TARIFA_METROS_BASE'] ?? 1000);
 
             $terreno = DB::table('Terreno')->where('id_terreno', $id_terreno)->first();
             if (!$terreno) throw new \Exception('Terreno no encontrado');
