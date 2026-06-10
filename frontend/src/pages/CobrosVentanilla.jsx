@@ -19,14 +19,21 @@ export default function CobrosVentanilla() {
   const [buscando, setBuscando] = useState(false);
   const [resultados, setResultados] = useState([]);
 
-  // Solo mostrar resultados cuando hay al menos 3 caracteres
+  // Búsqueda dual: terrenos + personas con multas sin terreno
   useEffect(() => {
     if (searchTerm.length >= 3) {
       const fetchResultados = async () => {
         setBuscando(true);
         try {
-          const res = await axios.get(`/terrenos/buscar-universal?termino=${searchTerm}&criterio=todos`);
-          setResultados(res.data.data);
+          const [resTerreno, resPersona] = await Promise.all([
+            axios.get(`/terrenos/buscar-universal?termino=${searchTerm}&criterio=todos`),
+            axios.get(`/cobros/buscar-deudor?termino=${searchTerm}`),
+          ]);
+          const terrenoResults = resTerreno.data.data || [];
+          // Excluir personas que ya aparecen vía terreno para evitar duplicados
+          const idsYaVistos = new Set(terrenoResults.map(r => r.id_titular || r.id_persona_cobro));
+          const personaResults = (resPersona.data.data || []).filter(p => !idsYaVistos.has(p.id_titular));
+          setResultados([...terrenoResults, ...personaResults]);
         } catch {
           setResultados([]);
         } finally {
@@ -178,13 +185,13 @@ export default function CobrosVentanilla() {
                 <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'rgba(15,23,42,0.98)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.5rem', marginTop: '0.5rem', maxHeight: '300px', overflowY: 'auto', zIndex: 1000, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.6)' }}>
                   {resultados.map((r, i) => (
                     <div
-                      key={`${r.id_terreno}-${i}`}
+                      key={`${r.id_terreno ?? r.id_titular}-${i}`}
                       style={{ padding: '1rem', borderBottom: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', transition: 'background 0.15s' }}
                       onClick={() => seleccionarPersona(r)}
                       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                       onMouseLeave={(e) => e.currentTarget.style.background = ''}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: 'bold', color: 'var(--primary-light)' }}>
                           {r.es_copropietario ? r.nombre_copropietario || r.nombre_cobro : r.nombre_titular}
                         </span>
@@ -193,9 +200,15 @@ export default function CobrosVentanilla() {
                             Copropietario
                           </span>
                         )}
+                        {r.sin_terreno && (
+                          <span style={{ fontSize: '0.65rem', background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                            Solo multas
+                          </span>
+                        )}
                       </div>
                       <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                        C.I: {r.es_copropietario ? r.cedula_cobro : r.cedula_titular} | Clave: {r.clave_catastral}
+                        C.I: {r.es_copropietario ? r.cedula_cobro : r.cedula_titular}
+                        {r.clave_catastral ? ` | Clave: ${r.clave_catastral}` : ''}
                       </div>
                       {r.es_copropietario && (
                         <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.15rem' }}>

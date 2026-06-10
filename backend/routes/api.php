@@ -77,6 +77,7 @@ Route::post('/cobros/planillas/auto-generar', [CobroController::class, 'generarM
 Route::post('/cobros/pagar', [CobroController::class, 'procesarPago']);
 Route::post('/cobros/pagar-agua', [CobroController::class, 'pagarAgua']);
 Route::get('/cobros/historial', [CobroController::class, 'historialTransacciones']);
+Route::get('/cobros/buscar-deudor', [CobroController::class, 'buscarDeudorSinTerreno']);
 Route::post('/cobros/multa', [CobroController::class, 'generarMulta']);
 Route::post('/cobros/egreso', [CobroController::class, 'registrarEgreso']);
 Route::post('/cobros/planillas', [CobroController::class, 'generarPlanillas']);

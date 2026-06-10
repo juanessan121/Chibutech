@@ -740,5 +740,54 @@ class CobroController extends Controller
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
+
+    /**
+     * Busca personas que tienen multas pendientes pero NO tienen terreno registrado.
+     * Sirve para que Ventanilla de Cobro pueda cobrarles aunque no aparezcan en buscar-universal.
+     */
+    public function buscarDeudorSinTerreno(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $termino = trim($request->query('termino', ''));
+        if (mb_strlen($termino) < 3) {
+            return response()->json(['status' => 'ok', 'data' => []]);
+        }
+
+        $personas = DB::table('Persona as p')
+            ->leftJoin('Sector as s', 'p.id_sector', '=', 's.id_sector')
+            ->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                  ->from('Multa as m')
+                  ->whereColumn('m.id_persona', 'p.id_persona')
+                  ->where('m.estado_pago', 'Pendiente');
+            })
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                  ->from('Terreno as t')
+                  ->whereColumn('t.id_titular', 'p.id_persona');
+            })
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                  ->from('Copropietario_Terreno as ct')
+                  ->whereColumn('ct.id_persona', 'p.id_persona');
+            })
+            ->where('p.estado_vital', 'Vivo')
+            ->where(function ($q) use ($termino) {
+                $q->where('p.cedula', 'like', "%{$termino}%")
+                  ->orWhere(DB::raw("CONCAT(p.nombre, ' ', p.apellido)"), 'like', "%{$termino}%");
+            })
+            ->select(
+                'p.id_persona as id_titular',
+                'p.cedula as cedula_titular',
+                DB::raw("CONCAT(p.nombre, ' ', p.apellido) as nombre_titular"),
+                's.nombre_sector as sector',
+                DB::raw('0 as es_copropietario'),
+                DB::raw('NULL as clave_catastral'),
+                DB::raw('1 as sin_terreno')
+            )
+            ->limit(10)
+            ->get();
+
+        return response()->json(['status' => 'ok', 'data' => $personas]);
+    }
 }
 
