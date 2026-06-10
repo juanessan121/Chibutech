@@ -67,7 +67,7 @@ class MingaController extends Controller
                 FROM Asignacion_Sector_Minga asm
                 JOIN Sector  s ON s.id_sector = asm.id_sector
                 JOIN Zona    z ON z.id_zona   = s.id_zona
-                JOIN Persona p ON p.id_sector = s.id_sector AND p.estado_vital = "Vivo"
+                LEFT JOIN Persona p ON p.id_sector = s.id_sector AND p.estado_vital = "Vivo"
                 GROUP BY asm.id_minga
             ) AS sec'), 'sec.id_minga', '=', 'm.id_minga')
             ->whereIn('e.nombre_estado', ['Programada', 'En Ejecución', 'Pospuesta', 'Suspendida'])
