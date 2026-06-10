@@ -12,7 +12,6 @@
 ```bash
 git clone https://github.com/juanessan121/Chibutech.git
 cd Chibutech
-git checkout feat/mejoras-jun-2026
 docker compose up --build -d
 ```
 
