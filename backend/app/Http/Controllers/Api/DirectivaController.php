@@ -292,9 +292,9 @@ class DirectivaController extends Controller
                 ->where('id_directiva', $saliente->id_directiva)
                 ->update(['estado' => 'Finalizado', 'fecha_fin' => $hoy]);
 
-            // Bajar su rol a Usuario Regular
+            // Bajar su rol a Comunero al salir de la directiva
             \App\Models\Usuario::where('id_persona', $saliente->id_persona)
-                ->update(['rol' => 'Usuario Regular']);
+                ->update(['rol' => 'Comunero']);
 
             // 3. Insertar al nuevo miembro (reelección permitida: no hay restricción por persona)
             $persona = DB::table('Persona')->where('id_persona', $request->id_persona_nueva)->first();

@@ -27,7 +27,7 @@ export default function Dashboard() {
   const [showStats, setShowStats] = useState(false); // Desplegable para las estadísticas
   const [realData, setRealData] = useState({ comuneros: 0, recaudacion: 0, multasPendientes: null, mingasMes: null, terrenos: null });
 
-  const isUsuarioBase = user?.rol === 'Usuario Regular' || user?.rol === 'Usuario';
+  const isUsuarioBase = user?.rol === 'Comunero' || user?.rol === 'Usuario Regular' || user?.rol === 'Usuario';
   const [comuneroData, setComuneroData] = useState(null);
   const [loadingComunero, setLoadingComunero] = useState(false);
 

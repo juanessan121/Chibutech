@@ -14,7 +14,7 @@ export default function TerrenoDetalles() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('ficha');
   const user = useAuthStore(state => state.user);
-  const isUsuarioBase = user?.rol === 'Usuario Regular' || user?.rol === 'Usuario';
+  const isUsuarioBase = user?.rol === 'Comunero' || user?.rol === 'Usuario Regular' || user?.rol === 'Usuario';
 
   const [terreno, setTerreno] = useState(null);
   const [loading, setLoading] = useState(true);

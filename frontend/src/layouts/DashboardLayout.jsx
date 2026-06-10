@@ -105,8 +105,8 @@ export default function DashboardLayout() {
         { name: 'Configuración', path: '/dashboard/administracion/configuracion' }
       ]
     },
-    { name: 'Mis Deudas', path: '/dashboard/mis-deudas', icon: Droplet, show: isRole('Usuario Regular') },
-    { name: 'Mis Terrenos', path: '/dashboard/mis-terrenos', icon: MapPin, show: isRole('Usuario Regular') },
+    { name: 'Mis Deudas', path: '/dashboard/mis-deudas', icon: Droplet, show: isRole('Comunero') },
+    { name: 'Mis Terrenos', path: '/dashboard/mis-terrenos', icon: MapPin, show: isRole('Comunero') },
   ];
 
   // Sincronizar automáticamente el submenú abierto (accordion) con la ruta actual

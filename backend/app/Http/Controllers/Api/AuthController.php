@@ -74,7 +74,7 @@ class AuthController extends Controller
                         'id_persona'       => $usuario->id_persona,
                         'username'         => $usuario->cedula,
                         'nombre_completo'  => $usuario->persona ? $usuario->persona->nombre . ' ' . $usuario->persona->apellido : 'Admin',
-                        'rol'              => $usuario->rol,
+                        'rol'              => $usuario->rol === 'Usuario Regular' ? 'Comunero' : $usuario->rol,
                         'permisos'         => $permisos,
                         'password_temporal'=> (bool) $usuario->password_temporal,
                     ]
@@ -82,7 +82,7 @@ class AuthController extends Controller
             ]);
         }
 
-        // 2. Si NO enviaron contraseña, asumimos que es un Comunero (Usuario Regular)
+        // 2. Si NO enviaron contraseña, asumimos que es un Comunero
         // Buscamos si existe la Persona con esa cedula
         $persona = Persona::where('cedula', $cedula)->first();
 
@@ -96,7 +96,7 @@ class AuthController extends Controller
         // Verificamos si esta persona ya tiene un usuario asignado
         $usuarioExistente = Usuario::where('id_persona', $persona->id_persona)->first();
 
-        if ($usuarioExistente && $usuarioExistente->rol !== 'Usuario Regular') {
+        if ($usuarioExistente && !in_array($usuarioExistente->rol, ['Comunero', 'Usuario Regular'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Esta cuenta tiene permisos especiales. Por favor ingresa tu contraseña.'
@@ -109,7 +109,7 @@ class AuthController extends Controller
                 'id_persona' => $persona->id_persona,
                 'cedula' => $cedula,
                 'password' => Hash::make(uniqid()), // Contraseña aleatoria imposible
-                'rol' => 'Usuario Regular'
+                'rol' => 'Comunero'
             ]);
         }
 
@@ -124,7 +124,7 @@ class AuthController extends Controller
                     'id_persona'     => $persona->id_persona,
                     'username'       => $usuarioExistente->cedula,
                     'nombre_completo'=> $persona->nombre . ' ' . $persona->apellido,
-                    'rol'            => 'Usuario Regular',
+                    'rol'            => 'Comunero',
                     'permisos'       => ['ver_dashboard', 'ver_perfil']
                 ]
             ]
@@ -139,9 +139,16 @@ class AuthController extends Controller
     {
         $request->validate([
             'id_persona' => 'required|integer|exists:Persona,id_persona',
-            'rol'        => 'required|in:Administrador,Presidente,Vicepresidente,Secretario,Tesorero,Vocal Principal 1,Vocal Principal 2,Vocal Principal 3,Vocal Suplente 1,Vocal Suplente 2,Usuario Regular',
+            'rol'        => 'nullable|in:Administrador,Comunero',
             'password'   => 'nullable|string|min:4',
         ]);
+
+        if (empty($request->rol) && empty($request->password)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Debes indicar un nuevo rol o una nueva contraseña.',
+            ], 422);
+        }
 
         // Un administrador no puede modificar su propio rol
         if ((int) $request->id_persona === (int) $request->user()->id_persona) {
@@ -154,7 +161,9 @@ class AuthController extends Controller
         $usuario = Usuario::where('id_persona', $request->id_persona)->first();
 
         if ($usuario) {
-            $usuario->rol = $request->rol;
+            if (!empty($request->rol)) {
+                $usuario->rol = $request->rol;
+            }
             if (!empty($request->password)) {
                 $usuario->password = Hash::make($request->password);
             }
@@ -165,13 +174,19 @@ class AuthController extends Controller
                 'id_persona' => $request->id_persona,
                 'cedula'     => $persona->cedula,
                 'password'   => Hash::make($request->password ?? $persona->cedula),
-                'rol'        => $request->rol,
+                'rol'        => $request->rol ?? 'Comunero',
             ]);
         }
 
+        $msg = match(true) {
+            !empty($request->rol) && !empty($request->password) => "Rol y contraseña actualizados correctamente.",
+            !empty($request->rol)  => "Rol actualizado a '{$request->rol}' correctamente.",
+            default                => "Contraseña actualizada correctamente.",
+        };
+
         return response()->json([
             'status'  => 'success',
-            'message' => "Rol actualizado a '{$request->rol}' correctamente.",
+            'message' => $msg,
             'data'    => ['id_usuario' => $usuario->id_usuario, 'rol' => $usuario->rol]
         ]);
     }
@@ -232,7 +247,7 @@ class AuthController extends Controller
                 'id_persona'        => $persona->id_persona,
                 'cedula'            => $persona->cedula,
                 'password'          => Hash::make($tempPass),
-                'rol'               => 'Usuario Regular',
+                'rol'               => 'Comunero',
                 'password_temporal' => true,
             ]);
         }

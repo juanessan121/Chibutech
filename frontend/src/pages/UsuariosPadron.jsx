@@ -7,19 +7,13 @@ import api from '../services/axiosConfig';
 import useAuthStore from '../store/useAuthStore';
 import ConfirmModal from '../components/ConfirmModal';
 
-const ROLES = [
-  'Usuario Regular',
-  'Vocal Suplente 2',
-  'Vocal Suplente 1',
-  'Vocal Principal 3',
-  'Vocal Principal 2',
-  'Vocal Principal 1',
-  'Tesorero',
-  'Secretario',
-  'Vicepresidente',
-  'Presidente',
-  'Administrador',
-];
+const ROLES_SISTEMA = ['Comunero', 'Administrador'];
+
+const CARGOS_DIRECTIVA = new Set([
+  'Presidente', 'Vicepresidente', 'Secretario', 'Tesorero',
+  'Vocal Principal 1', 'Vocal Principal 2', 'Vocal Principal 3',
+  'Vocal Suplente 1', 'Vocal Suplente 2',
+]);
 
 export default function UsuariosPadron() {
   const currentUser = useAuthStore((state) => state.user);
@@ -77,25 +71,25 @@ export default function UsuariosPadron() {
   };
 
   const abrirModalRol = (user) => {
-    setModalRol({ id_persona: user.id_persona, nombre: user.nombre_completo, rol_actual: user.rol });
-    setNuevoRol(user.rol);
+    const esDirectiva = CARGOS_DIRECTIVA.has(user.rol);
+    setModalRol({ id_persona: user.id_persona, nombre: user.nombre_completo, rol_actual: user.rol, es_directiva: esDirectiva });
+    setNuevoRol(esDirectiva ? 'Comunero' : (user.rol === 'Comunero' || user.rol === 'Administrador' ? user.rol : 'Comunero'));
     setNuevaPassword('');
   };
 
   const handleCambiarRol = async () => {
-    if (!nuevoRol) return;
     setGuardandoRol(true);
     try {
       await api.post('/auth/cambiar-rol', {
         id_persona: modalRol.id_persona,
-        rol: nuevoRol,
+        rol: modalRol.es_directiva ? undefined : nuevoRol,
         password: nuevaPassword || undefined,
       });
-      toast.success(`Rol actualizado a "${nuevoRol}" correctamente.`);
+      toast.success(modalRol.es_directiva ? 'Contraseña actualizada correctamente.' : `Rol actualizado a "${nuevoRol}" correctamente.`);
       setModalRol(null);
       fetchUsers();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'No se pudo actualizar el rol. Intenta de nuevo.');
+      toast.error(err.response?.data?.message || 'No se pudo actualizar. Intenta de nuevo.');
     } finally {
       setGuardandoRol(false);
     }
@@ -217,23 +211,30 @@ export default function UsuariosPadron() {
               <button onClick={() => setModalRol(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
             </div>
 
-            <p className="text-muted" style={{ marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+            <p className="text-muted" style={{ marginBottom: '1.25rem', fontSize: '0.9rem' }}>
               Modificar permisos de <strong style={{ color: 'var(--text-main)' }}>{modalRol.nombre}</strong>
             </p>
 
-            <div className="input-group" style={{ marginBottom: '1rem' }}>
-              <label className="input-label">Rol / Cargo en el sistema *</label>
-              <select className="form-select" value={nuevoRol} onChange={e => setNuevoRol(e.target.value)}>
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.3rem', display: 'block' }}>
-                {nuevoRol === 'Administrador' || nuevoRol === 'Presidente'
-                  ? '⚠️ Acceso total al sistema'
-                  : nuevoRol === 'Usuario Regular'
-                  ? 'Solo ve sus propios datos'
-                  : 'Acceso según cargo directivo'}
-              </span>
-            </div>
+            {modalRol.es_directiva ? (
+              <div style={{ marginBottom: '1.25rem', padding: '0.85rem 1rem', borderRadius: '0.5rem', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)' }}>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#f59e0b', fontWeight: 600 }}>
+                  Cargo asignado desde Directiva
+                </p>
+                <p style={{ margin: '0.3rem 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+                  <strong style={{ color: 'var(--text-main)' }}>{modalRol.rol_actual}</strong> — este cargo es gestionado desde el módulo de Directiva y no puede cambiarse aquí. Solo puedes actualizar la contraseña.
+                </p>
+              </div>
+            ) : (
+              <div className="input-group" style={{ marginBottom: '1rem' }}>
+                <label className="input-label">Rol en el sistema *</label>
+                <select className="form-select" value={nuevoRol} onChange={e => setNuevoRol(e.target.value)}>
+                  {ROLES_SISTEMA.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.3rem', display: 'block' }}>
+                  {nuevoRol === 'Administrador' ? '⚠️ Acceso total al sistema' : 'Solo ve sus propios datos y módulos habilitados'}
+                </span>
+              </div>
+            )}
 
             <div className="input-group" style={{ marginBottom: '1.5rem' }}>
               <label className="input-label">Nueva Contraseña <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>(dejar vacío para no cambiar)</span></label>
@@ -251,7 +252,7 @@ export default function UsuariosPadron() {
               <button
                 className="btn-primary"
                 style={{ width: 'auto', background: '#a78bfa', color: '#fff' }}
-                disabled={guardandoRol || nuevoRol === modalRol.rol_actual && !nuevaPassword}
+                disabled={guardandoRol || (modalRol.es_directiva ? !nuevaPassword : (nuevoRol === modalRol.rol_actual && !nuevaPassword))}
                 onClick={handleCambiarRol}
               >
                 {guardandoRol ? 'Guardando...' : 'Confirmar Cambio'}
