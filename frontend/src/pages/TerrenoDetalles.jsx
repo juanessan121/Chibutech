@@ -23,6 +23,7 @@ export default function TerrenoDetalles() {
   const [motivoTraspaso, setMotivoTraspaso] = useState('');
   const [motivoTouched, setMotivoTouched] = useState(false);
   const [directiva, setDirectiva] = useState([]);
+  const [tarifas, setTarifas] = useState({ metrosBase: 1000, valorBase: 5 });
 
   useEffect(() => {
     const fetch = async () => {
@@ -37,6 +38,13 @@ export default function TerrenoDetalles() {
     };
     fetch();
     api.get('/directiva/actual').then(res => setDirectiva(res.data.data || [])).catch(() => {});
+    api.get('/configuracion').then(res => {
+      const cfg = Object.fromEntries((res.data.data || []).map(c => [c.clave, parseFloat(c.valor)]));
+      setTarifas({
+        metrosBase: cfg['TARIFA_METROS_BASE'] || 1000,
+        valorBase:  cfg['TARIFA_VALOR_BASE']  || 5,
+      });
+    }).catch(() => {});
   }, [id]);
 
   const mapLat = parseFloat(terreno?.latitud) || -1.3281;
@@ -69,8 +77,8 @@ export default function TerrenoDetalles() {
 
     // Cálculo de cuota real (misma fórmula que en backend generarPlanillas)
     const areaM2 = parseFloat(terreno.area_m2) || 0;
-    const metrosBase = 1000;
-    const tarifaBase = 5.00;
+    const metrosBase = tarifas.metrosBase;
+    const tarifaBase = tarifas.valorBase;
     const fracciones = Math.ceil(areaM2 / metrosBase);
     const cuotaMensual = fracciones * tarifaBase;
     const cuotaAnual = cuotaMensual * 12;
@@ -469,8 +477,8 @@ export default function TerrenoDetalles() {
         {/* TAB 3: CUOTA DE PAGO */}
         {activeTab === 'turno' && (() => {
           const areaMz = parseFloat(terreno.area_m2) || 0;
-          const fracciones = Math.ceil(areaMz / 1000);
-          const cuotaMensual = fracciones * 5;
+          const fracciones = Math.ceil(areaMz / tarifas.metrosBase);
+          const cuotaMensual = fracciones * tarifas.valorBase;
           const cuotaAnual = cuotaMensual * 12;
           return (
           <div className="animate-fade-in">
@@ -478,7 +486,7 @@ export default function TerrenoDetalles() {
               Cuota de Pago por Predio
             </h3>
             <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              Calculado en base al área catastrada. Cada 1000 m² o fracción corresponde a <strong style={{ color: 'var(--text-main)' }}>$5.00 / mes</strong>.
+              Calculado en base al área catastrada. Cada {tarifas.metrosBase.toLocaleString('es-EC')} m² o fracción corresponde a <strong style={{ color: 'var(--text-main)' }}>${tarifas.valorBase.toFixed(2)} / mes</strong>.
             </p>
 
             <div style={{
@@ -498,12 +506,12 @@ export default function TerrenoDetalles() {
               </div>
 
               <div style={{ borderLeft: '1px solid rgba(255,255,255,0.08)', paddingLeft: '1.5rem' }}>
-                <p style={{ margin: '0 0 0.4rem 0', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Fracciones de 1000 m²</p>
+                <p style={{ margin: '0 0 0.4rem 0', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Fracciones de {tarifas.metrosBase.toLocaleString('es-EC')} m²</p>
                 <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                  {fracciones} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>× $5.00</span>
+                  {fracciones} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>× ${tarifas.valorBase.toFixed(2)}</span>
                 </p>
                 <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
-                  Cada 1000 m² o fracción = $5/mes
+                  Cada {tarifas.metrosBase.toLocaleString('es-EC')} m² o fracción = ${tarifas.valorBase.toFixed(2)}/mes
                 </p>
               </div>
 

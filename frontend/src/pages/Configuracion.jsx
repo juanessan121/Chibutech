@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, RefreshCw, Layers, MapPin, GraduationCap, Plus } from 'lucide-react';
+import { Settings, Save, RefreshCw, Layers, MapPin, GraduationCap, Plus, Calculator } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import axios from '../services/axiosConfig';
 import { allowTextWithPunctuation, allowOnlyLetters } from '../utils/validators';
@@ -207,7 +207,7 @@ export default function Configuracion() {
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {config.map((item, idx) => (
               <div key={item.clave} style={{
-                  display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '1.5rem', 
+                  display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '1.5rem',
                   padding: '1.2rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.05)'
                 }}>
                 <div>
@@ -227,6 +227,39 @@ export default function Configuracion() {
               </div>
             ))}
           </div>
+
+          {/* Panel de vista previa de la tarifa vigente */}
+          {(() => {
+            const getVal = (clave, fallback) => parseFloat(editando[clave] ?? config.find(c => c.clave === clave)?.valor ?? fallback) || fallback;
+            const metrosBase = getVal('TARIFA_METROS_BASE', 1000);
+            const valorBase  = getVal('TARIFA_VALOR_BASE', 5);
+            const ejemplos = [500, 1000, 2500, 5000];
+            const hayPendientes = Object.keys(editando).length > 0;
+            return (
+              <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.2)', borderRadius: '1rem' }}>
+                <p style={{ margin: '0 0 1rem 0', fontWeight: 600, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+                  <Calculator size={16} />
+                  {hayPendientes ? 'Vista previa (pendiente de guardar)' : 'Tarifa vigente'}
+                </p>
+                <p style={{ margin: '0 0 1rem 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  Fórmula: ⌈ Área ÷ {metrosBase.toLocaleString('es-EC')} m² ⌉ × ${valorBase.toFixed(2)} = cuota mensual
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+                  {ejemplos.map(area => {
+                    const fracs = Math.ceil(area / metrosBase);
+                    const cuota = fracs * valorBase;
+                    return (
+                      <div key={area} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '0.65rem', padding: '0.75rem 1rem' }}>
+                        <p style={{ margin: '0 0 0.2rem 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{area.toLocaleString('es-EC')} m²</p>
+                        <p style={{ margin: '0 0 0.1rem 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>${cuota.toFixed(2)}<span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>/mes</span></p>
+                        <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>{fracs} fracción{fracs !== 1 ? 'es' : ''}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
