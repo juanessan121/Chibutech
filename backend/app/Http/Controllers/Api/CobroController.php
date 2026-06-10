@@ -742,8 +742,8 @@ class CobroController extends Controller
     }
 
     /**
-     * Busca personas que tienen multas pendientes pero NO tienen terreno registrado.
-     * Sirve para que Ventanilla de Cobro pueda cobrarles aunque no aparezcan en buscar-universal.
+     * Busca personas que NO tienen terreno registrado (ni como titular ni copropietario).
+     * Complementa buscar-universal para que Ventanilla pueda atender a cualquier comunero.
      */
     public function buscarDeudorSinTerreno(Request $request): \Illuminate\Http\JsonResponse
     {
@@ -754,12 +754,6 @@ class CobroController extends Controller
 
         $personas = DB::table('Persona as p')
             ->leftJoin('Sector as s', 'p.id_sector', '=', 's.id_sector')
-            ->whereExists(function ($q) {
-                $q->select(DB::raw(1))
-                  ->from('Multa as m')
-                  ->whereColumn('m.id_persona', 'p.id_persona')
-                  ->where('m.estado_pago', 'Pendiente');
-            })
             ->whereNotExists(function ($q) {
                 $q->select(DB::raw(1))
                   ->from('Terreno as t')

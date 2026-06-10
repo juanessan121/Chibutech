@@ -201,8 +201,8 @@ export default function CobrosVentanilla() {
                           </span>
                         )}
                         {r.sin_terreno && (
-                          <span style={{ fontSize: '0.65rem', background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
-                            Solo multas
+                          <span style={{ fontSize: '0.65rem', background: 'rgba(148,163,184,0.15)', color: '#94a3b8', border: '1px solid rgba(148,163,184,0.25)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                            Sin terreno
                           </span>
                         )}
                       </div>
