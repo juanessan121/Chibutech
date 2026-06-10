@@ -29,3 +29,8 @@ export const actualizarMinga = async (idMinga, payload) => {
   const { data } = await axios.put(`/mingas/${idMinga}`, payload);
   return data;
 };
+
+export const getMingasActivasDetalle = async () => {
+  const { data } = await axios.get('/mingas/activas-detalle');
+  return data.data;
+};

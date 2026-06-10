@@ -55,6 +55,47 @@ class MingaController extends Controller
         return response()->json(['status' => 'ok', 'data' => $mingas]);
     }
 
+    public function activasDetalle()
+    {
+        $mingas = DB::table('Minga as m')
+            ->join('Catalogo_Estado_Minga as e', 'm.id_estado_minga', '=', 'e.id_estado_minga')
+            ->leftJoin(DB::raw('(
+                SELECT asm.id_minga,
+                       GROUP_CONCAT(DISTINCT s.nombre_sector ORDER BY s.nombre_sector SEPARATOR "|||") AS sectores,
+                       GROUP_CONCAT(DISTINCT z.nombre_zona  ORDER BY z.nombre_zona  SEPARATOR "|||") AS zonas,
+                       COUNT(DISTINCT p.id_persona) AS total_convocados
+                FROM Asignacion_Sector_Minga asm
+                JOIN Sector  s ON s.id_sector = asm.id_sector
+                JOIN Zona    z ON z.id_zona   = s.id_zona
+                JOIN Persona p ON p.id_sector = s.id_sector AND p.estado_vital = "Vivo"
+                GROUP BY asm.id_minga
+            ) AS sec'), 'sec.id_minga', '=', 'm.id_minga')
+            ->whereIn('e.nombre_estado', ['Programada', 'En Ejecución', 'Pospuesta', 'Suspendida'])
+            ->select(
+                'm.id_minga', 'm.fecha_programada', 'm.motivo_general', 'm.lugar_encuentro',
+                'e.nombre_estado', 'm.valor_multa_inasistencia', 'm.observacion_estado',
+                'sec.sectores', 'sec.zonas',
+                DB::raw('COALESCE(sec.total_convocados, 0) AS total_convocados')
+            )
+            ->orderBy('m.fecha_programada', 'asc')
+            ->get();
+
+        $data = $mingas->map(fn($m) => [
+            'id'               => $m->id_minga,
+            'fecha'            => $m->fecha_programada,
+            'motivo'           => $m->motivo_general,
+            'lugar'            => $m->lugar_encuentro,
+            'estado'           => $m->nombre_estado,
+            'multa'            => (float) $m->valor_multa_inasistencia,
+            'obs'              => $m->observacion_estado,
+            'sectores'         => $m->sectores ? explode('|||', $m->sectores) : [],
+            'zonas'            => $m->zonas    ? array_values(array_unique(explode('|||', $m->zonas))) : [],
+            'total_convocados' => (int) $m->total_convocados,
+        ]);
+
+        return response()->json(['status' => 'ok', 'data' => $data]);
+    }
+
     public function convocados($id)
     {
         // Obtener sectores asignados

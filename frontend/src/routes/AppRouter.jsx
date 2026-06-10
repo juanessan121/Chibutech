@@ -12,6 +12,7 @@ import Mingas from '../pages/Mingas';
 import MingasProgramar from '../pages/MingasProgramar';
 import MingasAsistencia from '../pages/MingasAsistencia';
 import MingasHistorial from '../pages/MingasHistorial';
+import MingasActivas from '../pages/MingasActivas';
 import Cobros from '../pages/Cobros';
 import CobrosVentanilla from '../pages/CobrosVentanilla';
 import CobrosGenerar from '../pages/CobrosGenerar';
@@ -84,6 +85,7 @@ export default function AppRouter() {
           <Route path="mingas">
             <Route index element={<PermissionRoute permission="ver_mingas"><Mingas /></PermissionRoute>} />
             <Route path="historial" element={<PermissionRoute permission="ver_mingas"><MingasHistorial /></PermissionRoute>} />
+            <Route path="activas" element={<PermissionRoute permission="ver_mingas"><MingasActivas /></PermissionRoute>} />
             <Route path="programar" element={<PermissionRoute permission="gestionar_mingas"><MingasProgramar /></PermissionRoute>} />
             <Route path="asistencia" element={<PermissionRoute permission="gestionar_mingas"><MingasAsistencia /></PermissionRoute>} />
           </Route>
