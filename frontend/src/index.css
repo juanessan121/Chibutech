@@ -221,6 +221,15 @@ body {
   color: rgba(148, 163, 184, 0.5);
 }
 
+.input-field::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.6);
+  cursor: pointer;
+}
+
+.input-field::-webkit-calendar-picker-indicator:hover {
+  filter: invert(1) opacity(1);
+}
+
 /* Buttons */
 .btn-primary {
   width: 100%;
