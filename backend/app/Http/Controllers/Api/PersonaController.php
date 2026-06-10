@@ -226,11 +226,17 @@ class PersonaController extends Controller
         $query = DB::table('Persona as p')
             ->leftJoin('Sector as s', 'p.id_sector', '=', 's.id_sector')
             ->leftJoin('usuarios as u', 'p.id_persona', '=', 'u.id_persona')
+            ->leftJoin('Miembro_Directiva as md', function($join) {
+                $join->on('md.id_persona', '=', 'p.id_persona')
+                     ->where('md.estado', '=', 'Activo');
+            })
+            ->leftJoin('Catalogo_Cargo_Directivo as cd', 'cd.id_cargo_directivo', '=', 'md.id_cargo_directivo')
             ->select(
                 'p.id_persona', 'p.cedula', 'p.nombre', 'p.apellido',
                 'p.estado_vital', 'p.estado_registro',
                 's.nombre_sector',
-                'u.rol as rol_sistema'
+                'u.rol as rol_sistema',
+                'cd.nombre_cargo as cargo_directiva'
             );
 
         if (!$request->query('include_dependents')) {
@@ -255,8 +261,14 @@ class PersonaController extends Controller
                 $estado = 'Activo';
             }
 
-            // Rol real desde tabla usuarios, o Comunero si no tiene usuario
-            $rol = $p->rol_sistema ?? 'Comunero';
+            // Prioridad: cargo activo en directiva > Administrador del sistema > Comunero
+            if (!empty($p->cargo_directiva)) {
+                $rol = $p->cargo_directiva;
+            } elseif ($p->rol_sistema === 'Administrador') {
+                $rol = 'Administrador';
+            } else {
+                $rol = 'Comunero';
+            }
 
             return [
                 'id'             => $p->id_persona,

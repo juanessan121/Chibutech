@@ -20,7 +20,7 @@ fi
 # Siempre se ejecuta: si vendor/ no existe lo instala (~60s), si ya existe solo
 # verifica que este al dia (~2s). Garantiza que git pull con nuevos paquetes funcione.
 echo "[2/7] Verificando dependencias PHP (composer install)..."
-composer install --no-interaction --no-progress --optimize-autoloader
+composer install --no-interaction --no-progress
 echo "[2/7] Dependencias PHP listas."
 
 # ── 3. Generar APP_KEY si está vacío ──────────────────────────────────────────
