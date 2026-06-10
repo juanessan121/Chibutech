@@ -763,7 +763,7 @@ class CobroController extends Controller
             ->whereNotExists(function ($q) {
                 $q->select(DB::raw(1))
                   ->from('Terreno as t')
-                  ->whereColumn('t.id_titular', 'p.id_persona');
+                  ->whereColumn('t.id_persona', 'p.id_persona');
             })
             ->whereNotExists(function ($q) {
                 $q->select(DB::raw(1))
