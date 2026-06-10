@@ -155,6 +155,68 @@ class MingaController extends Controller
         }
     }
 
+    public function update(Request $request, $id): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'accion'      => 'required|in:posponer,cancelar,reactivar',
+            'nueva_fecha' => 'required_if:accion,posponer|required_if:accion,reactivar|nullable|date',
+            'observacion' => 'nullable|string|max:500',
+        ]);
+
+        $minga = DB::table('Minga')->where('id_minga', $id)->first();
+        if (!$minga) {
+            return response()->json(['status' => 'error', 'message' => 'Minga no encontrada'], 404);
+        }
+
+        $estados = DB::table('Catalogo_Estado_Minga')->pluck('id_estado_minga', 'nombre_estado');
+        $idProgramada = $estados['Programada'] ?? 1;
+        $idPospuesta  = $estados['Pospuesta']  ?? null;
+        $idCancelada  = $estados['Cancelada']  ?? 5;
+        $idSuspendida = $estados['Suspendida'] ?? 4;
+
+        switch ($request->accion) {
+            case 'posponer':
+                if (!in_array($minga->id_estado_minga, [$idProgramada, $idPospuesta, $idSuspendida])) {
+                    return response()->json(['status' => 'error', 'message' => 'Solo se puede posponer una minga Programada, Pospuesta o Suspendida'], 422);
+                }
+                DB::table('Minga')->where('id_minga', $id)->update([
+                    'id_estado_minga'    => $idPospuesta,
+                    'fecha_programada'   => $request->nueva_fecha,
+                    'observacion_estado' => $request->observacion,
+                ]);
+                $mensaje = 'Minga marcada como Pospuesta para ' . $request->nueva_fecha;
+                break;
+
+            case 'cancelar':
+                if ($minga->id_estado_minga == 3) {
+                    return response()->json(['status' => 'error', 'message' => 'No se puede cancelar una minga ya finalizada'], 422);
+                }
+                DB::table('Minga')->where('id_minga', $id)->update([
+                    'id_estado_minga'    => $idCancelada,
+                    'observacion_estado' => $request->observacion,
+                ]);
+                $mensaje = 'Minga cancelada correctamente';
+                break;
+
+            case 'reactivar':
+                if (!in_array($minga->id_estado_minga, [$idPospuesta, $idSuspendida, $idCancelada])) {
+                    return response()->json(['status' => 'error', 'message' => 'Solo se puede reactivar una minga Pospuesta, Suspendida o Cancelada'], 422);
+                }
+                DB::table('Minga')->where('id_minga', $id)->update([
+                    'id_estado_minga'    => $idProgramada,
+                    'fecha_programada'   => $request->nueva_fecha,
+                    'observacion_estado' => $request->observacion,
+                ]);
+                $mensaje = 'Minga reprogramada para ' . $request->nueva_fecha;
+                break;
+
+            default:
+                return response()->json(['status' => 'error', 'message' => 'Acción no válida'], 422);
+        }
+
+        return response()->json(['status' => 'ok', 'message' => $mensaje]);
+    }
+
     public function store(Request $request)
     {
         $fecha = substr($request->fecha_hora_programada, 0, 10);

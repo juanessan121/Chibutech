@@ -24,3 +24,8 @@ export const registrarAsistencia = async (idMinga, asistenciaData) => {
   const { data } = await axios.post(`/mingas/${idMinga}/asistencia`, asistenciaData);
   return data;
 };
+
+export const actualizarMinga = async (idMinga, payload) => {
+  const { data } = await axios.put(`/mingas/${idMinga}`, payload);
+  return data;
+};

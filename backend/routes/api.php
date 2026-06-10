@@ -66,6 +66,7 @@ Route::get('/mingas/activas', [MingaController::class, 'activas']);
 Route::get('/mingas/{id}/convocados', [MingaController::class, 'convocados']);
 Route::post('/mingas/{id}/asistencia', [MingaController::class, 'registrarAsistencia']);
 Route::post('/mingas', [MingaController::class, 'store']);
+Route::put('/mingas/{id}', [MingaController::class, 'update']);
 
 // Cobros y Caja
 Route::get('/cobros/deudas/{id}', [CobroController::class, 'deudasPendientes']);
