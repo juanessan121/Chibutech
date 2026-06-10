@@ -16,14 +16,12 @@ else
     echo "[1/7] .env ya existe — OK"
 fi
 
-# ── 2. Instalar dependencias Composer si vendor/ no existe ────────────────────
-if [ ! -d vendor ]; then
-    echo "[2/7] Instalando dependencias PHP (primera vez, ~60 segundos)..."
-    composer install --no-interaction --no-progress --optimize-autoloader
-    echo "[2/7] Dependencias instaladas."
-else
-    echo "[2/7] vendor/ ya existe — OK"
-fi
+# ── 2. Instalar / actualizar dependencias Composer ───────────────────────────
+# Siempre se ejecuta: si vendor/ no existe lo instala (~60s), si ya existe solo
+# verifica que este al dia (~2s). Garantiza que git pull con nuevos paquetes funcione.
+echo "[2/7] Verificando dependencias PHP (composer install)..."
+composer install --no-interaction --no-progress --optimize-autoloader
+echo "[2/7] Dependencias PHP listas."
 
 # ── 3. Generar APP_KEY si está vacío ──────────────────────────────────────────
 APP_KEY_VAL=$(grep "^APP_KEY=" .env | cut -d'=' -f2)

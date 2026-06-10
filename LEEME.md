@@ -1,8 +1,9 @@
 # Chibutech ERP — Guía rápida para el equipo
 
 ## Requisitos previos
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y corriendo
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y **corriendo**
 - Git instalado
+- Puertos libres: **5173**, **8080**, **8081**, **3308**
 
 ---
 
@@ -15,33 +16,64 @@ git checkout feat/mejoras-jun-2026
 docker compose up --build -d
 ```
 
-Espera ~2–3 minutos la primera vez. El sistema hace todo solo:
-- Importa la base de datos
-- Instala dependencias PHP (Composer)
-- Genera la clave de la aplicación
-- Aplica todas las migraciones
-- Levanta el frontend con sus dependencias
+La primera vez tarda **3–5 minutos** — el sistema hace todo solo:
+1. Crea la base de datos e importa los datos iniciales (catálogos, sectores)
+2. Instala dependencias PHP con Composer
+3. Genera la clave de la aplicación (APP_KEY)
+4. Aplica todas las migraciones de base de datos
+5. Crea el usuario administrador
+6. Instala dependencias del frontend (npm)
+7. Levanta todos los servicios
 
-## Acceder al sistema
-
-| Servicio | URL |
-|---|---|
-| Frontend (app) | http://localhost:5173 |
-| Backend API | http://localhost:8080/api |
-| phpMyAdmin | http://localhost:8081 |
+Para ver el progreso en tiempo real:
+```bash
+docker compose logs -f backend
+```
 
 ---
 
-## Después de hacer `git pull` (actualizaciones)
+## Acceder al sistema
+
+| Servicio        | URL                          |
+|-----------------|------------------------------|
+| **App web**     | http://localhost:5173        |
+| Backend API     | http://localhost:8080/api    |
+| phpMyAdmin (BD) | http://localhost:8081        |
+
+### Credenciales de acceso al sistema
+
+| Campo    | Valor   |
+|----------|---------|
+| Usuario  | `admin` |
+| Clave    | `admin` |
+
+> Cambia la contraseña desde el perfil después del primer acceso.
+
+### Credenciales de base de datos (DBeaver / TablePlus / phpMyAdmin)
+
+| Campo      | Valor           |
+|------------|-----------------|
+| Host       | `127.0.0.1`     |
+| Puerto     | `3308`          |
+| Base datos | `basechi`       |
+| Usuario    | `ChibuleoP2026` |
+| Contraseña | `Chibutech2026` |
+
+---
+
+## Después de hacer `git pull` (actualizaciones del equipo)
 
 ```bash
 git pull
 docker compose restart
 ```
 
-El contenedor aplica automáticamente las migraciones nuevas al reiniciar.  
-Si hay cambios en el `Dockerfile` o dependencias PHP nuevas:
+El sistema aplica automáticamente al reiniciar:
+- Migraciones nuevas de base de datos
+- Dependencias PHP nuevas (Composer)
+- Dependencias npm nuevas (frontend)
 
+**Si hay cambios en algún `Dockerfile`** (poco frecuente):
 ```bash
 git pull
 docker compose up --build -d
@@ -55,31 +87,51 @@ docker compose up --build -d
 docker compose down
 ```
 
+Para apagar **y borrar la base de datos** (empezar desde cero):
+```bash
+docker compose down -v
+```
+
+> ⚠️ `down -v` elimina todos los datos. Úsalo solo si quieres un reset total.
+
+---
+
+## Solución de problemas comunes
+
+### El frontend no carga / error de conexión
+Espera 30 segundos más — el backend puede estar terminando de iniciar.
+Verifica con: `docker compose ps` (todos deben estar `Up`)
+
+### Error al iniciar: puerto ocupado
+Alguien tiene otro servicio en el puerto 5173, 8080, 8081 o 3308.
+Cierra ese servicio o edita los puertos en `docker-compose.yml`.
+
+### La base de datos está vacía / no hay datos
+```bash
+docker compose down -v
+docker compose up --build -d
+```
+
+### Ver logs de un contenedor
+```bash
+docker compose logs -f backend     # PHP / Laravel
+docker compose logs -f frontend    # Vite / React
+docker compose logs -f db          # MariaDB
+```
+
 ---
 
 ## Correo electrónico (opcional)
 
-Por defecto los correos se guardan en logs (`storage/logs/laravel.log`).  
-Para activar envío real de correos, edita `backend/.env`:
+Por defecto los correos se guardan en logs y no se envían realmente.
+Para activar envío real, edita `backend/.env`:
 
-```
+```env
 MAIL_MAILER=smtp
 MAIL_USERNAME=tu_correo@gmail.com
 MAIL_PASSWORD=tu_clave_de_aplicacion_gmail
 MAIL_FROM_ADDRESS=tu_correo@gmail.com
 ```
 
-La clave de aplicación se genera en:  
+La clave de aplicación se genera en:
 `Cuenta Google → Seguridad → Verificación en 2 pasos → Contraseñas de aplicaciones`
-
----
-
-## Base de datos (conexión externa con DBeaver / TablePlus)
-
-| Campo | Valor |
-|---|---|
-| Host | 127.0.0.1 |
-| Puerto | 3308 |
-| Base de datos | basechi |
-| Usuario | ChibuleoP2026 |
-| Contraseña | Chibutech2026 |
