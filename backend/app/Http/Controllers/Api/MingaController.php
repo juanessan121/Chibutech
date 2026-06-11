@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Minga;
 use App\Models\AsignacionSectorMinga;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Api\NotificacionController as Notif;
 
 class MingaController extends Controller
 {
@@ -181,6 +182,15 @@ class MingaController extends Controller
                     }
                     if (!empty($multasToInsert)) {
                         DB::table('Multa')->insert($multasToInsert);
+                        foreach ($multasToInsert as $multa) {
+                            Notif::insertar(
+                                $multa['id_persona'],
+                                'multa',
+                                'Multa por inasistencia a minga',
+                                "Se generó una multa de \${$valorMulta} por inasistencia: {$mingaData->motivo_general}",
+                                '/dashboard/mis-deudas'
+                            );
+                        }
                     }
                 }
 
@@ -290,6 +300,14 @@ class MingaController extends Controller
             }
 
             DB::commit();
+
+            $fechaFmt = \Carbon\Carbon::parse($fecha)->format('d/m/Y');
+            Notif::broadcast(
+                'minga',
+                'Nueva minga programada',
+                "Se ha programado una minga para el {$fechaFmt}: {$request->motivo_minga} — {$request->lugar_encuentro}",
+                '/dashboard/mingas/activas'
+            );
 
             return response()->json(['status' => 'ok', 'message' => 'Minga programada correctamente', 'data' => $minga]);
 

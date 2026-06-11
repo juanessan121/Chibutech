@@ -96,6 +96,11 @@ Route::post('/directiva', [\App\Http\Controllers\Api\DirectivaController::class,
 Route::post('/directiva/reactivar', [\App\Http\Controllers\Api\DirectivaController::class, 'reactivar']);
 Route::patch('/directiva/miembro', [\App\Http\Controllers\Api\DirectivaController::class, 'cambiarMiembro']);
 
+// Notificaciones
+Route::get('/notificaciones', [\App\Http\Controllers\Api\NotificacionController::class, 'index']);
+Route::post('/notificaciones/leidas', [\App\Http\Controllers\Api\NotificacionController::class, 'marcarTodasLeidas']);
+Route::patch('/notificaciones/{id}/leida', [\App\Http\Controllers\Api\NotificacionController::class, 'marcarLeida']);
+
 // Auditoría
 Route::get('/auditoria', [\App\Http\Controllers\Api\AuditoriaController::class, 'index']);
 

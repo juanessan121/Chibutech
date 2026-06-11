@@ -9,6 +9,7 @@ use App\Models\PlanillaCabecera;
 use App\Models\PlanillaDetalle;
 use App\Models\CajaComunitaria;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Api\NotificacionController as Notif;
 
 class CobroController extends Controller
 {
@@ -205,6 +206,14 @@ class CobroController extends Controller
                 'url_documento_justificativo' => $validated['url_documento'] ?? null,
                 'fecha_emision'               => now(),
             ]);
+
+            Notif::insertar(
+                (int) $validated['id_persona'],
+                'multa',
+                'Nueva multa registrada',
+                "Se registró una multa de \${$validated['monto']}: {$validated['motivo']}",
+                '/dashboard/mis-deudas'
+            );
 
             return response()->json(['status' => 'ok', 'message' => 'Multa generada correctamente', 'data' => $multa]);
         } catch (\Exception $e) {
@@ -616,8 +625,9 @@ class CobroController extends Controller
             $tarifaBase = (float) ($config['TARIFA_VALOR_BASE'] ?? 5.00);
             $metrosBase = (float) ($config['TARIFA_METROS_BASE'] ?? 1000.00);
 
-            $generadas = 0;
-            $omitidas  = 0;
+            $generadas       = 0;
+            $omitidas        = 0;
+            $notifPlanillas  = [];
 
             DB::beginTransaction();
 
@@ -631,7 +641,7 @@ class CobroController extends Controller
                     ->toArray()
             );
 
-            DB::table('Terreno')->orderBy('id_terreno')->chunk(200, function ($terrenos) use ($mes, $anio, $tarifaBase, $metrosBase, &$generadas, &$omitidas, $existentesSet) {
+            DB::table('Terreno')->orderBy('id_terreno')->chunk(200, function ($terrenos) use ($mes, $anio, $tarifaBase, $metrosBase, &$generadas, &$omitidas, &$notifPlanillas, $existentesSet) {
                 foreach ($terrenos as $terreno) {
                     if (isset($existentesSet[$terreno->id_terreno])) { $omitidas++; continue; }
 
@@ -653,10 +663,21 @@ class CobroController extends Controller
                         'area_terreno_copia' => $area,
                         'subtotal_calculado' => $subtotal,
                     ]);
+                    $notifPlanillas[] = ['id_persona' => $terreno->id_persona, 'subtotal' => $subtotal];
                     $generadas++;
                 }
             });
             DB::commit();
+
+            foreach ($notifPlanillas as $np) {
+                Notif::insertar(
+                    (int) $np['id_persona'],
+                    'planilla',
+                    'Nueva planilla generada',
+                    "Se generó tu planilla de {$mes}/{$anio} por \${$np['subtotal']}",
+                    '/dashboard/mis-deudas'
+                );
+            }
 
             return response()->json([
                 'status'  => 'ok',

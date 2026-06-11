@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Exception;
+use App\Http\Controllers\Api\NotificacionController as Notif;
 
 class DirectivaController extends Controller
 {
@@ -246,6 +247,25 @@ class DirectivaController extends Controller
 
             DB::commit();
 
+            $fechaFmt = \Carbon\Carbon::parse($validated['fecha_inicio'])->format('d/m/Y');
+            foreach ($request->input('cargos', []) as $cargo) {
+                if (empty($cargo['id_persona'])) continue;
+                $rolNombre = match ((int) ($cargo['id_cargo_directivo'] ?? 0)) {
+                    1 => 'Presidente',
+                    2 => 'Vicepresidente',
+                    3 => 'Secretario',
+                    4 => 'Tesorero',
+                    default => 'Vocal',
+                };
+                Notif::insertar(
+                    (int) $cargo['id_persona'],
+                    'directiva',
+                    'Nombramiento en la directiva',
+                    "Ha sido nombrado como {$rolNombre} en la nueva directiva desde el {$fechaFmt}",
+                    '/dashboard/directiva'
+                );
+            }
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Directiva registrada correctamente. La anterior ha sido finalizada.'
@@ -327,6 +347,16 @@ class DirectivaController extends Controller
             );
 
             DB::commit();
+
+            $rolMap2 = [1 => 'Presidente', 2 => 'Vicepresidente', 3 => 'Secretario', 4 => 'Tesorero'];
+            $rolNuevo = $rolMap2[(int) $request->id_cargo_directivo] ?? 'Vocal';
+            Notif::insertar(
+                (int) $request->id_persona_nueva,
+                'directiva',
+                'Nombramiento en la directiva',
+                "Ha sido nombrado como {$rolNuevo} en la directiva a partir de hoy",
+                '/dashboard/directiva'
+            );
 
             return response()->json([
                 'status'  => 'success',

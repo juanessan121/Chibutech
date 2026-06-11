@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
-import { Droplets, LogOut, LayoutDashboard, Users, FileText, Settings, ShieldAlert, UserCircle, Droplet, Award, Map, MapPin, Menu, Bell, Search, User, X, CheckCircle, ChevronRight } from 'lucide-react';
+import { Droplets, LogOut, LayoutDashboard, Users, FileText, Settings, ShieldAlert, UserCircle, Droplet, Award, Map, MapPin, Menu, Bell, Search, User, X, CheckCircle, ChevronRight, Calendar, Wallet, AlertTriangle } from 'lucide-react';
 import { usePermissions } from '../hooks/usePermissions';
 import { Toaster } from 'sonner';
 import bgLayout from '../assets/bg_layout.png';
+import { getNotificaciones, marcarLeida, marcarTodasLeidas } from '../services/notificacionService';
 
 export default function DashboardLayout() {
   const user = useAuthStore((state) => state.user);
@@ -18,11 +19,28 @@ export default function DashboardLayout() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [noLeidas, setNoLeidas] = useState(0);
+  const [loadingNotif, setLoadingNotif] = useState(false);
 
   const notificationsRef = useRef(null);
 
-  const multasNotifications = notifications.filter(n => n.type === 'multa');
-  const unreadCount = multasNotifications.filter(n => n.unread).length;
+  const fetchNotificaciones = useCallback(async () => {
+    try {
+      const res = await getNotificaciones();
+      setNotifications(res.data || []);
+      setNoLeidas(res.no_leidas || 0);
+    } catch {
+      // silencioso — no interrumpir el layout
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotificaciones();
+    const interval = setInterval(fetchNotificaciones, 120000);
+    return () => clearInterval(interval);
+  }, [fetchNotificaciones]);
+
+  const unreadCount = noLeidas;
 
   // Cerrar notificaciones al cambiar de página
   useEffect(() => {
@@ -62,6 +80,7 @@ export default function DashboardLayout() {
       activePaths: ['/dashboard/mingas'],
       subItems: [
         { name: 'Control de Mingas', path: '/dashboard/mingas' },
+        { name: 'Mingas Activas', path: '/dashboard/mingas/activas' },
         { name: 'Historial de Mingas', path: '/dashboard/mingas/historial' },
         { name: 'Programar Minga', path: '/dashboard/mingas/programar', show: hasPermission('gestionar_mingas') },
         { name: 'Tomar Asistencia', path: '/dashboard/mingas/asistencia', show: hasPermission('gestionar_mingas') }
@@ -348,39 +367,51 @@ export default function DashboardLayout() {
           <div className="topbar-actions">
             {/* Campana de Notificaciones */}
             <div style={{ position: 'relative' }} ref={notificationsRef}>
-              <div 
+              <div
                 className={`notifications-bell-container ${unreadCount > 0 ? 'bell-animate' : ''}`}
-                onClick={() => {
+                onClick={async () => {
                   const isOpening = !showNotifications;
                   setShowNotifications(isOpening);
-                  
-                  // Auto-marcar como leído si se está abriendo
-                  if (isOpening && unreadCount > 0) {
-                    // Opcional: Pequeño delay para que el usuario alcance a ver que se abrieron y luego desaparezca el contador
-                    setTimeout(() => {
-                      setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
-                    }, 500);
+                  if (isOpening) {
+                    setLoadingNotif(true);
+                    await fetchNotificaciones();
+                    setLoadingNotif(false);
                   }
                 }}
               >
                 <Bell size={18} />
-                {unreadCount > 0 && <span className="bell-badge">{unreadCount}</span>}
+                {unreadCount > 0 && <span className="bell-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
               </div>
 
               {showNotifications && (
                 <div className="notifications-popover glass-card">
-                  <div className="notifications-header">
-                    <h4>Notificaciones</h4>
+                  <div className="notifications-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h4 style={{ margin: 0 }}>Notificaciones {unreadCount > 0 && <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>({unreadCount} nuevas)</span>}</h4>
+                    {unreadCount > 0 && (
+                      <button
+                        style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.78rem', cursor: 'pointer', padding: '0.25rem 0.5rem', borderRadius: '0.4rem', whiteSpace: 'nowrap' }}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          await marcarTodasLeidas();
+                          setNotifications(prev => prev.map(n => ({ ...n, leida: true })));
+                          setNoLeidas(0);
+                        }}
+                      >
+                        Marcar todas leídas
+                      </button>
+                    )}
                   </div>
                   <div className="notifications-list" style={{ padding: '0.5rem' }}>
-                    {multasNotifications.length === 0 ? (
-                      <div style={{ 
-                        padding: '2.5rem 1rem', 
-                        textAlign: 'center', 
-                        color: '#94a3b8', 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        alignItems: 'center', 
+                    {loadingNotif ? (
+                      <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>Cargando...</div>
+                    ) : notifications.length === 0 ? (
+                      <div style={{
+                        padding: '2.5rem 1rem',
+                        textAlign: 'center',
+                        color: '#94a3b8',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
                         gap: '0.8rem',
                         backgroundColor: 'rgba(241, 245, 249, 0.03)',
                         borderRadius: '0.75rem',
@@ -388,101 +419,92 @@ export default function DashboardLayout() {
                       }}>
                         <CheckCircle size={32} style={{ color: 'var(--green)', opacity: 0.8 }} />
                         <div>
-                          <p style={{ margin: 0, fontWeight: '600', color: 'var(--text-main)', fontSize: '0.95rem' }}>¡Todo al día!</p>
-                          <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>No hay multas pendientes</p>
+                          <p style={{ margin: 0, fontWeight: '600', color: 'var(--text-main)', fontSize: '0.95rem' }}>¡Sin notificaciones!</p>
+                          <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>Todo en orden por ahora</p>
                         </div>
                       </div>
                     ) : (
-                      multasNotifications.map(n => (
-                        <div 
-                          key={n.id} 
-                          className={`notification-item ${n.unread ? 'unread' : ''}`}
-                          style={{ 
-                            cursor: 'pointer', 
-                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)', 
-                            backgroundColor: n.unread ? 'rgba(239, 68, 68, 0.04)' : 'transparent',
-                            borderRadius: '0.75rem',
-                            margin: '0.25rem 0.5rem',
-                            padding: '0.85rem',
-                            border: '1px solid transparent',
-                            display: 'flex',
-                            alignItems: 'center',
-                            position: 'relative',
-                            overflow: 'hidden'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
-                            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)';
-                            e.currentTarget.style.transform = 'translateY(-1px)';
-                            const chevron = e.currentTarget.querySelector('.chevron-icon');
-                            if (chevron) {
-                              chevron.style.transform = 'translateX(4px)';
-                              chevron.style.opacity = '1';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = n.unread ? 'rgba(239, 68, 68, 0.04)' : 'transparent';
-                            e.currentTarget.style.borderColor = 'transparent';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            const chevron = e.currentTarget.querySelector('.chevron-icon');
-                            if (chevron) {
-                              chevron.style.transform = 'translateX(0)';
-                              chevron.style.opacity = '0.5';
-                            }
-                          }}
-                          onClick={() => {
-                            setNotifications(notifications.map(item => item.id === n.id ? { ...item, unread: false } : item));
-                            setShowNotifications(false);
-                            
-                            // Redirección inteligente basada en los permisos del usuario
-                            // utilizando el identificador de la multa (n.id)
-                            if (hasPermission('gestionar_multas')) {
-                              navigate(`/dashboard/cobros/ventanilla?multaId=${n.id}`, { state: { multaId: n.id } });
-                            } else {
-                              navigate(`/dashboard/mis-deudas?multaId=${n.id}`, { state: { multaId: n.id } });
-                            }
-                          }}
-                        >
-                          {n.unread && (
-                            <div style={{
-                              position: 'absolute',
-                              left: 0,
-                              top: '50%',
-                              transform: 'translateY(-50%)',
-                              width: '4px',
-                              height: '40%',
-                              backgroundColor: 'var(--red)',
-                              borderRadius: '0 4px 4px 0'
-                            }} />
-                          )}
-                          <div 
-                            className="notification-icon-wrapper" 
-                            style={{ 
-                              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.05) 100%)',
-                              color: 'var(--red)',
-                              boxShadow: '0 4px 10px rgba(239, 68, 68, 0.1)',
-                              border: '1px solid rgba(239, 68, 68, 0.1)'
+                      notifications.map(n => {
+                        const tipoConfig = {
+                          multa:     { Icon: AlertTriangle, color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
+                          minga:     { Icon: Calendar,      color: '#0ea5e9', bg: 'rgba(14,165,233,0.15)' },
+                          directiva: { Icon: Award,         color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
+                          planilla:  { Icon: Wallet,        color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)' },
+                          sistema:   { Icon: Bell,          color: '#94a3b8', bg: 'rgba(148,163,184,0.15)' },
+                        }[n.tipo] || { Icon: Bell, color: '#94a3b8', bg: 'rgba(148,163,184,0.15)' };
+                        const { Icon, color, bg } = tipoConfig;
+                        const isUnread = !n.leida;
+                        const fecha = new Date(n.fecha_creacion);
+                        const ahora = new Date();
+                        const diffMin = Math.floor((ahora - fecha) / 60000);
+                        const tiempoStr = diffMin < 1 ? 'Ahora mismo'
+                          : diffMin < 60 ? `hace ${diffMin} min`
+                          : diffMin < 1440 ? `hace ${Math.floor(diffMin / 60)}h`
+                          : fecha.toLocaleDateString('es-EC', { day: '2-digit', month: 'short' });
+
+                        return (
+                          <div
+                            key={n.id}
+                            className={`notification-item ${isUnread ? 'unread' : ''}`}
+                            style={{
+                              cursor: 'pointer',
+                              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                              backgroundColor: isUnread ? `${color}08` : 'transparent',
+                              borderRadius: '0.75rem',
+                              margin: '0.25rem 0.5rem',
+                              padding: '0.85rem',
+                              border: '1px solid transparent',
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              gap: '0.75rem',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = `${color}12`;
+                              e.currentTarget.style.borderColor = `${color}30`;
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = isUnread ? `${color}08` : 'transparent';
+                              e.currentTarget.style.borderColor = 'transparent';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                            }}
+                            onClick={async () => {
+                              if (isUnread) {
+                                await marcarLeida(n.id);
+                                setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, leida: true } : item));
+                                setNoLeidas(prev => Math.max(0, prev - 1));
+                              }
+                              setShowNotifications(false);
+                              if (n.url_destino) navigate(n.url_destino);
                             }}
                           >
-                            <ShieldAlert size={16} strokeWidth={2.5} />
+                            {isUnread && (
+                              <div style={{
+                                position: 'absolute',
+                                left: 0, top: '50%',
+                                transform: 'translateY(-50%)',
+                                width: '4px', height: '40%',
+                                backgroundColor: color,
+                                borderRadius: '0 4px 4px 0'
+                              }} />
+                            )}
+                            <div
+                              className="notification-icon-wrapper"
+                              style={{ background: bg, color, border: `1px solid ${color}20`, flexShrink: 0 }}
+                            >
+                              <Icon size={16} strokeWidth={2.5} />
+                            </div>
+                            <div className="notification-item-content" style={{ flex: 1, minWidth: 0 }}>
+                              <p className="notification-title" style={{ fontSize: '0.88rem', fontWeight: isUnread ? '700' : '600', margin: 0 }}>{n.titulo}</p>
+                              <p className="notification-text" style={{ fontSize: '0.79rem', lineHeight: '1.4', margin: '0.2rem 0 0' }}>{n.mensaje}</p>
+                              <span className="notification-time" style={{ fontSize: '0.72rem', marginTop: '0.3rem', display: 'block', color: '#64748b' }}>{tiempoStr}</span>
+                            </div>
+                            <ChevronRight size={16} style={{ color: '#64748b', opacity: 0.5, flexShrink: 0, marginTop: '2px' }} />
                           </div>
-                          <div className="notification-item-content" style={{ flex: 1 }}>
-                            <p className="notification-title" style={{ fontSize: '0.9rem', fontWeight: n.unread ? '700' : '600' }}>{n.title}</p>
-                            <p className="notification-text" style={{ fontSize: '0.8rem', lineHeight: '1.4' }}>{n.text}</p>
-                            <span className="notification-time" style={{ fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>{n.time}</span>
-                          </div>
-                          <ChevronRight 
-                            className="chevron-icon"
-                            size={18} 
-                            style={{ 
-                              color: 'var(--text-muted)', 
-                              opacity: 0.5, 
-                              transition: 'all 0.2s ease',
-                              marginLeft: '0.5rem'
-                            }} 
-                          />
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
