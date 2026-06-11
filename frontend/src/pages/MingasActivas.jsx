@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Zap, ChevronDown, ChevronUp,
   Calendar, MapPin, Users, AlertCircle,
-  RotateCcw, Ban, X, CalendarPlus, Layers, Map,
+  RotateCcw, Ban, X, CalendarPlus, Layers, Map, ClipboardCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getMingasActivasDetalle, actualizarMinga } from '../services/mingaService';
@@ -152,6 +152,7 @@ export default function MingasActivas() {
           {mingas.map((minga) => {
             const s = ESTADO_STYLE[minga.estado] || ESTADO_STYLE['Programada'];
             const abierto = expandido === minga.id;
+            const fechaPasada = minga.estado === 'Programada' && new Date(minga.fecha + 'T23:59:59') < new Date();
 
             return (
               <div
@@ -179,6 +180,17 @@ export default function MingasActivas() {
                     {/* Fila superior: estado + motivo */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
                       <EstadoBadge estado={minga.estado} />
+                      {fechaPasada && (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                          padding: '0.15rem 0.55rem', borderRadius: '999px',
+                          fontSize: '0.72rem', fontWeight: 700,
+                          background: 'rgba(16,185,129,0.15)', color: '#10b981',
+                          border: '1px solid rgba(16,185,129,0.4)',
+                        }}>
+                          <ClipboardCheck size={11} /> Pendiente de lista
+                        </span>
+                      )}
                       <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>
                         {minga.motivo}
                       </span>
@@ -263,11 +275,44 @@ export default function MingasActivas() {
                       </div>
                     </div>
 
+                    {/* Aviso: fecha pasada sin confirmar */}
+                    {fechaPasada && (
+                      <div style={{
+                        marginBottom: '1rem', padding: '0.7rem 1rem',
+                        borderRadius: '0.5rem',
+                        background: 'rgba(16,185,129,0.08)',
+                        border: '1px solid rgba(16,185,129,0.4)',
+                        display: 'flex', alignItems: 'center', gap: '0.6rem',
+                        fontSize: '0.85rem',
+                      }}>
+                        <ClipboardCheck size={16} style={{ color: '#10b981', flexShrink: 0 }} />
+                        <span style={{ color: '#10b981' }}>
+                          <strong>La fecha de esta minga ya pasó.</strong> Si se realizó, usa <em>Tomar Lista</em> para registrar la asistencia y cerrar el registro.
+                        </span>
+                      </div>
+                    )}
+
                     {/* Botones de acción */}
                     <div style={{
                       display: 'flex', gap: '0.6rem', flexWrap: 'wrap',
                       paddingTop: '1rem', borderTop: `1px solid ${s.border}`,
                     }}>
+                      {/* Tomar lista — solo Programada y En Ejecución */}
+                      {['Programada', 'En Ejecución'].includes(minga.estado) && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate('/dashboard/mingas/asistencia'); }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '0.4rem',
+                            padding: '0.5rem 1rem', borderRadius: '0.5rem', cursor: 'pointer',
+                            fontSize: '0.85rem', fontWeight: 700,
+                            color: '#fff', background: '#10b981',
+                            border: '1px solid #059669',
+                          }}
+                        >
+                          <ClipboardCheck size={15} /> Tomar Lista
+                        </button>
+                      )}
+
                       {['Programada', 'Pospuesta', 'Suspendida'].includes(minga.estado) && (
                         <button onClick={(e) => abrirAccion(e, minga, 'posponer')} style={{
                           display: 'flex', alignItems: 'center', gap: '0.4rem',
