@@ -297,8 +297,8 @@ export default function MingasActivas() {
                       display: 'flex', gap: '0.6rem', flexWrap: 'wrap',
                       paddingTop: '1rem', borderTop: `1px solid ${s.border}`,
                     }}>
-                      {/* Tomar lista — solo Programada y En Ejecución */}
-                      {['Programada', 'En Ejecución'].includes(minga.estado) && (
+                      {/* Tomar lista — En Ejecución siempre; Programada solo si la fecha ya pasó */}
+                      {(minga.estado === 'En Ejecución' || (minga.estado === 'Programada' && fechaPasada)) && (
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate('/dashboard/mingas/asistencia'); }}
                           style={{
