@@ -66,6 +66,7 @@ services:
       DB_PASSWORD: Chibutech2026
     volumes:
       - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
     depends_on:
       db:
         condition: service_healthy
@@ -100,3 +101,5 @@ services:
 
 volumes:
   db_data:
+  # vendor vive en Docker storage (rápido) — se siembra desde la imagen al primer arranque
+  backend_vendor:

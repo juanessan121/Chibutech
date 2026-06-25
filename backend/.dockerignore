@@ -1,0 +1,12 @@
+vendor/
+.env
+.env.*
+storage/logs/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+.phpunit.cache/
+.phpunit.result.cache
+auth.json
+public/storage
+public/hot

@@ -111,40 +111,46 @@ class CobroController extends Controller
 
             $comprobante = $request->comprobante ?: (time() % 100000);
 
-            // Pagar Multas — se verifica que la multa esté Pendiente
+            // Pagar Multas — batch fetch, luego update (2 queries en vez de N*2)
             if (!empty($request->multas)) {
+                $multasMap = Multa::whereIn('id_multa', $request->multas)
+                    ->where('estado_pago', 'Pendiente')
+                    ->get()
+                    ->keyBy('id_multa');
+
                 foreach ($request->multas as $id_multa) {
-                    $multa = Multa::where('id_multa', $id_multa)
-                        ->where('estado_pago', 'Pendiente')
-                        ->first();
+                    $multa = $multasMap->get($id_multa);
                     if ($multa) {
                         $multa->update(['estado_pago' => 'Pagada']);
                         CajaComunitaria::create([
-                            'numero_comprobante' => $comprobante . '-M' . $id_multa,
-                            'tipo_movimiento'    => 'Ingreso',
-                            'concepto'           => 'Cobro Multa: ' . $multa->motivo_multa,
-                            'id_multa'           => $id_multa,
-                            'monto'              => $multa->monto,
+                            'numero_comprobante'   => $comprobante . '-M' . $id_multa,
+                            'tipo_movimiento'      => 'Ingreso',
+                            'concepto'             => 'Cobro Multa: ' . $multa->motivo_multa,
+                            'id_multa'             => $id_multa,
+                            'monto'                => $multa->monto,
                             'responsable_registro' => auth()->id()
                         ]);
                     }
                 }
             }
 
-            // Pagar Planillas — se verifica estado Pendiente
+            // Pagar Planillas — batch fetch, luego update (2 queries en vez de N*2)
             if (!empty($request->planillas)) {
+                $planillasMap = PlanillaCabecera::whereIn('id_planilla', $request->planillas)
+                    ->where('estado_pago', 'Pendiente')
+                    ->get()
+                    ->keyBy('id_planilla');
+
                 foreach ($request->planillas as $id_planilla) {
-                    $planilla = PlanillaCabecera::where('id_planilla', $id_planilla)
-                        ->where('estado_pago', 'Pendiente')
-                        ->first();
+                    $planilla = $planillasMap->get($id_planilla);
                     if ($planilla) {
                         $planilla->update(['estado_pago' => 'Pagada']);
                         CajaComunitaria::create([
-                            'numero_comprobante' => $comprobante . '-P' . $id_planilla,
-                            'tipo_movimiento'    => 'Ingreso',
-                            'concepto'           => 'Cobro Planilla Agua ' . $planilla->mes_fiscal . '/' . $planilla->anio_fiscal,
-                            'id_planilla'        => $id_planilla,
-                            'monto'              => $planilla->total_pagar,
+                            'numero_comprobante'   => $comprobante . '-P' . $id_planilla,
+                            'tipo_movimiento'      => 'Ingreso',
+                            'concepto'             => 'Cobro Planilla Agua ' . $planilla->mes_fiscal . '/' . $planilla->anio_fiscal,
+                            'id_planilla'          => $id_planilla,
+                            'monto'                => $planilla->total_pagar,
                             'responsable_registro' => auth()->id()
                         ]);
                     }
@@ -352,14 +358,14 @@ class CobroController extends Controller
 
             $ingresos = $movimientos->where('tipo_movimiento', 'Ingreso')
                 ->map(fn($i) => [
-                    'fecha'    => date('Y-m-d'),
+                    'fecha'    => substr($i->fecha_registro ?? '', 0, 10),
                     'concepto' => $i->concepto ?? 'Sin concepto',
                     'monto'    => (float) $i->monto
                 ])->values();
 
             $egresos = $movimientos->where('tipo_movimiento', 'Egreso')
                 ->map(fn($e) => [
-                    'fecha'    => date('Y-m-d'),
+                    'fecha'    => substr($e->fecha_registro ?? '', 0, 10),
                     'concepto' => $e->concepto ?? 'Sin concepto',
                     'monto'    => (float) $e->monto
                 ])->values();
@@ -573,28 +579,39 @@ class CobroController extends Controller
             DB::beginTransaction();
             $pagadas = 0;
 
-            foreach ($request->id_planillas as $id_planilla) {
-                $planilla = DB::table('Planilla_Cabecera')
-                    ->where('id_planilla', $id_planilla)
-                    ->where('estado_pago',  'Pendiente')
-                    ->first();
+            // Batch fetch: 1 query en vez de N
+            $planillasMap = DB::table('Planilla_Cabecera')
+                ->whereIn('id_planilla', $request->id_planillas)
+                ->where('estado_pago', 'Pendiente')
+                ->get()
+                ->keyBy('id_planilla');
 
+            $cajaRows = [];
+            $pagadasIds = [];
+
+            foreach ($request->id_planillas as $id_planilla) {
+                $planilla = $planillasMap->get($id_planilla);
                 if ($planilla) {
-                    DB::table('Planilla_Cabecera')->where('id_planilla', $id_planilla)->update([
-                        'estado_pago'        => 'Pagada',
-                        'numero_comprobante' => $request->numero_comprobante,
-                        'fecha_pago'         => now(),
-                    ]);
-                    DB::table('Caja_Comunitaria')->insert([
+                    $pagadasIds[] = $id_planilla;
+                    $cajaRows[] = [
                         'numero_comprobante'   => $request->numero_comprobante,
                         'tipo_movimiento'      => 'Ingreso',
                         'concepto'             => 'Pago agua — Mes ' . $planilla->mes_fiscal . '/' . $planilla->anio_fiscal,
                         'id_planilla'          => $id_planilla,
                         'monto'                => $planilla->total_pagar,
                         'responsable_registro' => auth()->id(),
-                    ]);
+                    ];
                     $pagadas++;
                 }
+            }
+
+            if (!empty($pagadasIds)) {
+                DB::table('Planilla_Cabecera')->whereIn('id_planilla', $pagadasIds)->update([
+                    'estado_pago'        => 'Pagada',
+                    'numero_comprobante' => $request->numero_comprobante,
+                    'fecha_pago'         => now(),
+                ]);
+                DB::table('Caja_Comunitaria')->insert($cajaRows);
             }
 
             DB::commit();

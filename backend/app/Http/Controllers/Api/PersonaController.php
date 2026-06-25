@@ -196,9 +196,15 @@ class PersonaController extends Controller
      */
     private function guardarTitulos(int $idPersona, array $carreras, string $identificador): void
     {
+        $nombres = collect($carreras)->pluck('nombre')->filter()->unique()->values()->all();
+        if (empty($nombres)) return;
+
+        // Una sola query para todos los títulos (evita N queries)
+        $titulos = TituloEducativo::whereIn('nombre', $nombres)->get()->keyBy('nombre');
+
         foreach ($carreras as $carrera) {
             if (empty($carrera['nombre'])) continue;
-            $tituloInfo = TituloEducativo::where('nombre', $carrera['nombre'])->first();
+            $tituloInfo = $titulos->get($carrera['nombre']);
             if (!$tituloInfo) continue;
 
             $rutaArchivo = null;

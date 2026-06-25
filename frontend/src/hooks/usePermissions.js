@@ -1,19 +1,17 @@
+import { useCallback } from 'react';
 import useAuthStore from '../store/useAuthStore';
 
 export function usePermissions() {
   const user = useAuthStore((state) => state.user);
 
-  // Función para comprobar si el usuario tiene un permiso específico
-  const hasPermission = (permission) => {
-    if (!user || !user.permisos) return false;
-    // Si es Administrador, podríamos darle pase libre a todo, pero es más seguro verificar el array
+  const hasPermission = useCallback((permission) => {
+    if (!user?.permisos) return false;
     return user.permisos.includes(permission);
-  };
+  }, [user?.permisos]);
 
-  // Función para comprobar el rol exacto (útil para títulos o lógicas simples)
-  const isRole = (roleName) => {
+  const isRole = useCallback((roleName) => {
     return user?.rol === roleName;
-  };
+  }, [user?.rol]);
 
   return { hasPermission, isRole, userRole: user?.rol };
 }

@@ -213,37 +213,40 @@ class DirectivaController extends Controller
 
             // 2. Insertar los nuevos miembros y actualizar usuarios
             $nuevosMiembros = [];
-            foreach ($request->input('cargos', []) as $cargo) {
-                if (!empty($cargo['id_persona'])) {
-                    $nuevosMiembros[] = [
-                        'id_persona' => $cargo['id_persona'],
-                        'id_cargo_directivo' => $cargo['id_cargo_directivo'],
-                        'fecha_inicio' => $validated['fecha_inicio'],
-                        'fecha_fin' => $validated['fecha_fin'] ?? null,
-                        'resolucion_nombramiento' => $validated['resolucion'] ?? null,
-                        'estado' => 'Activo'
-                    ];
+            $cargosConPersona = array_filter($request->input('cargos', []), fn($c) => !empty($c['id_persona']));
 
-                    // Mapear el ID de cargo al nombre del rol
-                    $rol = 'Vocal';
-                    if ($cargo['id_cargo_directivo'] == 1) $rol = 'Presidente';
-                    elseif ($cargo['id_cargo_directivo'] == 2) $rol = 'Vicepresidente';
-                    elseif ($cargo['id_cargo_directivo'] == 3) $rol = 'Secretario';
-                    elseif ($cargo['id_cargo_directivo'] == 4) $rol = 'Tesorero';
+            // Batch fetch: una sola query en vez de N (una por persona)
+            $personaIds = array_column($cargosConPersona, 'id_persona');
+            $personasMap = DB::table('Persona')
+                ->whereIn('id_persona', $personaIds)
+                ->get()
+                ->keyBy('id_persona');
 
-                    $persona = DB::table('Persona')->where('id_persona', $cargo['id_persona'])->first();
+            $rolMap = [1 => 'Presidente', 2 => 'Vicepresidente', 3 => 'Secretario', 4 => 'Tesorero'];
 
-                    if ($persona) {
-                        Usuario::updateOrCreate(
-                            ['id_persona' => $cargo['id_persona']],
-                            [
-                                'cedula'            => $persona->cedula,
-                                'password'          => Hash::make($cargo['password'] ?? 'chibuleo2024'),
-                                'rol'               => $rol,
-                                'password_temporal' => true,
-                            ]
-                        );
-                    }
+            foreach ($cargosConPersona as $cargo) {
+                $nuevosMiembros[] = [
+                    'id_persona'              => $cargo['id_persona'],
+                    'id_cargo_directivo'      => $cargo['id_cargo_directivo'],
+                    'fecha_inicio'            => $validated['fecha_inicio'],
+                    'fecha_fin'               => $validated['fecha_fin'] ?? null,
+                    'resolucion_nombramiento' => $validated['resolucion'] ?? null,
+                    'estado'                  => 'Activo'
+                ];
+
+                $rol     = $rolMap[(int) $cargo['id_cargo_directivo']] ?? 'Vocal';
+                $persona = $personasMap->get($cargo['id_persona']);
+
+                if ($persona) {
+                    Usuario::updateOrCreate(
+                        ['id_persona' => $cargo['id_persona']],
+                        [
+                            'cedula'            => $persona->cedula,
+                            'password'          => Hash::make($cargo['password'] ?? 'chibuleo2024'),
+                            'rol'               => $rol,
+                            'password_temporal' => true,
+                        ]
+                    );
                 }
             }
 

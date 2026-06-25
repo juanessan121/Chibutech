@@ -38,6 +38,12 @@ RUN sed -ri -e 's!/var/www/!/var/www/html/public!g' /etc/apache2/apache2.conf /e
 
 WORKDIR /var/www/html
 
+# Instalar dependencias en la imagen (vendor queda en capa de imagen)
+# La imagen se usa para sembrar el named volume en docker-compose, evitando
+# la lentitud de escribir ~5000 archivos en el filesystem de Windows.
+COPY composer.json composer.lock ./
+RUN composer install --no-interaction --no-progress --optimize-autoloader --no-scripts
+
 COPY . /var/www/html/
 
 RUN chown -R www-data:www-data /var/www/html

@@ -212,19 +212,12 @@ class AuthController extends Controller
             ], 404);
         }
 
+        // Una sola query: primero principal (es_principal DESC), sino cualquier correo
         $contacto = \DB::table('Contacto_Persona')
             ->where('id_persona', $persona->id_persona)
-            ->where('id_tipo_contacto', 3) // Correo Electrónico
-            ->where('es_principal', 1)
+            ->where('id_tipo_contacto', 3)
+            ->orderBy('es_principal', 'desc')
             ->first();
-
-        // Si no hay correo principal, buscar cualquier correo
-        if (!$contacto) {
-            $contacto = \DB::table('Contacto_Persona')
-                ->where('id_persona', $persona->id_persona)
-                ->where('id_tipo_contacto', 3)
-                ->first();
-        }
 
         if (!$contacto || empty($contacto->valor_contacto)) {
             return response()->json([

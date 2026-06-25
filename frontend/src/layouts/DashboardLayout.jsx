@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
 import { Droplets, LogOut, LayoutDashboard, Users, FileText, Settings, ShieldAlert, UserCircle, Award, Map, MapPin, Menu, Bell, User, X, CheckCircle, ChevronRight, ChevronLeft, Calendar, Wallet, AlertTriangle } from 'lucide-react';
@@ -78,7 +78,7 @@ export default function DashboardLayout() {
     navigate('/login');
   };
 
-  const menuItems = [
+  const menuItems = useMemo(() => [
     { name: 'Panel Principal', path: '/dashboard', icon: LayoutDashboard, show: true, color: '#0ea5e9' },
     // ── Sección Gestión Comunitaria ──────────────────────────────────────────
     { section: 'Gestión', show: hasPermission('gestionar_mingas') || hasPermission('ver_mingas') || hasPermission('ver_catastro') || hasPermission('crear_usuario') },
@@ -149,7 +149,8 @@ export default function DashboardLayout() {
     { section: 'Mi Cuenta', show: isRole('Comunero') },
     { name: 'Mis Deudas', path: '/dashboard/mis-deudas', icon: Wallet, color: '#ef4444', show: isRole('Comunero') },
     { name: 'Mis Terrenos', path: '/dashboard/mis-terrenos', icon: MapPin, color: '#10b981', show: isRole('Comunero') },
-  ];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [hasPermission, isRole]);
 
   // Sincronizar automáticamente el submenú abierto (accordion) con la ruta actual
   useEffect(() => {
@@ -456,8 +457,6 @@ export default function DashboardLayout() {
           <button className="burger-menu-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
-
-
 
           <div className="topbar-actions">
             {/* Campana de Notificaciones */}
