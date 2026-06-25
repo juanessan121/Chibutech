@@ -253,32 +253,51 @@ class TerrenoController extends Controller
     public function update(Request $request, $id): JsonResponse
     {
         $request->validate([
-            'area_total' => 'required|numeric|min:0',
-            'id_estado_construccion' => 'required|integer',
-            'latitud' => 'nullable|numeric',
-            'longitud' => 'nullable|numeric'
+            'area_total'              => 'required|numeric|min:0',
+            'id_estado_construccion'  => 'required|integer',
+            'latitud'                 => 'nullable|numeric',
+            'longitud'                => 'nullable|numeric',
+            'copropietarios'          => 'nullable|array',
+            'copropietarios.*'        => 'integer|exists:Persona,id_persona',
         ]);
 
         try {
             DB::beginTransaction();
             $terrenoAnterior = DB::table('Terreno')->where('id_terreno', $id)->first();
-            
+
+            if (!$terrenoAnterior) {
+                return response()->json(['status' => 'error', 'message' => 'Terreno no encontrado'], 404);
+            }
+
             DB::table('Terreno')->where('id_terreno', $id)->update([
-                'area_total' => $request->area_total,
+                'area_total'             => $request->area_total,
                 'id_estado_construccion' => $request->id_estado_construccion,
-                'latitud' => $request->latitud,
-                'longitud' => $request->longitud
+                'latitud'                => $request->latitud,
+                'longitud'               => $request->longitud,
             ]);
 
-            // Auditoría (Opcional para edicion tecnica, pero la incluimos)
+            // Sincronizar copropietarios si se envía el campo
+            if ($request->has('copropietarios')) {
+                DB::table('Copropietario_Terreno')->where('id_terreno', $id)->delete();
+                foreach (array_unique($request->copropietarios) as $idPersona) {
+                    // No permitir que el titular sea también copropietario
+                    if ((int)$idPersona !== (int)$terrenoAnterior->id_persona) {
+                        DB::table('Copropietario_Terreno')->insert([
+                            'id_terreno' => $id,
+                            'id_persona' => $idPersona,
+                        ]);
+                    }
+                }
+            }
+
             DB::table('Auditoria')->insert([
-                'tabla_afectada' => 'Terreno',
-                'operacion' => 'UPDATE',
-                'id_registro' => $id,
-                'datos_anteriores' => json_encode($terrenoAnterior),
-                'datos_nuevos' => json_encode($request->only(['area_total', 'id_estado_construccion', 'latitud', 'longitud'])),
-                'id_usuario' => auth()->id(),
-                'fecha_hora' => now()
+                'tabla_afectada'  => 'Terreno',
+                'operacion'       => 'UPDATE',
+                'id_registro'     => $id,
+                'datos_anteriores'=> json_encode($terrenoAnterior),
+                'datos_nuevos'    => json_encode($request->only(['area_total', 'id_estado_construccion', 'latitud', 'longitud', 'copropietarios'])),
+                'id_usuario'      => auth()->id(),
+                'fecha_hora'      => now(),
             ]);
 
             DB::commit();

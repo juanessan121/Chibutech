@@ -115,13 +115,15 @@ export default function Directiva() {
           <h3 style={{ textAlign: 'center', marginBottom: '1.5rem', color: 'var(--text-main)' }}>Vocales y Representantes</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
             {miembrosDirectiva.filter(m => m.cargo.includes('Vocal')).map(miembro => (
-              <div key={miembro.id} className="glass-card" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(255,255,255,0.05)', borderLeft: `3px solid ${miembro.color}` }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: `${miembro.color}20`, color: miembro.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div key={miembro.id} className="glass-card" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', background: miembro.id_persona ? 'rgba(255,255,255,0.05)' : 'rgba(245,158,11,0.06)', borderLeft: `3px solid ${miembro.id_persona ? miembro.color : '#f59e0b'}` }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: miembro.id_persona ? `${miembro.color}20` : 'rgba(245,158,11,0.15)', color: miembro.id_persona ? miembro.color : '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <User size={20} />
                 </div>
                 <div>
-                  <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text-main)' }}>{miembro.nombre}</p>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: miembro.color }}>{miembro.cargo}</p>
+                  <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem', color: miembro.id_persona ? 'var(--text-main)' : '#f59e0b' }}>
+                    {miembro.id_persona ? miembro.nombre : 'Por designar'}
+                  </p>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: miembro.id_persona ? miembro.color : '#f59e0b' }}>{miembro.cargo}</p>
                 </div>
               </div>
             ))}
@@ -163,9 +165,14 @@ function MiembroCard({ miembro, isMain = false }) {
       }}>
         <Icono size={isMain ? 40 : 30} />
       </div>
-      <h2 style={{ fontSize: isMain ? '1.5rem' : '1.2rem', color: 'var(--text-main)', margin: '0 0 0.2rem 0' }}>{miembro.nombre}</h2>
+      <h2 style={{ fontSize: isMain ? '1.5rem' : '1.2rem', color: miembro.id_persona ? 'var(--text-main)' : '#f59e0b', margin: '0 0 0.2rem 0' }}>
+        {miembro.id_persona ? miembro.nombre : 'Por designar'}
+      </h2>
       <span style={{ fontWeight: 'bold', color: miembro.color, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>{miembro.cargo}</span>
-      <span className="text-muted" style={{ fontSize: '0.8rem' }}>C.I: {miembro.cedula}</span>
+      {miembro.id_persona
+        ? <span className="text-muted" style={{ fontSize: '0.8rem' }}>C.I: {miembro.cedula}</span>
+        : <span style={{ fontSize: '0.75rem', color: '#f59e0b', background: 'rgba(245,158,11,0.15)', padding: '0.15rem 0.6rem', borderRadius: '999px' }}>⬚ Vacante</span>
+      }
     </div>
   );
 }

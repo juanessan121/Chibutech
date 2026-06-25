@@ -357,7 +357,7 @@ export default function DirectivaGestion() {
                       <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr', alignItems: 'center', gap: '1rem' }}>
                         <label className="input-label" style={{ textAlign: 'right', fontSize: '0.8rem' }}>Asignar Contraseña:</label>
                         <input
-                          type="text"
+                          type="password"
                           className="input-field"
                           placeholder="Contraseña temporal (ej. chibuleo2024)"
                           value={cargosPasswords[cargo.id] || ''}
@@ -455,14 +455,28 @@ export default function DirectivaGestion() {
       )}
 
       {/* CONTENIDO PESTAÑA: CAMBIAR MIEMBRO */}
-      {activeTab === 'cambiar' && (
+      {activeTab === 'cambiar' && (() => {
+        const cargoSeleccionado = miembrosActivos.find(m => String(m.id_cargo_directivo) === String(cambioData.id_cargo_directivo));
+        const esVacante = cargoSeleccionado && !cargoSeleccionado.id_persona;
+        const vacantes = miembrosActivos.filter(m => !m.id_persona);
+        return (
         <div className="glass-card animate-fade-in" style={{ padding: '2.5rem', maxWidth: '800px', margin: '0 auto' }}>
           <h3 className="text-primary" style={{ marginBottom: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
             Cambiar Miembro de la Directiva Actual
           </h3>
           <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-            Reemplaza a un miembro activo en su cargo. El saliente queda como Finalizado desde hoy y el entrante hereda la fecha fin del periodo. La reelección está permitida.
+            Reemplaza a un miembro activo o designa a alguien para un cargo vacante. Si la persona ya ocupa otro cargo, ese puesto quedará vacante automáticamente.
           </p>
+
+          {/* Aviso de vacantes */}
+          {vacantes.length > 0 && (
+            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '0.75rem', padding: '0.85rem 1rem', marginBottom: '1.5rem' }}>
+              <AlertTriangle size={15} style={{ color: 'var(--yellow)', flexShrink: 0, marginTop: '0.1rem' }} />
+              <span style={{ fontSize: '0.82rem', color: 'var(--yellow)' }}>
+                Hay <strong>{vacantes.length}</strong> cargo(s) sin designar: {vacantes.map(v => v.cargo).join(', ')}.
+              </span>
+            </div>
+          )}
 
           {miembrosActivos.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
@@ -471,15 +485,23 @@ export default function DirectivaGestion() {
           ) : (
             <form onSubmit={handleCambiarMiembro} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-              {/* Tabla miembros actuales */}
+              {/* Lista de miembros actuales con badge de vacante */}
               <div>
-                <h4 style={{ marginBottom: '0.75rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Miembros actuales del periodo</h4>
+                <h4 style={{ marginBottom: '0.75rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Estado actual de la directiva</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                   {miembrosActivos.map(m => (
-                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '0.5rem', border: '1px solid var(--border-color)', fontSize: '0.88rem' }}>
+                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.6rem 1rem', background: m.id_persona ? 'rgba(255,255,255,0.04)' : 'rgba(245,158,11,0.06)', borderRadius: '0.5rem', border: `1px solid ${m.id_persona ? 'var(--border-color)' : 'rgba(245,158,11,0.25)'}`, fontSize: '0.88rem' }}>
                       <span style={{ color: 'var(--yellow)', fontWeight: 600, minWidth: '160px' }}>{m.cargo}</span>
-                      <span style={{ color: 'var(--text-main)' }}>{m.nombre}</span>
-                      <span className="text-muted" style={{ fontSize: '0.78rem' }}>{m.cedula}</span>
+                      {m.id_persona ? (
+                        <>
+                          <span style={{ color: 'var(--text-main)' }}>{m.nombre}</span>
+                          <span className="text-muted" style={{ fontSize: '0.78rem' }}>{m.cedula}</span>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f59e0b', background: 'rgba(245,158,11,0.15)', padding: '0.15rem 0.6rem', borderRadius: '999px' }}>
+                          ⬚ Por designar
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -488,7 +510,7 @@ export default function DirectivaGestion() {
               {/* Cargo a modificar */}
               <div className="input-group">
                 <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Shield size={14} className="text-yellow" /> Cargo a reemplazar *
+                  <Shield size={14} className="text-yellow" /> Cargo a {esVacante ? 'designar' : 'reemplazar'} *
                 </label>
                 <select
                   className="form-select"
@@ -500,7 +522,7 @@ export default function DirectivaGestion() {
                   <option value="">-- Seleccione el cargo --</option>
                   {miembrosActivos.map(m => (
                     <option key={m.id_cargo_directivo} value={m.id_cargo_directivo}>
-                      {m.cargo} — {m.nombre}
+                      {m.id_persona ? `${m.cargo} — ${m.nombre}` : `⬚ ${m.cargo} — Vacante`}
                     </option>
                   ))}
                 </select>
@@ -512,16 +534,30 @@ export default function DirectivaGestion() {
               {/* Nueva persona */}
               {cambioData.id_cargo_directivo && (
                 <>
+                  {/* Contexto según si es vacante o reemplazo */}
+                  {esVacante ? (
+                    <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '0.6rem', padding: '0.75rem 1rem' }}>
+                      <span style={{ fontSize: '0.82rem', color: '#10b981' }}>
+                        Este cargo está vacante. La persona que designes ocupará el puesto desde hoy.
+                      </span>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', borderRadius: '0.6rem', padding: '0.75rem 1rem' }}>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                        <strong style={{ color: 'var(--text-main)' }}>{cargoSeleccionado?.nombre}</strong> pasará a estado Finalizado. Si la persona nueva ya tiene otro cargo, ese puesto quedará vacante para designación posterior.
+                      </span>
+                    </div>
+                  )}
+
                   <div className="input-group">
                     <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <UserPlus size={14} className="text-blue" /> Nueva persona para el cargo *
+                      <UserPlus size={14} className="text-blue" /> Persona a designar *
                     </label>
                     <PersonaAutocompleteInput
                       key={cambioData.id_cargo_directivo}
                       onChange={item => setCambioData({ ...cambioData, id_persona_nueva: item.id_persona })}
                       placeholder="Buscar por Cédula o Apellido..."
                     />
-                    <span className="text-muted" style={{ fontSize: '0.75rem' }}>La reelección está permitida — puede ser la misma persona u otra.</span>
                   </div>
 
                   <div className="input-group">
@@ -529,7 +565,7 @@ export default function DirectivaGestion() {
                       <FileText size={14} className="text-muted" /> Contraseña temporal para el nuevo miembro
                     </label>
                     <input
-                      type="text"
+                      type="password"
                       className="input-field"
                       placeholder="chibuleo2024 (por defecto si se deja vacío)"
                       value={cambioData.password}
@@ -547,13 +583,14 @@ export default function DirectivaGestion() {
                   disabled={guardandoCambio || !cambioData.id_cargo_directivo || !cambioData.id_persona_nueva}
                   style={{ width: 'auto', background: '#0ea5e9' }}
                 >
-                  {guardandoCambio ? 'Guardando cambio...' : <><Save size={18} /> Confirmar Cambio de Miembro</>}
+                  {guardandoCambio ? 'Guardando...' : <><Save size={18} /> {esVacante ? 'Designar Miembro' : 'Confirmar Cambio'}</>}
                 </button>
               </div>
             </form>
           )}
         </div>
-      )}
+        );
+      })()}
 
       {/* MODAL REACTIVAR DIRECTIVA */}
       {modalReactivar && (

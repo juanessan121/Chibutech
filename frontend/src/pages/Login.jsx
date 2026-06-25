@@ -86,7 +86,7 @@ export default function Login() {
           <div className="logo-container">
             <Droplet size={40} className="logo-icon" />
           </div>
-          <h1>Chibutech ERP</h1>
+          <h1>Consejo de Gobierno Comunitario<br />Chibuleo-San Francisco</h1>
           <p>Gestión Inteligente de Juntas de Agua</p>
         </div>
 

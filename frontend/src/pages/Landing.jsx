@@ -79,7 +79,7 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="landing-footer">
-        <p>© {new Date().getFullYear()} ERP Chibutech - Unidos por nuestra tierra.</p>
+        <p>© {new Date().getFullYear()} Consejo de Gobierno Comunitario Chibuleo-San Francisco - Unidos por nuestra tierra.</p>
       </footer>
     </div>
   );

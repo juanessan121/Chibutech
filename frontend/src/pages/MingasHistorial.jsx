@@ -114,9 +114,21 @@ export default function MingasHistorial() {
       doc.text(`Resumen: ${presentes} Presentes, ${faltas} Faltas, ${justificados} Justificados`, 14, 62);
       autoTable(doc, {
         startY: 70,
-        head: [['Cédula', 'Nombre', 'Sector', 'Estado']],
-        body: convocados.map(c => [c.cedula, c.nombre, c.sector, c.estado]),
-        theme: 'grid', styles: { fontSize: 9 }, headStyles: { fillColor: [16, 185, 129] },
+        head: [['Cédula', 'Nombre', 'Sector', 'Estado', 'Multa']],
+        body: convocados.map(c => [
+          c.cedula,
+          c.nombre,
+          c.sector,
+          c.estado,
+          c.multa_estado === 'Pagada'    ? '✓ Pagada'
+          : c.multa_estado === 'Pendiente' ? `$${Number(c.multa_monto || 0).toFixed(2)} Pend.`
+          : c.multa_estado === 'Anulada'   ? 'Anulada'
+          : '—'
+        ]),
+        theme: 'grid',
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [16, 185, 129] },
+        columnStyles: { 4: { halign: 'center' } },
       });
       doc.save(`Acta_Minga_${minga.fecha}.pdf`);
       toast.success('Acta PDF descargada correctamente.', { id: toastId });
@@ -356,19 +368,44 @@ export default function MingasHistorial() {
             <div className="table-container" style={{ maxHeight: '400px', overflowY: 'auto' }}>
               <table className="data-table">
                 <thead>
-                  <tr><th>Cédula</th><th>Nombre y Apellido</th><th>Sector</th><th style={{ textAlign: 'center' }}>Estado</th></tr>
+                  <tr>
+                    <th>Cédula</th>
+                    <th>Nombre y Apellido</th>
+                    <th>Sector</th>
+                    <th style={{ textAlign: 'center' }}>Estado</th>
+                    <th style={{ textAlign: 'center' }}>Multa</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {convocadosDetalle.map((c, i) => (
                     <tr key={i}>
-                      <td>{c.cedula}</td><td>{c.nombre}</td><td>{c.sector}</td>
+                      <td>{c.cedula}</td>
+                      <td>{c.nombre}</td>
+                      <td>{c.sector}</td>
                       <td style={{ textAlign: 'center' }}>
-                        <span className={`badge ${c.estado === 'Presente' ? 'badge-admin' : c.estado.includes('Faltó') ? 'badge-user' : 'badge-directive'}`}>{c.estado}</span>
+                        <span className={`badge ${
+                          c.estado === 'Presente'       ? 'badge-admin' :
+                          c.estado.includes('Faltó')   ? 'badge-user'  :
+                          c.estado === 'Justificado'   ? 'badge-directive' : ''
+                        }`} style={c.estado === 'Faltó (Pagado)' ? { background: 'rgba(245,158,11,0.2)', color: '#f59e0b', border: '1px solid #f59e0b' } : {}}>
+                          {c.estado}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center', fontSize: '0.8rem' }}>
+                        {c.multa_estado === 'Pagada' ? (
+                          <span style={{ color: '#10b981', fontWeight: 600 }}>✓ Pagada</span>
+                        ) : c.multa_estado === 'Pendiente' ? (
+                          <span style={{ color: '#ef4444', fontWeight: 600 }}>${Number(c.multa_monto || 0).toFixed(2)} Pendiente</span>
+                        ) : c.multa_estado === 'Anulada' ? (
+                          <span style={{ color: '#94a3b8' }}>Anulada</span>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>—</span>
+                        )}
                       </td>
                     </tr>
                   ))}
                   {convocadosDetalle.length === 0 && (
-                    <tr><td colSpan="4" style={{ textAlign: 'center', padding: '2rem' }}>No hay datos de asistentes registrados.</td></tr>
+                    <tr><td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>No hay datos de asistentes registrados.</td></tr>
                   )}
                 </tbody>
               </table>

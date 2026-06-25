@@ -6,8 +6,8 @@
 
 // ── INSTITUCIÓN ────────────────────────────────────────────────────────────────
 export const INSTITUCION = {
-  nombre: 'Junta de Agua Chibuleo',
-  subtitulo: 'Sistema de Gestión Comunitaria — Chibutech',
+  nombre: 'Consejo de Gobierno Comunitario Chibuleo-San Francisco',
+  subtitulo: 'Sistema de Gestión Comunitaria',
   ruc: 'RUC: 1890001234001',
   direccion: 'Comunidad Chibuleo, Cantón Ambato, Provincia de Tungurahua',
   telefono: 'Tel: (03) 2-345-678',

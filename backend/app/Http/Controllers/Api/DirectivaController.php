@@ -18,19 +18,21 @@ class DirectivaController extends Controller
     {
         try {
             $directiva = DB::table('Miembro_Directiva as md')
-                ->join('Persona as p', 'md.id_persona', '=', 'p.id_persona')
+                ->leftJoin('Persona as p', 'md.id_persona', '=', 'p.id_persona')
                 ->join('Catalogo_Cargo_Directivo as ccd', 'md.id_cargo_directivo', '=', 'ccd.id_cargo_directivo')
                 ->where('md.estado', 'Activo')
                 ->select(
                     'md.id_directiva as id',
                     'md.id_cargo_directivo',
-                    DB::raw("CONCAT(p.nombre, ' ', p.apellido) as nombre"),
+                    'md.id_persona',
+                    DB::raw("COALESCE(CONCAT(p.nombre, ' ', p.apellido), 'Vacante') as nombre"),
                     'p.cedula',
                     'ccd.nombre_cargo as cargo',
                     'md.fecha_inicio',
                     'md.fecha_fin',
                     'md.estado'
                 )
+                ->orderBy('md.id_cargo_directivo')
                 ->get();
 
             return response()->json([
@@ -67,7 +69,8 @@ class DirectivaController extends Controller
                     'ccd.nombre_cargo as cargo',
                     'md.fecha_inicio',
                     'md.fecha_fin',
-                    'md.estado'
+                    'md.estado',
+                    'md.resolucion_nombramiento'
                 )
                 ->get();
 
@@ -294,29 +297,53 @@ class DirectivaController extends Controller
 
             $hoy = now()->toDateString();
 
-            // 1. Encontrar miembro activo en ese cargo
-            $saliente = DB::table('Miembro_Directiva')
+            // 1. Encontrar el registro activo del cargo destino (puede tener persona o estar vacante)
+            $registroCargo = DB::table('Miembro_Directiva')
                 ->where('estado', 'Activo')
                 ->where('id_cargo_directivo', $request->id_cargo_directivo)
                 ->first();
 
-            if (!$saliente) {
+            if (!$registroCargo) {
                 return response()->json([
                     'status'  => 'error',
-                    'message' => 'No hay ningún miembro activo en ese cargo.'
+                    'message' => 'No existe ningún registro activo para ese cargo.'
                 ], 404);
             }
 
-            // 2. Finalizar al miembro saliente
+            // 2. Finalizar el registro del cargo destino
             DB::table('Miembro_Directiva')
-                ->where('id_directiva', $saliente->id_directiva)
+                ->where('id_directiva', $registroCargo->id_directiva)
                 ->update(['estado' => 'Finalizado', 'fecha_fin' => $hoy]);
 
-            // Bajar su rol a Comunero al salir de la directiva
-            \App\Models\Usuario::where('id_persona', $saliente->id_persona)
-                ->update(['rol' => 'Comunero']);
+            // Si el cargo no estaba vacante, bajar el rol del saliente a Comunero
+            if ($registroCargo->id_persona !== null) {
+                \App\Models\Usuario::where('id_persona', $registroCargo->id_persona)
+                    ->update(['rol' => 'Comunero']);
+            }
 
-            // 3. Insertar al nuevo miembro (reelección permitida: no hay restricción por persona)
+            // 3. Si la persona nueva ya ocupa otro cargo activo, finalizarlo y dejar ESE cargo vacante
+            $cargoAnterior = DB::table('Miembro_Directiva')
+                ->where('estado', 'Activo')
+                ->where('id_persona', $request->id_persona_nueva)
+                ->first();
+
+            if ($cargoAnterior) {
+                DB::table('Miembro_Directiva')
+                    ->where('id_directiva', $cargoAnterior->id_directiva)
+                    ->update(['estado' => 'Finalizado', 'fecha_fin' => $hoy]);
+
+                // Crear vacante para el cargo que dejó libre
+                DB::table('Miembro_Directiva')->insert([
+                    'id_persona'              => null,
+                    'id_cargo_directivo'      => $cargoAnterior->id_cargo_directivo,
+                    'fecha_inicio'            => $hoy,
+                    'fecha_fin'               => $cargoAnterior->fecha_fin,
+                    'resolucion_nombramiento' => $cargoAnterior->resolucion_nombramiento,
+                    'estado'                  => 'Activo',
+                ]);
+            }
+
+            // 4. Buscar la persona entrante
             $persona = DB::table('Persona')->where('id_persona', $request->id_persona_nueva)->first();
 
             if (!$persona) {
@@ -324,12 +351,13 @@ class DirectivaController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Persona no encontrada.'], 404);
             }
 
+            // 5. Insertar al nuevo miembro en el cargo destino
             DB::table('Miembro_Directiva')->insert([
                 'id_persona'             => $request->id_persona_nueva,
                 'id_cargo_directivo'     => $request->id_cargo_directivo,
                 'fecha_inicio'           => $hoy,
-                'fecha_fin'              => $saliente->fecha_fin, // hereda el fin del periodo
-                'resolucion_nombramiento'=> $saliente->resolucion_nombramiento,
+                'fecha_fin'              => $registroCargo->fecha_fin,
+                'resolucion_nombramiento'=> $registroCargo->resolucion_nombramiento,
                 'estado'                 => 'Activo',
             ]);
 
@@ -363,9 +391,9 @@ class DirectivaController extends Controller
                 'message' => 'Miembro actualizado correctamente. El cambio aplica desde hoy.'
             ]);
 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            return response()->json(['status' => 'error', 'message' => $e->getMessage() ?: 'Error interno al cambiar el miembro.'], 500);
         }
     }
 }

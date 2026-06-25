@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Map, MapPin, ArrowLeft, Calendar, FileText, Info, Compass, FileDown, Edit2, ArrowRightLeft, X, ExternalLink } from 'lucide-react';
+import { Map, MapPin, ArrowLeft, Calendar, FileText, Info, Compass, FileDown, Edit2, ArrowRightLeft, X, ExternalLink, Users, ChevronRight, AlertTriangle } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import useAuthStore from '../store/useAuthStore';
 
@@ -19,6 +19,7 @@ export default function TerrenoDetalles() {
   const [terreno, setTerreno] = useState(null);
   const [loading, setLoading] = useState(true);
   const [modalTraspaso, setModalTraspaso] = useState(false);
+  const [traspasoStep, setTraspasoStep] = useState(1); // 1 = buscar nuevo dueño, 2 = confirmar
   const [nuevoDueno, setNuevoDueno] = useState(null);
   const [motivoTraspaso, setMotivoTraspaso] = useState('');
   const [motivoTouched, setMotivoTouched] = useState(false);
@@ -59,6 +60,9 @@ export default function TerrenoDetalles() {
       await traspasarDominio(id, nuevoDueno.id_persona, motivoTraspaso);
       toast.success('Traspaso de dominio ejecutado con éxito');
       setModalTraspaso(false);
+      setTraspasoStep(1);
+      setNuevoDueno(null);
+      setMotivoTraspaso('');
       setLoading(true);
       const data = await getTerrenoById(id);
       setTerreno(data);
@@ -66,6 +70,14 @@ export default function TerrenoDetalles() {
     } catch(e) {
       toast.error(e.response?.data?.message || 'No se pudo realizar el traspaso. Verifica los datos e intenta de nuevo.');
     }
+  };
+
+  const cerrarModalTraspaso = () => {
+    setModalTraspaso(false);
+    setTraspasoStep(1);
+    setNuevoDueno(null);
+    setMotivoTraspaso('');
+    setMotivoTouched(false);
   };
 
   if (loading) return <div style={{padding: '3rem', textAlign: 'center', color: 'var(--text-main)'}}>Cargando información del predio...</div>;
@@ -100,12 +112,12 @@ export default function TerrenoDetalles() {
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(16);
     doc.setTextColor(15, 23, 42);
-    doc.text('JUNTA DE AGUA DE RIEGO CHIBULEO', 105, 24, { align: 'center' });
+    doc.text('CONSEJO DE GOBIERNO COMUNITARIO CHIBULEO-SAN FRANCISCO', 105, 24, { align: 'center' });
 
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(100, 116, 139);
-    doc.text('Sistema de Gestión Comunitaria - ERP Chibutech', 105, 30, { align: 'center' });
+    doc.text('Sistema de Gestión Comunitaria', 105, 30, { align: 'center' });
     doc.text('Tungurahua - Ecuador', 105, 35, { align: 'center' });
 
     doc.setLineWidth(0.8);
@@ -349,100 +361,152 @@ export default function TerrenoDetalles() {
       <div className="glass-card" style={{ padding: '2rem' }}>
         
         {/* TAB 1: FICHA CATASTRAL */}
-        {activeTab === 'ficha' && (
+        {activeTab === 'ficha' && (() => {
+          const estadoColor = {
+            'Construido':       { bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)', text: '#10b981' },
+            'En Construcción':  { bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)', text: '#f59e0b' },
+            'En Planificación': { bg: 'rgba(14,165,233,0.12)', border: 'rgba(14,165,233,0.3)', text: '#0ea5e9' },
+            'Abandonado':       { bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.3)',  text: '#ef4444' },
+          };
+          const ec = estadoColor[terreno.estado_construccion] || { bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)', text: 'var(--text-muted)' };
+          const initials = (name) => name?.split(' ').filter(Boolean).slice(0, 2).map(n => n[0].toUpperCase()).join('') || '?';
+          return (
           <div className="details-grid animate-fade-in">
-            <div>
-              <h3 style={{ margin: '0 0 1.25rem 0', color: 'var(--primary)', fontSize: '1.15rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                Datos de Identificación del Lote
+
+            {/* ── COLUMNA IZQUIERDA ─────────────────────────────── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <h3 style={{ margin: '0 0 0.25rem 0', color: 'var(--primary)', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FileText size={16} /> Datos de Identificación
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div className="detail-row">
-                  <span className="detail-label">Clave Catastral</span>
-                  <span className="detail-value">{terreno.clave_catastral}</span>
+
+              {/* Clave catastral destacada */}
+              <div style={{ background: 'rgba(14,165,233,0.07)', border: '1px solid rgba(14,165,233,0.22)', borderRadius: '0.75rem', padding: '0.9rem 1.1rem' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '0.3rem' }}>Clave Catastral</div>
+                <div style={{ fontFamily: 'monospace', fontSize: '1.15rem', fontWeight: 700, color: 'var(--primary)', letterSpacing: '1.5px' }}>{terreno.clave_catastral}</div>
+              </div>
+
+              {/* Propietario con avatar */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.75rem', padding: '0.9rem 1.1rem' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.95rem', fontWeight: 700, color: '#fff', flexShrink: 0, boxShadow: '0 2px 8px rgba(14,165,233,0.35)' }}>
+                  {initials(terreno.propietario)}
                 </div>
-                <div className="detail-row">
-                  <span className="detail-label">Propietario Concesionario</span>
-                  <span className="detail-value">{terreno.propietario}</span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.2rem' }}>Propietario Concesionario</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.98rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{terreno.propietario}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>C.I: <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>{terreno.cedula}</span></div>
                 </div>
-                <div className="detail-row">
-                  <span className="detail-label">Cédula</span>
-                  <span className="detail-value">{terreno.cedula}</span>
-                </div>
-                {terreno.copropietarios && terreno.copropietarios.length > 0 && (
-                  <div className="detail-row">
-                    <span className="detail-label">Copropietarios</span>
-                    <span className="detail-value">
-                      {terreno.copropietarios.map(c => `${c.nombre} (${c.cedula})`).join(', ')}
-                    </span>
-                  </div>
-                )}
-                <div className="detail-item">
-                  <span className="detail-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <MapPin size={16} /> Sector (Zona)
+              </div>
+
+              {/* Copropietarios */}
+              <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.75rem', padding: '0.9rem 1.1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: terreno.copropietarios?.length > 0 ? '0.65rem' : 0 }}>
+                  <Users size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Copropietarios</span>
+                  <span style={{ marginLeft: 'auto', fontSize: '0.72rem', fontWeight: 700, color: terreno.copropietarios?.length > 0 ? 'var(--primary)' : 'var(--text-muted)', background: terreno.copropietarios?.length > 0 ? 'rgba(14,165,233,0.15)' : 'rgba(255,255,255,0.06)', padding: '0.1rem 0.55rem', borderRadius: '999px' }}>
+                    {terreno.copropietarios?.length || 0}
                   </span>
-                  <span className="detail-value">{terreno.sector} ({terreno.zona})</span>
                 </div>
-                <div className="detail-row">
-                  <span className="detail-label">Estado de Construcción</span>
-                  <span className="detail-value" style={{ color: 'var(--primary)', fontWeight: 'bold' }}>{terreno.estado_construccion}</span>
-                </div>
-                {terreno.archivo_escritura && (
-                  <div className="detail-row">
-                    <span className="detail-label">Archivo de Escrituras</span>
-                    <span className="detail-value">
-                      <a 
-                        href={`http://localhost:8000${terreno.archivo_escritura}`} 
-                        target="_blank" 
-                        rel="noreferrer"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--primary)', textDecoration: 'underline' }}
-                      >
-                        <FileText size={16} /> Ver Documento
-                      </a>
-                    </span>
+                {terreno.copropietarios?.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                    {terreno.copropietarios.map(c => (
+                      <div key={c.id_persona} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.5rem 0.7rem', background: 'rgba(14,165,233,0.06)', borderRadius: '0.5rem', border: '1px solid rgba(14,165,233,0.14)' }}>
+                        <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(14,165,233,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700, color: 'var(--primary)', flexShrink: 0 }}>
+                          {initials(c.nombre)}
+                        </div>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nombre}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0 }}>C.I: {c.cedula}</span>
+                      </div>
+                    ))}
                   </div>
+                ) : (
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin copropietarios registrados</p>
                 )}
               </div>
+
+              {/* Sector / Zona + Estado */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', alignItems: 'start' }}>
+                <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.75rem', padding: '0.9rem 1.1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.3rem' }}>
+                    <MapPin size={13} style={{ color: 'var(--primary)' }} />
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sector / Zona</span>
+                  </div>
+                  <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-main)' }}>{terreno.sector}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{terreno.zona}</div>
+                </div>
+                <div style={{ background: ec.bg, border: `1px solid ${ec.border}`, borderRadius: '0.75rem', padding: '0.9rem 1rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.3rem' }}>Estado</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.82rem', color: ec.text }}>{terreno.estado_construccion || '—'}</div>
+                </div>
+              </div>
+
+              {/* Escritura si existe */}
+              {terreno.archivo_escritura && (
+                <a href={`http://localhost:8000${terreno.archivo_escritura}`} target="_blank" rel="noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.75rem 1rem', background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.2)', borderRadius: '0.75rem', color: 'var(--primary)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 500 }}>
+                  <FileText size={16} /> Ver Archivo de Escrituras <ExternalLink size={13} style={{ marginLeft: 'auto' }} />
+                </a>
+              )}
             </div>
 
-            <div>
-              <h3 style={{ margin: '0 0 1.25rem 0', color: 'var(--primary)', fontSize: '1.15rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                Medidas e Información Técnica
+            {/* ── COLUMNA DERECHA ───────────────────────────────── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <h3 style={{ margin: '0 0 0.25rem 0', color: 'var(--primary)', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Compass size={16} /> Medidas e Información Técnica
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div className="detail-row">
-                  <span className="detail-label">Área del Predio (m²)</span>
-                  <span className="detail-value">{terreno.area_m2} m²</span>
+
+              {/* Métricas de área */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.12) 0%, rgba(14,165,233,0.05) 100%)', border: '1px solid rgba(14,165,233,0.22)', borderRadius: '0.75rem', padding: '1rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.4rem' }}>Área del Predio</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--primary)', lineHeight: 1 }}>{parseFloat(terreno.area_m2).toLocaleString('es-EC')}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>m²</div>
                 </div>
-                <div className="detail-row">
-                  <span className="detail-label">Área en Hectáreas (Ha)</span>
-                  <span className="detail-value">{(terreno.area_m2 / 10000).toFixed(4)} Ha</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">Latitud GPS (Centroide)</span>
-                  <span className="detail-value">{terreno.latitud || 'Sin asignar'}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">Longitud GPS (Centroide)</span>
-                  <span className="detail-value">{terreno.longitud || 'Sin asignar'}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">Enlace a Google Maps</span>
-                  <span className="detail-value">
-                    {terreno.latitud ? (
-                      <a 
-                        href={`https://www.google.com/maps?q=${terreno.latitud},${terreno.longitud}`} 
-                        target="_blank" rel="noreferrer"
-                        style={{ color: 'var(--primary)', textDecoration: 'underline' }}
-                      >
-                        Ver ubicación en mapa
-                      </a>
-                    ) : 'No disponible'}
-                  </span>
+                <div style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(16,185,129,0.04) 100%)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: '0.75rem', padding: '1rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.4rem' }}>Hectáreas</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#10b981', lineHeight: 1 }}>{(terreno.area_m2 / 10000).toFixed(4)}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Ha</div>
                 </div>
               </div>
+
+              {/* Coordenadas GPS */}
+              <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.75rem', padding: '0.9rem 1.1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
+                  <Compass size={13} style={{ color: 'var(--primary)' }} />
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Coordenadas GPS (Centroide)</span>
+                </div>
+                {terreno.latitud ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Latitud</div>
+                      <div style={{ fontFamily: 'monospace', fontSize: '0.92rem', fontWeight: 600, color: 'var(--text-main)' }}>{terreno.latitud}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Longitud</div>
+                      <div style={{ fontFamily: 'monospace', fontSize: '0.92rem', fontWeight: 600, color: 'var(--text-main)' }}>{terreno.longitud}</div>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin coordenadas GPS registradas</p>
+                )}
+              </div>
+
+              {/* Botón Google Maps */}
+              {terreno.latitud ? (
+                <a href={`https://www.google.com/maps?q=${terreno.latitud},${terreno.longitud}`} target="_blank" rel="noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.85rem 1.1rem', background: 'rgba(14,165,233,0.08)', border: '1px solid rgba(14,165,233,0.25)', borderRadius: '0.75rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600, fontSize: '0.88rem', transition: 'background 0.2s' }}>
+                  <MapPin size={16} />
+                  Ver ubicación en Google Maps
+                  <ExternalLink size={13} style={{ marginLeft: 'auto' }} />
+                </a>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.85rem 1.1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.75rem', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                  <MapPin size={16} /> Ubicación en mapa no disponible
+                </div>
+              )}
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* TAB 2: VISTA EN GOOGLE MAPS */}
         {activeTab === 'mapa' && (
@@ -541,53 +605,142 @@ export default function TerrenoDetalles() {
       {/* MODAL TRASPASO DE DOMINIO */}
       {modalTraspaso && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.75)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          backdropFilter: 'blur(4px)'
         }}>
-          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '500px', padding: '2rem' }}>
+          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '560px', padding: '2rem' }}>
+
+            {/* Cabecera */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ margin: 0, color: 'var(--yellow)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <ArrowRightLeft size={20} /> Traspaso de Dominio
-              </h2>
-              <button onClick={() => setModalTraspaso(false)} style={{ color: 'var(--text-muted)' }}><X size={20} /></button>
-            </div>
-            
-            <div className="alert-warning" style={{ background: 'rgba(245,158,11,0.1)', color: 'var(--yellow)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
-              <strong>Atención:</strong> Esta acción transferirá legalmente el terreno ({terreno.clave_catastral}) a otra persona. Las deudas anteriores quedarán con el dueño actual ({terreno.propietario}).
+              <div>
+                <h2 style={{ margin: 0, color: 'var(--yellow)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>
+                  <ArrowRightLeft size={20} /> Traspaso de Dominio
+                </h2>
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Predio: <strong style={{ color: 'var(--text-main)' }}>{terreno.clave_catastral}</strong>
+                </p>
+              </div>
+              <button onClick={cerrarModalTraspaso} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
             </div>
 
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label className="input-label">Buscar Nuevo Propietario *</label>
-              <PersonaAutocompleteInput 
-                onSelect={(persona) => setNuevoDueno(persona)} 
-                placeholder="Busca por cédula o apellido..." 
-              />
-              {nuevoDueno && (
-                <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem', fontSize: '0.85rem' }}>
-                  <strong>Seleccionado:</strong> {nuevoDueno.nombre} {nuevoDueno.apellido} (C.I: {nuevoDueno.cedula})
+            {/* Indicador de pasos */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+              {[1, 2].map(step => (
+                <React.Fragment key={step}>
+                  <div style={{
+                    width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.8rem', fontWeight: 700,
+                    background: traspasoStep >= step ? 'var(--yellow)' : 'rgba(255,255,255,0.08)',
+                    color: traspasoStep >= step ? '#000' : 'var(--text-muted)',
+                    border: traspasoStep >= step ? '2px solid var(--yellow)' : '2px solid rgba(255,255,255,0.12)',
+                    transition: 'all 0.3s'
+                  }}>{step}</div>
+                  {step < 2 && <div style={{ flex: 1, height: '2px', background: traspasoStep > 1 ? 'var(--yellow)' : 'rgba(255,255,255,0.1)', transition: 'all 0.3s' }} />}
+                  <span style={{ fontSize: '0.75rem', color: traspasoStep >= step ? 'var(--yellow)' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                    {step === 1 ? 'Nuevo propietario' : 'Confirmar'}
+                  </span>
+                  {step < 2 && <div style={{ flex: 1 }} />}
+                </React.Fragment>
+              ))}
+            </div>
+
+            {/* PASO 1: Buscar nuevo propietario */}
+            {traspasoStep === 1 && (
+              <>
+                {/* Dueño actual */}
+                <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1.5rem' }}>
+                  <p style={{ margin: '0 0 0.4rem 0', fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dueño actual</p>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>{terreno.propietario}</p>
+                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>C.I: {terreno.cedula}</p>
                 </div>
-              )}
-            </div>
 
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label className="input-label">Motivo o Documento de Respaldo *</label>
-              <textarea
-                className="input-field"
-                placeholder="Ej: Contrato de compra-venta No. 12345, notariado..."
-                value={motivoTraspaso}
-                onChange={e => setMotivoTraspaso(e.target.value)}
-                onBlur={() => setMotivoTouched(true)}
-                rows={3}
-              />
-              {motivoTouched && !motivoTraspaso.trim() && (
-                <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El motivo o documento de respaldo es obligatorio.</span>
-              )}
-            </div>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label className="input-label">Buscar nuevo propietario *</label>
+                  <PersonaAutocompleteInput
+                    onChange={(persona) => setNuevoDueno(persona)}
+                    placeholder="Busca por cédula o apellido..."
+                  />
+                </div>
 
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-              <button className="btn-secondary" onClick={() => { setModalTraspaso(false); setMotivoTouched(false); }}>Cancelar</button>
-              <button className="btn-primary" style={{ background: 'var(--yellow)', color: '#000' }} onClick={handleTraspaso}>Confirmar Traspaso</button>
-            </div>
+                {nuevoDueno && (
+                  <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1.5rem' }}>
+                    <p style={{ margin: '0 0 0.4rem 0', fontSize: '0.72rem', color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Nuevo dueño seleccionado</p>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>
+                      {nuevoDueno.nombre} {nuevoDueno.apellido}
+                    </p>
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>C.I: {nuevoDueno.cedula}</p>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                  <button className="btn-secondary" onClick={cerrarModalTraspaso}>Cancelar</button>
+                  <button
+                    className="btn-primary"
+                    style={{ background: nuevoDueno ? 'var(--yellow)' : undefined, color: nuevoDueno ? '#000' : undefined, display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                    disabled={!nuevoDueno}
+                    onClick={() => setTraspasoStep(2)}
+                  >
+                    Continuar <ChevronRight size={16} />
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* PASO 2: Confirmar con documento */}
+            {traspasoStep === 2 && (
+              <>
+                {/* Visualización: de → a */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                  <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.6rem', padding: '0.75rem', textAlign: 'center' }}>
+                    <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Sale</p>
+                    <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-main)' }}>{terreno.propietario}</p>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>{terreno.cedula}</p>
+                  </div>
+                  <ArrowRightLeft size={20} style={{ color: 'var(--yellow)', flexShrink: 0 }} />
+                  <div style={{ flex: 1, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '0.6rem', padding: '0.75rem', textAlign: 'center' }}>
+                    <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.7rem', color: '#10b981', textTransform: 'uppercase' }}>Entra</p>
+                    <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-main)' }}>{nuevoDueno.nombre} {nuevoDueno.apellido}</p>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>{nuevoDueno.cedula}</p>
+                  </div>
+                </div>
+
+                {/* Aviso */}
+                <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '0.6rem', padding: '0.75rem', marginBottom: '1.25rem', display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
+                  <AlertTriangle size={16} style={{ color: 'var(--yellow)', flexShrink: 0, marginTop: '0.1rem' }} />
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--yellow)', lineHeight: 1.5 }}>
+                    Las deudas pendientes quedan con el dueño saliente. Los copropietarios se borran con el traspaso.
+                  </p>
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label className="input-label">Documento o motivo legal del traspaso *</label>
+                  <textarea
+                    className="input-field"
+                    placeholder="Ej: Contrato de compra-venta No. 12345, escritura notariada..."
+                    value={motivoTraspaso}
+                    onChange={e => setMotivoTraspaso(e.target.value)}
+                    onBlur={() => setMotivoTouched(true)}
+                    rows={3}
+                  />
+                  {motivoTouched && !motivoTraspaso.trim() && (
+                    <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>El documento de respaldo es obligatorio.</span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                  <button className="btn-secondary" onClick={() => setTraspasoStep(1)}>← Atrás</button>
+                  <button
+                    className="btn-primary"
+                    style={{ background: 'var(--yellow)', color: '#000' }}
+                    disabled={!motivoTraspaso.trim()}
+                    onClick={handleTraspaso}
+                  >
+                    Ejecutar Traspaso
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

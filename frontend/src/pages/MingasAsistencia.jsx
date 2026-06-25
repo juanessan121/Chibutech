@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ClipboardCheck, ArrowLeft, Search, Save, CheckCircle, XCircle, FileText, Lock } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { getMingasActivas, getConvocados, registrarAsistencia } from '../services/mingaService';
+
 import { allowTextWithPunctuation } from '../utils/validators';
 
 export default function MingasAsistencia() {
@@ -46,8 +47,20 @@ export default function MingasAsistencia() {
     }
     try {
       await registrarAsistencia(selectedMinga, { asistencias: asistencia, cerrar_registro: false });
-      toast.success('Listado de asistencia guardado correctamente.');
-      getConvocados(selectedMinga).then(setAsistencia);
+      // Recargar convocados y verificar si la minga fue auto-finalizada
+      const [updatedConvocados, mingasAun] = await Promise.all([
+        getConvocados(selectedMinga),
+        getMingasActivas(),
+      ]);
+      setAsistencia(updatedConvocados);
+      setMingasActivas(mingasAun);
+      const sigueActiva = mingasAun.some(m => m.id_minga == selectedMinga);
+      if (sigueActiva) {
+        toast.success('Listado de asistencia guardado correctamente.');
+      } else {
+        setIsClosed(true);
+        toast.success('Lista registrada. El registro se cerró automáticamente — todos los participantes marcados.');
+      }
     } catch (e) {
       toast.error('No se pudo guardar el listado de asistencia. Intenta de nuevo.');
     }
@@ -199,6 +212,12 @@ export default function MingasAsistencia() {
       {/* Tabla de Asistencia (Solo visible si hay minga seleccionada) */}
       {selectedMinga ? (
         <div className="table-container animate-fade-in">
+          {/* Indicador de filas ocultas cuando hay búsqueda activa */}
+          {searchTerm.trim() && (
+            <div style={{ padding: '0.6rem 1rem', background: 'rgba(14,165,233,0.08)', borderBottom: '1px solid rgba(14,165,233,0.2)', fontSize: '0.8rem', color: 'var(--primary)' }}>
+              Mostrando todos los resultados para "{searchTerm}" (incluye ya marcados). Borra la búsqueda para ver solo pendientes.
+            </div>
+          )}
           <table className="data-table">
             <thead>
               <tr>
@@ -210,7 +229,13 @@ export default function MingasAsistencia() {
               </tr>
             </thead>
             <tbody>
-              {asistencia.filter(u => u.nombre.toLowerCase().includes(searchTerm.toLowerCase())).map((user) => (
+              {(searchTerm.trim()
+                ? asistencia.filter(u =>
+                    u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (u.cedula && u.cedula.includes(searchTerm))
+                  )
+                : asistencia.filter(u => u.estado === 'Pendiente')
+              ).map((user) => (
                 <tr key={user.id}>
                   <td>{user.cedula}</td>
                   <td style={{ fontWeight: '500', color: 'var(--text-main)' }}>{user.nombre}</td>

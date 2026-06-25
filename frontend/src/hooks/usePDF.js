@@ -76,7 +76,7 @@ function dibujarFooter(doc) {
     doc.setTextColor(...COLORS.muted);
     doc.text(INSTITUCION.nombre, LAYOUT.marginLeft, LAYOUT.footerY + 5);
     doc.text(`Página ${i} de ${pageCount}`, pageW - LAYOUT.marginRight, LAYOUT.footerY + 5, { align: 'right' });
-    doc.text('Documento generado electrónicamente por Chibutech', pageW / 2, LAYOUT.footerY + 5, { align: 'center' });
+    doc.text('Documento generado electrónicamente por el Consejo de Gobierno Comunitario Chibuleo-San Francisco', pageW / 2, LAYOUT.footerY + 5, { align: 'center' });
   }
 }
 

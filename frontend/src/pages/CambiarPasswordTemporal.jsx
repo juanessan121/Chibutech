@@ -61,7 +61,7 @@ export default function CambiarPasswordTemporal() {
           <div className="logo-container">
             <Droplet size={40} className="logo-icon" />
           </div>
-          <h1>Chibutech ERP</h1>
+          <h1>Consejo de Gobierno Comunitario<br />Chibuleo-San Francisco</h1>
           <p>Establece tu nueva contraseña</p>
         </div>
 

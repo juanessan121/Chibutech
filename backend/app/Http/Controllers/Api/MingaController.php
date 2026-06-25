@@ -99,17 +99,22 @@ class MingaController extends Controller
 
     public function convocados($id)
     {
-        // Obtener sectores asignados
-        $sectores = DB::table('Asignacion_Sector_Minga')->where('id_minga', $id)->pluck('id_sector');
+        $sectores   = DB::table('Asignacion_Sector_Minga')->where('id_minga', $id)->pluck('id_sector');
+        $fechaMinga = DB::table('Minga')->where('id_minga', $id)->value('fecha_programada') ?? '';
 
-        // Obtener personas de esos sectores
+        // Sub-query: multas ligadas a esta minga por fecha (la tabla Multa no tiene id_minga FK)
+        $multasSub = DB::table('Multa')
+            ->where('motivo_multa', 'like', "Inasistencia a Minga: %({$fechaMinga})")
+            ->select('id_persona', 'estado_pago', 'monto');
+
         $personas = DB::table('Persona as p')
             ->join('Sector as s', 'p.id_sector', '=', 's.id_sector')
-            ->leftJoin('Asistencia_Minga as a', function($join) use ($id) {
+            ->leftJoin('Asistencia_Minga as a', function ($join) use ($id) {
                 $join->on('p.id_persona', '=', 'a.id_persona')
                      ->where('a.id_minga', '=', $id);
             })
             ->leftJoin('Catalogo_Estado_Asistencia as ea', 'a.id_estado_asistencia', '=', 'ea.id_estado_asistencia')
+            ->leftJoinSub($multasSub, 'mul', 'p.id_persona', '=', 'mul.id_persona')
             ->whereIn('p.id_sector', $sectores)
             ->where('p.estado_vital', 'Vivo')
             ->select(
@@ -117,7 +122,13 @@ class MingaController extends Controller
                 'p.cedula',
                 DB::raw("CONCAT(p.nombre, ' ', p.apellido) as nombre"),
                 's.nombre_sector as sector',
-                DB::raw("COALESCE(ea.nombre_estado, 'Pendiente') as estado")
+                // Si la persona faltó Y su multa está Pagada → mostrar estado compuesto
+                DB::raw("CASE
+                    WHEN ea.nombre_estado = 'Faltó' AND mul.estado_pago = 'Pagada' THEN 'Faltó (Pagado)'
+                    ELSE COALESCE(ea.nombre_estado, 'Pendiente')
+                END as estado"),
+                DB::raw("COALESCE(mul.estado_pago, NULL) as multa_estado"),
+                DB::raw("COALESCE(mul.monto, NULL) as multa_monto")
             )
             ->orderBy('s.nombre_sector')
             ->orderBy('nombre')
@@ -131,52 +142,58 @@ class MingaController extends Controller
         try {
             DB::beginTransaction();
 
-            // Mapeo inverso de estado a ID
-            // 'Pendiente' => 1, 'Presente' => 2, 'Faltó' => 3, 'Justificado' => 4
             $estadoMap = [
-                'Pendiente' => 1,
-                'Presente' => 2,
-                'Faltó' => 3,
-                'Justificado' => 4,
-                'Faltó (Pagado)' => 3 // Tratar igual en BD por ahora
+                'Pendiente'      => 1,
+                'Presente'       => 2,
+                'Faltó'          => 3,
+                'Justificado'    => 4,
+                'Faltó (Pagado)' => 3,
             ];
 
             foreach ($request->asistencias as $asistencia) {
                 $idEstado = $estadoMap[$asistencia['estado']] ?? 1;
-                
                 DB::table('Asistencia_Minga')->updateOrInsert(
                     ['id_minga' => $id, 'id_persona' => $asistencia['id']],
                     ['id_estado_asistencia' => $idEstado]
                 );
             }
 
-            if ($request->cerrar_registro) {
-                // Primero obtenemos el valor de la multa para esta minga
-                $mingaData = DB::table('Minga')->where('id_minga', $id)->first();
+            // Finalizar si: se solicitó cerrar_registro O si ya no quedan Pendientes en la BD
+            $pendientesRestantes = DB::table('Asistencia_Minga')
+                ->where('id_minga', $id)
+                ->where('id_estado_asistencia', 1) // Pendiente
+                ->count();
+
+            $totalRegistrados = DB::table('Asistencia_Minga')
+                ->where('id_minga', $id)
+                ->count();
+
+            $debeFinalizarse = $request->cerrar_registro
+                || ($totalRegistrados > 0 && $pendientesRestantes === 0);
+
+            if ($debeFinalizarse) {
+                $mingaData  = DB::table('Minga')->where('id_minga', $id)->first();
                 $valorMulta = $mingaData ? $mingaData->valor_multa_inasistencia : 0;
-                
-                // Si la minga tiene multa configurada, generamos el registro en la tabla Multa
+
                 if ($valorMulta > 0) {
                     $faltos = DB::table('Asistencia_Minga')
                         ->where('id_minga', $id)
-                        ->where('id_estado_asistencia', 3) // 3 = Faltó
+                        ->where('id_estado_asistencia', 3) // Faltó
                         ->pluck('id_persona');
-                    
+
                     $multasToInsert = [];
                     foreach ($faltos as $idPersona) {
-                        // Verificamos que no exista ya la multa para evitar duplicados en caso de múltiples clics
                         $exists = DB::table('Multa')
                             ->where('id_persona', $idPersona)
                             ->where('motivo_multa', 'like', "Inasistencia a Minga: %($mingaData->fecha_programada)")
                             ->exists();
-                            
                         if (!$exists) {
                             $multasToInsert[] = [
-                                'id_persona' => $idPersona,
+                                'id_persona'   => $idPersona,
                                 'motivo_multa' => 'Inasistencia a Minga: ' . $mingaData->motivo_general . ' (' . $mingaData->fecha_programada . ')',
-                                'monto' => $valorMulta,
-                                'estado_pago' => 'Pendiente',
-                                'fecha_emision' => now()
+                                'monto'        => $valorMulta,
+                                'estado_pago'  => 'Pendiente',
+                                'fecha_emision'=> now(),
                             ];
                         }
                     }
@@ -194,11 +211,15 @@ class MingaController extends Controller
                     }
                 }
 
-                DB::table('Minga')->where('id_minga', $id)->update(['id_estado_minga' => 3]); // 3 = Finalizada
+                // Buscar el ID de "Finalizada" dinámicamente para no depender de un valor hardcodeado
+                $idFinalizada = DB::table('Catalogo_Estado_Minga')
+                    ->where('nombre_estado', 'Finalizada')
+                    ->value('id_estado_minga') ?? 3;
+
+                DB::table('Minga')->where('id_minga', $id)->update(['id_estado_minga' => $idFinalizada]);
             }
 
             DB::commit();
-
             return response()->json(['status' => 'ok', 'message' => 'Asistencia guardada']);
         } catch (\Exception $e) {
             DB::rollBack();
