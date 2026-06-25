@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * PageHeader — Header de página consistente
  *

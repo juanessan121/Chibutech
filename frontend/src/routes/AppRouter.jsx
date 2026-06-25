@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Landing from '../pages/Landing';
 import Login from '../pages/Login';
@@ -127,11 +126,11 @@ export default function AppRouter() {
           {/* Perfil de Usuario — todos */}
           <Route path="perfil" element={<PrivateRoute><PerfilUsuario /></PrivateRoute>} />
 
-          {/* Módulo de Administración — solo Admin y Presidente (eliminar_usuario) */}
+          {/* Módulo de Administración — solo Administrador (administrar_sistema) */}
           <Route path="administracion">
-            <Route index element={<PermissionRoute permission="eliminar_usuario"><Administracion /></PermissionRoute>} />
-            <Route path="configuracion" element={<PermissionRoute permission="eliminar_usuario"><Configuracion /></PermissionRoute>} />
-            <Route path="bitacora" element={<PermissionRoute permission="eliminar_usuario"><Bitacora /></PermissionRoute>} />
+            <Route index element={<PermissionRoute permission="administrar_sistema"><Administracion /></PermissionRoute>} />
+            <Route path="configuracion" element={<PermissionRoute permission="administrar_sistema"><Configuracion /></PermissionRoute>} />
+            <Route path="bitacora" element={<PermissionRoute permission="administrar_sistema"><Bitacora /></PermissionRoute>} />
           </Route>
           
         </Route>

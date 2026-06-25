@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ShieldAlert, User, Clock, FileText } from 'lucide-react';
 import axios from '../services/axiosConfig';
 
@@ -11,8 +11,7 @@ export default function Bitacora() {
       try {
         const res = await axios.get('/auditoria');
         setAuditoria(res.data.data);
-      } catch (error) {
-        console.error("Error al obtener auditoría:", error);
+      } catch {
       } finally {
         setLoading(false);
       }

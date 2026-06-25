@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Shield, UserCheck, Star, Award, User, UserPlus } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
@@ -44,8 +44,7 @@ export default function Directiva() {
         });
 
         setMiembrosDirectiva(mapeados);
-      } catch (error) {
-        console.error("Error al obtener la directiva:", error);
+      } catch {
       } finally {
         setLoading(false);
       }

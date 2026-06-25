@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Map, MapPin, ArrowLeft, Calendar, FileText, Info, Compass, FileDown, Edit2, ArrowRightLeft, X, ExternalLink, Users, ChevronRight, AlertTriangle } from 'lucide-react';
 import { jsPDF } from 'jspdf';
@@ -627,7 +627,7 @@ export default function TerrenoDetalles() {
             {/* Indicador de pasos */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
               {[1, 2].map(step => (
-                <React.Fragment key={step}>
+                <Fragment key={step}>
                   <div style={{
                     width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '0.8rem', fontWeight: 700,
@@ -641,7 +641,7 @@ export default function TerrenoDetalles() {
                     {step === 1 ? 'Nuevo propietario' : 'Confirmar'}
                   </span>
                   {step < 2 && <div style={{ flex: 1 }} />}
-                </React.Fragment>
+                </Fragment>
               ))}
             </div>
 

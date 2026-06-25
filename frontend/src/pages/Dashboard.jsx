@@ -46,8 +46,8 @@ export default function Dashboard() {
             terrenos:         d.terrenos          ?? 0,
             multasPendientes: d.multas_pendientes ?? 0,
           });
-        } catch (error) {
-          if (!controller.signal.aborted) console.error('Error cargando datos del dashboard', error);
+        } catch {
+          // silencioso — el dashboard muestra placeholders
         }
       };
       fetchDashboardData();
@@ -55,7 +55,7 @@ export default function Dashboard() {
       setLoadingComunero(true);
       axios.get('/dashboard/resumen-comunero', { signal: controller.signal })
         .then(res => setComuneroData(res.data.data))
-        .catch(err => { if (!controller.signal.aborted) console.error('Error cargando datos del comunero', err); })
+        .catch(() => {})
         .finally(() => setLoadingComunero(false));
     }
 

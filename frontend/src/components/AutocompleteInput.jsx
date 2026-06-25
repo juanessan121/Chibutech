@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../services/axiosConfig';
 
@@ -64,8 +64,7 @@ export default function AutocompleteInput({ value, onChange, placeholder }) {
           globalTitlesCache = res.data.data;
           setAllTitles(globalTitlesCache);
         }
-      }).catch(err => {
-        console.error("Error fetching titles catalog", err);
+      }).catch(() => {
       }).finally(() => {
         isFetchingCache = false;
         setLoading(false);

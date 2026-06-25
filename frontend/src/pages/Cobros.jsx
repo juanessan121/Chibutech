@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import { Wallet, Search, PlusCircle, BarChart3, ArrowRight, Droplets } from 'lucide-react';
 import bgVentanillaCobro from '../assets/bg_ventanilla_cobro.png';

@@ -17,8 +17,8 @@ api.interceptors.request.use((config) => {
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
-    } catch (e) {
-      console.error("Error parsing auth token", e);
+    } catch {
+      // token corrupto — se ignora y continúa sin header
     }
   }
   return config;

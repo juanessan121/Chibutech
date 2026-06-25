@@ -21,8 +21,8 @@ export default function CobrosEgreso() {
       try {
         const { data } = await axios.get('/reportes/balance');
         setSaldoCaja(data.data.resumen.saldo);
-      } catch (error) {
-        console.error('Error obteniendo balance:', error);
+      } catch {
+        // el saldo se muestra en 0 si no carga
       }
     };
     fetchBalance();

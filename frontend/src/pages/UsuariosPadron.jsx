@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { getUsers, deleteUser } from '../services/userService';
-import { Users, Trash2, CheckCircle, XCircle, ArrowLeft, Search, Edit2, ShieldCheck, X, ShieldOff } from 'lucide-react';
+import { Users, Trash2, CheckCircle, XCircle, ArrowLeft, Search, Edit2, ShieldCheck, X, ShieldOff, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/axiosConfig';
@@ -34,6 +34,7 @@ export default function UsuariosPadron() {
   const [modalRol, setModalRol] = useState(null); // { id_persona, nombre, rol_actual }
   const [nuevoRol, setNuevoRol] = useState('');
   const [nuevaPassword, setNuevaPassword] = useState('');
+  const [showModalPass, setShowModalPass] = useState(false);
   const [guardandoRol, setGuardandoRol] = useState(false);
 
   useEffect(() => { fetchUsers(); }, []);
@@ -75,6 +76,7 @@ export default function UsuariosPadron() {
     setModalRol({ id_persona: user.id_persona, nombre: user.nombre_completo, rol_actual: user.rol, es_directiva: esDirectiva });
     setNuevoRol(esDirectiva ? 'Comunero' : (user.rol === 'Comunero' || user.rol === 'Administrador' ? user.rol : 'Comunero'));
     setNuevaPassword('');
+    setShowModalPass(false);
   };
 
   const handleCambiarRol = async () => {
@@ -200,28 +202,32 @@ export default function UsuariosPadron() {
         )}
       </div>
 
-      {/* MODAL CAMBIAR ROL */}
+      {/* MODAL CAMBIAR ROL / RESTABLECER CONTRASEÑA */}
       {modalRol && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '440px', padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <h3 style={{ margin: 0, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <ShieldCheck size={20} /> Cambiar Rol
+                {modalRol.es_directiva ? <KeyRound size={20} /> : <ShieldCheck size={20} />}
+                {modalRol.es_directiva ? 'Restablecer Contraseña' : 'Cambiar Rol'}
               </h3>
               <button onClick={() => setModalRol(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
             </div>
 
             <p className="text-muted" style={{ marginBottom: '1.25rem', fontSize: '0.9rem' }}>
-              Modificar permisos de <strong style={{ color: 'var(--text-main)' }}>{modalRol.nombre}</strong>
+              {modalRol.es_directiva
+                ? <>Asignar nueva contraseña para <strong style={{ color: 'var(--text-main)' }}>{modalRol.nombre}</strong></>
+                : <>Modificar permisos de <strong style={{ color: 'var(--text-main)' }}>{modalRol.nombre}</strong></>
+              }
             </p>
 
             {modalRol.es_directiva ? (
-              <div style={{ marginBottom: '1.25rem', padding: '0.85rem 1rem', borderRadius: '0.5rem', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)' }}>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#f59e0b', fontWeight: 600 }}>
-                  Cargo asignado desde Directiva
+              <div style={{ marginBottom: '1.25rem', padding: '0.85rem 1rem', borderRadius: '0.5rem', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)' }}>
+                <p style={{ margin: 0, fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.5 }}>
+                  El cargo <strong style={{ color: 'var(--text-main)' }}>{modalRol.rol_actual}</strong> es administrado desde el módulo de Directiva. Aquí solo puedes restablecer su contraseña de acceso.
                 </p>
-                <p style={{ margin: '0.3rem 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
-                  <strong style={{ color: 'var(--text-main)' }}>{modalRol.rol_actual}</strong> — este cargo es gestionado desde el módulo de Directiva y no puede cambiarse aquí. Solo puedes actualizar la contraseña.
+                <p style={{ margin: '0.4rem 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  Al guardar, el usuario deberá cambiarla en su próximo inicio de sesión.
                 </p>
               </div>
             ) : (
@@ -237,14 +243,28 @@ export default function UsuariosPadron() {
             )}
 
             <div className="input-group" style={{ marginBottom: '1.5rem' }}>
-              <label className="input-label">Nueva Contraseña <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>(dejar vacío para no cambiar)</span></label>
-              <input
-                type="password"
-                className="input-field"
-                placeholder="Mín. 4 caracteres"
-                value={nuevaPassword}
-                onChange={e => setNuevaPassword(e.target.value)}
-              />
+              <label className="input-label">
+                {modalRol.es_directiva ? 'Nueva contraseña *' : 'Nueva Contraseña'}
+                {!modalRol.es_directiva && <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}> (dejar vacío para no cambiar)</span>}
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showModalPass ? 'text' : 'password'}
+                  className="input-field"
+                  placeholder="Mín. 4 caracteres"
+                  value={nuevaPassword}
+                  onChange={e => setNuevaPassword(e.target.value)}
+                  style={{ paddingRight: '2.5rem' }}
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => setShowModalPass(v => !v)}
+                  style={{ position: 'absolute', right: '0.6rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+                >
+                  {showModalPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
@@ -255,7 +275,7 @@ export default function UsuariosPadron() {
                 disabled={guardandoRol || (modalRol.es_directiva ? !nuevaPassword : (nuevoRol === modalRol.rol_actual && !nuevaPassword))}
                 onClick={handleCambiarRol}
               >
-                {guardandoRol ? 'Guardando...' : 'Confirmar Cambio'}
+                {guardandoRol ? 'Guardando...' : modalRol.es_directiva ? 'Restablecer Contraseña' : 'Confirmar Cambio'}
               </button>
             </div>
           </div>

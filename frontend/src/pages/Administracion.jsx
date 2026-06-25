@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import { Shield, Settings, ArrowRight, ShieldAlert } from 'lucide-react';
 import bgLayout from '../assets/bg_layout.png';

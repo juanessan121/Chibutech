@@ -15,8 +15,8 @@ export const login = async (cedula, password) => {
 export const logout = async () => {
   try {
     await api.post('/auth/logout');
-  } catch (error) {
-    console.error('Error al cerrar sesión', error);
+  } catch {
+    // sesión expirada en el servidor — no interrumpir flujo local
   }
 };
 

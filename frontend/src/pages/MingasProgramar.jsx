@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CalendarPlus, ArrowLeft, Save, MapPin, DollarSign, Clock, Users, FileText, Tag, Navigation } from 'lucide-react';
 import { Toaster, toast } from 'sonner';

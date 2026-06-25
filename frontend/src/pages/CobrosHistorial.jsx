@@ -14,8 +14,8 @@ export default function CobrosHistorial() {
       try {
         const data = await getHistorialCaja();
         setTransacciones(data || []);
-      } catch (error) {
-        console.error(error);
+      } catch {
+        // historial no disponible
       }
     };
     fetchHistorial();

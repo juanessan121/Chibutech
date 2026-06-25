@@ -1,0 +1,35 @@
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.suo
+*.sw?
+
+# Backend — Laravel
+backend/vendor/
+backend/.env
+backend/.env.*
+backend/.phpunit.result.cache
+backend/.phpunit.cache/
+backend/storage/*.key
+backend/storage/pail/
+backend/storage/logs/
+backend/storage/framework/cache/
+backend/storage/framework/sessions/
+backend/storage/framework/views/
+backend/public/storage
+backend/public/hot
+backend/auth.json
+
+# Frontend — Vite / Node
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+
+# Docker runtime
+*.pid

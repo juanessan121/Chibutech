@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import { Search, UserPlus, Users, ArrowRight, Shield } from 'lucide-react';
 import bgBuscarUsuario from '../assets/bg_buscar_usuario.png';

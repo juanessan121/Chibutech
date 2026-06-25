@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { User, Phone, Mail, Award, Lock, Save, Droplets, Shield, Calendar } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import useAuthStore from '../store/useAuthStore';

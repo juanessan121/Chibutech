@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, ArrowLeft, History, UserPlus, Save, FileText, Calendar, RefreshCw, RotateCcw, AlertTriangle, X } from 'lucide-react';
+import { Shield, ArrowLeft, History, UserPlus, Save, FileText, Calendar, RefreshCw, RotateCcw, AlertTriangle, X, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from '../services/axiosConfig';
 import PersonaAutocompleteInput from '../components/PersonaAutocompleteInput';
@@ -41,6 +41,10 @@ export default function DirectivaGestion() {
   // Estado para cambio de miembro
   const [cambioData, setCambioData] = useState({ id_cargo_directivo: '', id_persona_nueva: null, password: '' });
   const [guardandoCambio, setGuardandoCambio] = useState(false);
+
+  // Toggle visibilidad contraseñas
+  const [showPassNueva, setShowPassNueva] = useState(false);
+  const [showPassRegistro, setShowPassRegistro] = useState(false);
 
   // Touched para validación inline
   const [touched, setTouched] = useState({ fecha_inicio: false, resolucion: false, cargo: false });
@@ -167,7 +171,7 @@ export default function DirectivaGestion() {
             return acc;
         }, {});
         setHistorialPeriodos(Object.values(agrupado).sort((a,b) => b.periodo - a.periodo));
-      }).catch(err => console.error("Error cargando historial:", err));
+      }).catch(() => {});
     }
   }, [activeTab]);
 
@@ -356,14 +360,25 @@ export default function DirectivaGestion() {
                     {cargosSeleccionados[cargo.id] && (
                       <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr', alignItems: 'center', gap: '1rem' }}>
                         <label className="input-label" style={{ textAlign: 'right', fontSize: '0.8rem' }}>Asignar Contraseña:</label>
-                        <input
-                          type="password"
-                          className="input-field"
-                          placeholder="Contraseña temporal (ej. chibuleo2024)"
-                          value={cargosPasswords[cargo.id] || ''}
-                          onChange={(e) => handlePasswordChange(cargo.id, e.target.value)}
-                          style={{ maxWidth: '300px', fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                        />
+                        <div style={{ position: 'relative', maxWidth: '300px' }}>
+                          <input
+                            type={showPassRegistro ? 'text' : 'password'}
+                            className="input-field"
+                            placeholder="Contraseña temporal (ej. chibuleo2024)"
+                            value={cargosPasswords[cargo.id] || ''}
+                            onChange={(e) => handlePasswordChange(cargo.id, e.target.value)}
+                            style={{ fontSize: '0.85rem', padding: '0.4rem 2.2rem 0.4rem 0.8rem', width: '100%' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassRegistro(v => !v)}
+                            style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
+                            tabIndex={-1}
+                            aria-label={showPassRegistro ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                          >
+                            {showPassRegistro ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -456,24 +471,42 @@ export default function DirectivaGestion() {
 
       {/* CONTENIDO PESTAÑA: CAMBIAR MIEMBRO */}
       {activeTab === 'cambiar' && (() => {
-        const cargoSeleccionado = miembrosActivos.find(m => String(m.id_cargo_directivo) === String(cambioData.id_cargo_directivo));
+        // Combina el catálogo fijo con los registros activos para mostrar TODOS los cargos,
+        // incluyendo los que nunca tuvieron registro en Miembro_Directiva
+        const todosCargos = CARGOS_DIRECTIVA.map(cargo => {
+          const miembro = miembrosActivos.find(m => m.id_cargo_directivo === cargo.id);
+          if (miembro) return miembro;
+          return {
+            id_cargo_directivo: cargo.id,
+            cargo: cargo.nombre,
+            id_persona: null,
+            nombre: null,
+            cedula: null,
+            sinRegistro: true,
+          };
+        });
+
+        const cargoSeleccionado = todosCargos.find(m => String(m.id_cargo_directivo) === String(cambioData.id_cargo_directivo));
         const esVacante = cargoSeleccionado && !cargoSeleccionado.id_persona;
-        const vacantes = miembrosActivos.filter(m => !m.id_persona);
+        const sinRegistro = cargoSeleccionado?.sinRegistro === true;
+        const vacantes = todosCargos.filter(m => !m.id_persona);
+
         return (
         <div className="glass-card animate-fade-in" style={{ padding: '2.5rem', maxWidth: '800px', margin: '0 auto' }}>
           <h3 className="text-primary" style={{ marginBottom: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
             Cambiar Miembro de la Directiva Actual
           </h3>
           <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-            Reemplaza a un miembro activo o designa a alguien para un cargo vacante. Si la persona ya ocupa otro cargo, ese puesto quedará vacante automáticamente.
+            Reemplaza a un miembro activo, designa a alguien para un cargo vacante o registra un cargo que aún no tiene representante. Si la persona ya ocupa otro cargo, ese puesto quedará vacante automáticamente.
           </p>
 
-          {/* Aviso de vacantes */}
+          {/* Aviso de vacantes o cargos sin registro */}
           {vacantes.length > 0 && (
             <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '0.75rem', padding: '0.85rem 1rem', marginBottom: '1.5rem' }}>
               <AlertTriangle size={15} style={{ color: 'var(--yellow)', flexShrink: 0, marginTop: '0.1rem' }} />
               <span style={{ fontSize: '0.82rem', color: 'var(--yellow)' }}>
-                Hay <strong>{vacantes.length}</strong> cargo(s) sin designar: {vacantes.map(v => v.cargo).join(', ')}.
+                Hay <strong>{vacantes.length}</strong> cargo(s) sin designar:{' '}
+                {vacantes.map(v => v.sinRegistro ? `${v.cargo} (sin registro)` : v.cargo).join(', ')}.
               </span>
             </div>
           )}
@@ -485,18 +518,32 @@ export default function DirectivaGestion() {
           ) : (
             <form onSubmit={handleCambiarMiembro} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-              {/* Lista de miembros actuales con badge de vacante */}
+              {/* Lista COMPLETA de cargos — incluye sin registro */}
               <div>
                 <h4 style={{ marginBottom: '0.75rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Estado actual de la directiva</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  {miembrosActivos.map(m => (
-                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.6rem 1rem', background: m.id_persona ? 'rgba(255,255,255,0.04)' : 'rgba(245,158,11,0.06)', borderRadius: '0.5rem', border: `1px solid ${m.id_persona ? 'var(--border-color)' : 'rgba(245,158,11,0.25)'}`, fontSize: '0.88rem' }}>
+                  {todosCargos.map(m => (
+                    <div
+                      key={m.id_cargo_directivo}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '1rem',
+                        padding: '0.6rem 1rem',
+                        background: m.id_persona ? 'rgba(255,255,255,0.04)' : m.sinRegistro ? 'rgba(239,68,68,0.05)' : 'rgba(245,158,11,0.06)',
+                        borderRadius: '0.5rem',
+                        border: `1px solid ${m.id_persona ? 'var(--border-color)' : m.sinRegistro ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.25)'}`,
+                        fontSize: '0.88rem',
+                      }}
+                    >
                       <span style={{ color: 'var(--yellow)', fontWeight: 600, minWidth: '160px' }}>{m.cargo}</span>
                       {m.id_persona ? (
                         <>
                           <span style={{ color: 'var(--text-main)' }}>{m.nombre}</span>
                           <span className="text-muted" style={{ fontSize: '0.78rem' }}>{m.cedula}</span>
                         </>
+                      ) : m.sinRegistro ? (
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#ef4444', background: 'rgba(239,68,68,0.12)', padding: '0.15rem 0.6rem', borderRadius: '999px' }}>
+                          ✕ Sin representante registrado
+                        </span>
                       ) : (
                         <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f59e0b', background: 'rgba(245,158,11,0.15)', padding: '0.15rem 0.6rem', borderRadius: '999px' }}>
                           ⬚ Por designar
@@ -510,7 +557,7 @@ export default function DirectivaGestion() {
               {/* Cargo a modificar */}
               <div className="input-group">
                 <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Shield size={14} className="text-yellow" /> Cargo a {esVacante ? 'designar' : 'reemplazar'} *
+                  <Shield size={14} className="text-yellow" /> Cargo a {sinRegistro ? 'registrar' : esVacante ? 'designar' : 'reemplazar'} *
                 </label>
                 <select
                   className="form-select"
@@ -520,9 +567,13 @@ export default function DirectivaGestion() {
                   onBlur={() => setTouched(t => ({ ...t, cargo: true }))}
                 >
                   <option value="">-- Seleccione el cargo --</option>
-                  {miembrosActivos.map(m => (
+                  {todosCargos.map(m => (
                     <option key={m.id_cargo_directivo} value={m.id_cargo_directivo}>
-                      {m.id_persona ? `${m.cargo} — ${m.nombre}` : `⬚ ${m.cargo} — Vacante`}
+                      {m.id_persona
+                        ? `${m.cargo} — ${m.nombre}`
+                        : m.sinRegistro
+                          ? `✕ ${m.cargo} — Sin representante`
+                          : `⬚ ${m.cargo} — Vacante`}
                     </option>
                   ))}
                 </select>
@@ -534,8 +585,15 @@ export default function DirectivaGestion() {
               {/* Nueva persona */}
               {cambioData.id_cargo_directivo && (
                 <>
-                  {/* Contexto según si es vacante o reemplazo */}
-                  {esVacante ? (
+                  {/* Contexto según tipo de cargo */}
+                  {sinRegistro ? (
+                    <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.6rem', padding: '0.75rem 1rem' }}>
+                      <AlertTriangle size={15} style={{ color: '#ef4444', flexShrink: 0, marginTop: '0.1rem' }} />
+                      <span style={{ fontSize: '0.82rem', color: '#fca5a5' }}>
+                        Este cargo <strong>no tiene ningún registro</strong> en la directiva actual. La persona que designes será registrada como representante oficial de <strong>{cargoSeleccionado?.cargo}</strong> dentro del periodo vigente.
+                      </span>
+                    </div>
+                  ) : esVacante ? (
                     <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '0.6rem', padding: '0.75rem 1rem' }}>
                       <span style={{ fontSize: '0.82rem', color: '#10b981' }}>
                         Este cargo está vacante. La persona que designes ocupará el puesto desde hoy.
@@ -564,14 +622,25 @@ export default function DirectivaGestion() {
                     <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <FileText size={14} className="text-muted" /> Contraseña temporal para el nuevo miembro
                     </label>
-                    <input
-                      type="password"
-                      className="input-field"
-                      placeholder="chibuleo2024 (por defecto si se deja vacío)"
-                      value={cambioData.password}
-                      onChange={e => setCambioData({ ...cambioData, password: e.target.value })}
-                      style={{ maxWidth: '320px' }}
-                    />
+                    <div style={{ position: 'relative', maxWidth: '320px' }}>
+                      <input
+                        type={showPassNueva ? 'text' : 'password'}
+                        className="input-field"
+                        placeholder="chibuleo2024 (por defecto si se deja vacío)"
+                        value={cambioData.password}
+                        onChange={e => setCambioData({ ...cambioData, password: e.target.value })}
+                        style={{ paddingRight: '2.2rem', width: '100%' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassNueva(v => !v)}
+                        style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
+                        tabIndex={-1}
+                        aria-label={showPassNueva ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                      >
+                        {showPassNueva ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                   </div>
                 </>
               )}

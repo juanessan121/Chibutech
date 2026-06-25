@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
 import { Droplets, LogOut, LayoutDashboard, Users, FileText, Settings, ShieldAlert, UserCircle, Award, Map, MapPin, Menu, Bell, User, X, CheckCircle, ChevronRight, ChevronLeft, Calendar, Wallet, AlertTriangle } from 'lucide-react';
@@ -128,7 +128,7 @@ export default function DashboardLayout() {
     },
     { name: 'Reportes', path: '/dashboard/reportes', icon: FileText, color: '#f59e0b', show: hasPermission('ver_reportes') },
     // ── Sección Organización ─────────────────────────────────────────────────
-    { section: 'Organización', show: hasPermission('crear_usuario') || hasPermission('eliminar_usuario') },
+    { section: 'Organización', show: hasPermission('crear_usuario') || hasPermission('administrar_sistema') },
     {
       name: 'Directiva', icon: Award, color: '#f59e0b', show: hasPermission('crear_usuario'),
       activePaths: ['/dashboard/directiva'],
@@ -138,7 +138,7 @@ export default function DashboardLayout() {
       ]
     },
     {
-      name: 'Administración', icon: Settings, color: '#94a3b8', show: hasPermission('eliminar_usuario'),
+      name: 'Administración', icon: Settings, color: '#94a3b8', show: hasPermission('administrar_sistema'),
       activePaths: ['/dashboard/administracion'],
       subItems: [
         { name: 'Panel Admin', path: '/dashboard/administracion' },

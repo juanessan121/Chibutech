@@ -37,6 +37,10 @@ class AuthController extends Controller
             // Permisos por rol
             switch ($usuario->rol) {
                 case 'Administrador':
+                    $permisos = ['ver_dashboard', 'crear_usuario', 'editar_usuario', 'eliminar_usuario',
+                                 'gestionar_multas', 'gestionar_mingas', 'ver_reportes',
+                                 'ver_usuarios', 'ver_mingas', 'ver_catastro', 'administrar_sistema'];
+                    break;
                 case 'Presidente':
                     $permisos = ['ver_dashboard', 'crear_usuario', 'editar_usuario', 'eliminar_usuario',
                                  'gestionar_multas', 'gestionar_mingas', 'ver_reportes',
@@ -165,16 +169,18 @@ class AuthController extends Controller
                 $usuario->rol = $request->rol;
             }
             if (!empty($request->password)) {
-                $usuario->password = Hash::make($request->password);
+                $usuario->password          = Hash::make($request->password);
+                $usuario->password_temporal = true; // obliga al usuario a cambiarla al próximo login
             }
             $usuario->save();
         } else {
             $persona = Persona::findOrFail($request->id_persona);
             $usuario = Usuario::create([
-                'id_persona' => $request->id_persona,
-                'cedula'     => $persona->cedula,
-                'password'   => Hash::make($request->password ?? $persona->cedula),
-                'rol'        => $request->rol ?? 'Comunero',
+                'id_persona'        => $request->id_persona,
+                'cedula'            => $persona->cedula,
+                'password'          => Hash::make($request->password ?? $persona->cedula),
+                'rol'               => $request->rol ?? 'Comunero',
+                'password_temporal' => !empty($request->password), // forzar cambio si se asignó password
             ]);
         }
 

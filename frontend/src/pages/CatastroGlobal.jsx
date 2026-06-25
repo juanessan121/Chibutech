@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Map, Search, ExternalLink, Building2, Fence, MapPin, Plus, Edit2, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTerrenos, updateEstadoTerreno } from '../services/terrenoService';
@@ -35,8 +35,8 @@ export default function CatastroGlobal() {
         setTotalPaginas(res.pagination.last_page);
         setTotalTerrenos(res.pagination.total);
       }
-    } catch (error) {
-      console.error(error);
+    } catch {
+      // error al cargar terrenos — tabla queda vacía
     }
   };
 

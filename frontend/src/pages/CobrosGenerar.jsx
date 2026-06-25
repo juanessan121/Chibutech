@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, ArrowLeft, User, DollarSign, AlertTriangle, X, Search } from 'lucide-react';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
 import { generarMulta } from '../services/cobroService';
 import PersonaAutocompleteInput from '../components/PersonaAutocompleteInput';
 import axios from '../services/axiosConfig';
@@ -21,15 +21,15 @@ export default function CobrosGenerar() {
   const [resultados, setResultados] = useState([]);
 
   // Búsqueda en tiempo real
-  React.useEffect(() => {
+  useEffect(() => {
     if (searchTerm.length >= 3) {
       const fetchResultados = async () => {
         setBuscando(true);
         try {
           const res = await axios.get(`/terrenos/buscar-universal?termino=${searchTerm}&criterio=todos`);
           setResultados(res.data.data);
-        } catch (error) {
-          console.error(error);
+        } catch {
+          setResultados([]);
         } finally {
           setBuscando(false);
         }

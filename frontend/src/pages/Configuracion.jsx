@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings, Save, RefreshCw, Layers, MapPin, GraduationCap, Plus, Calculator } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import axios from '../services/axiosConfig';
@@ -52,8 +52,7 @@ export default function Configuracion() {
       setZonas(resZonas.data.data.zonas);
       setSectores(resZonas.data.data.sectores);
       setTitulos(resTitulos.data.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error('No se pudieron cargar los parámetros del sistema. Recarga la página.');
     }
   };

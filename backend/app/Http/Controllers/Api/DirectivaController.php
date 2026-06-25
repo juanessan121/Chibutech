@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\JsonResponse;
 use Exception;
+use App\Models\Usuario;
+use Carbon\Carbon;
 use App\Http\Controllers\Api\NotificacionController as Notif;
 
 class DirectivaController extends Controller
@@ -129,7 +132,7 @@ class DirectivaController extends Controller
                 $rolGroups[$rol][] = $miembro->id_persona;
             }
             foreach ($rolGroups as $rol => $personaIds) {
-                \App\Models\Usuario::whereIn('id_persona', $personaIds)->update(['rol' => $rol]);
+                Usuario::whereIn('id_persona', $personaIds)->update(['rol' => $rol]);
             }
 
             DB::commit();
@@ -228,16 +231,16 @@ class DirectivaController extends Controller
                     elseif ($cargo['id_cargo_directivo'] == 3) $rol = 'Secretario';
                     elseif ($cargo['id_cargo_directivo'] == 4) $rol = 'Tesorero';
 
-                    // Obtener la cédula para el usuario
-                    $persona = \Illuminate\Support\Facades\DB::table('Persona')->where('id_persona', $cargo['id_persona'])->first();
+                    $persona = DB::table('Persona')->where('id_persona', $cargo['id_persona'])->first();
 
                     if ($persona) {
-                        \App\Models\Usuario::updateOrCreate(
+                        Usuario::updateOrCreate(
                             ['id_persona' => $cargo['id_persona']],
                             [
-                                'cedula' => $persona->cedula,
-                                'password' => \Illuminate\Support\Facades\Hash::make($cargo['password'] ?? 'chibuleo2024'),
-                                'rol' => $rol
+                                'cedula'            => $persona->cedula,
+                                'password'          => Hash::make($cargo['password'] ?? 'chibuleo2024'),
+                                'rol'               => $rol,
+                                'password_temporal' => true,
                             ]
                         );
                     }
@@ -250,7 +253,7 @@ class DirectivaController extends Controller
 
             DB::commit();
 
-            $fechaFmt = \Carbon\Carbon::parse($validated['fecha_inicio'])->format('d/m/Y');
+            $fechaFmt = Carbon::parse($validated['fecha_inicio'])->format('d/m/Y');
             foreach ($request->input('cargos', []) as $cargo) {
                 if (empty($cargo['id_persona'])) continue;
                 $rolNombre = match ((int) ($cargo['id_cargo_directivo'] ?? 0)) {
@@ -297,28 +300,39 @@ class DirectivaController extends Controller
 
             $hoy = now()->toDateString();
 
-            // 1. Encontrar el registro activo del cargo destino (puede tener persona o estar vacante)
+            // 1. Encontrar el registro activo del cargo destino (puede tener persona, estar vacante, o no existir)
             $registroCargo = DB::table('Miembro_Directiva')
                 ->where('estado', 'Activo')
                 ->where('id_cargo_directivo', $request->id_cargo_directivo)
                 ->first();
 
+            // Si el cargo nunca tuvo registro, tomamos los datos del periodo del cargo del directiva activa
+            $periodoRef = $registroCargo;
             if (!$registroCargo) {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'No existe ningún registro activo para ese cargo.'
-                ], 404);
+                $periodoRef = DB::table('Miembro_Directiva')
+                    ->where('estado', 'Activo')
+                    ->whereNotNull('id_persona')
+                    ->first();
+
+                if (!$periodoRef) {
+                    DB::rollBack();
+                    return response()->json([
+                        'status'  => 'error',
+                        'message' => 'No hay directiva activa a la que agregar este cargo.'
+                    ], 404);
+                }
             }
 
-            // 2. Finalizar el registro del cargo destino
-            DB::table('Miembro_Directiva')
-                ->where('id_directiva', $registroCargo->id_directiva)
-                ->update(['estado' => 'Finalizado', 'fecha_fin' => $hoy]);
+            // 2. Finalizar el registro existente del cargo (solo si había uno)
+            if ($registroCargo) {
+                DB::table('Miembro_Directiva')
+                    ->where('id_directiva', $registroCargo->id_directiva)
+                    ->update(['estado' => 'Finalizado', 'fecha_fin' => $hoy]);
 
-            // Si el cargo no estaba vacante, bajar el rol del saliente a Comunero
-            if ($registroCargo->id_persona !== null) {
-                \App\Models\Usuario::where('id_persona', $registroCargo->id_persona)
-                    ->update(['rol' => 'Comunero']);
+                if ($registroCargo->id_persona !== null) {
+                    Usuario::where('id_persona', $registroCargo->id_persona)
+                        ->update(['rol' => 'Comunero']);
+                }
             }
 
             // 3. Si la persona nueva ya ocupa otro cargo activo, finalizarlo y dejar ESE cargo vacante
@@ -356,8 +370,8 @@ class DirectivaController extends Controller
                 'id_persona'             => $request->id_persona_nueva,
                 'id_cargo_directivo'     => $request->id_cargo_directivo,
                 'fecha_inicio'           => $hoy,
-                'fecha_fin'              => $registroCargo->fecha_fin,
-                'resolucion_nombramiento'=> $registroCargo->resolucion_nombramiento,
+                'fecha_fin'              => $periodoRef->fecha_fin,
+                'resolucion_nombramiento'=> $periodoRef->resolucion_nombramiento,
                 'estado'                 => 'Activo',
             ]);
 
@@ -365,24 +379,35 @@ class DirectivaController extends Controller
             $rolMap = [1 => 'Presidente', 2 => 'Vicepresidente', 3 => 'Secretario', 4 => 'Tesorero'];
             $rol = $rolMap[(int) $request->id_cargo_directivo] ?? 'Vocal';
 
-            \App\Models\Usuario::updateOrCreate(
-                ['id_persona' => $request->id_persona_nueva],
-                [
-                    'cedula'   => $persona->cedula,
-                    'password' => \Illuminate\Support\Facades\Hash::make($request->password ?? 'chibuleo2024'),
-                    'rol'      => $rol,
-                ]
-            );
+            $usuarioExistente = Usuario::where('id_persona', $request->id_persona_nueva)->first();
+
+            $rolesDirectiva = ['Presidente','Vicepresidente','Secretario','Tesorero','Vocal Principal 1','Vocal Principal 2','Vocal Principal 3','Vocal Suplente 1','Vocal Suplente 2'];
+            $tieneClavePropia = $usuarioExistente
+                && in_array($usuarioExistente->rol, $rolesDirectiva)
+                && !$usuarioExistente->password_temporal;
+
+            if ($tieneClavePropia) {
+                $usuarioExistente->rol = $rol;
+                $usuarioExistente->save();
+            } else {
+                Usuario::updateOrCreate(
+                    ['id_persona' => $request->id_persona_nueva],
+                    [
+                        'cedula'            => $persona->cedula,
+                        'password'          => Hash::make($request->password ?? 'chibuleo2024'),
+                        'rol'               => $rol,
+                        'password_temporal' => true,
+                    ]
+                );
+            }
 
             DB::commit();
 
-            $rolMap2 = [1 => 'Presidente', 2 => 'Vicepresidente', 3 => 'Secretario', 4 => 'Tesorero'];
-            $rolNuevo = $rolMap2[(int) $request->id_cargo_directivo] ?? 'Vocal';
             Notif::insertar(
                 (int) $request->id_persona_nueva,
                 'directiva',
                 'Nombramiento en la directiva',
-                "Ha sido nombrado como {$rolNuevo} en la directiva a partir de hoy",
+                "Ha sido nombrado como {$rol} en la directiva a partir de hoy",
                 '/dashboard/directiva'
             );
 

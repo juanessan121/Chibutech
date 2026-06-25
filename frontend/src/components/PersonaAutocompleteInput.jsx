@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../services/axiosConfig';
 
@@ -63,8 +63,7 @@ export default function PersonaAutocompleteInput({ value, onChange, placeholder,
           if (response.data.status === 'ok') {
             setResults(response.data.data);
           }
-        } catch (error) {
-          console.error("Error fetching personas", error);
+        } catch {
         } finally {
           setLoading(false);
         }
