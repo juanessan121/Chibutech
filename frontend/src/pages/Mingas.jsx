@@ -43,7 +43,7 @@ export default function MingasMenu() {
         </div>
 
         {/* TARJETA 2: ASISTENCIA */}
-        <div className="glass-card module-card hover-glow cursor-pointer" onClick={() => navigate('/dashboard/mingas/asistencia')}>
+        <div className="glass-card module-card hover-glow cursor-pointer" onClick={() => navigate('/dashboard/mingas/activas')}>
           <div className="module-banner bg-gradient-green" style={{ backgroundImage: `url(${bgTomarAsistencia})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.8 }}></div>
           <div className="module-content">
             <div className="module-icon bg-green"><ClipboardCheck size={28} /></div>

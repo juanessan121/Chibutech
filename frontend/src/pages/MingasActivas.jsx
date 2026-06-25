@@ -300,7 +300,7 @@ export default function MingasActivas() {
                       {/* Tomar lista — En Ejecución siempre; Programada solo si la fecha ya pasó */}
                       {(minga.estado === 'En Ejecución' || (minga.estado === 'Programada' && fechaPasada)) && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); navigate('/dashboard/mingas/asistencia'); }}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/mingas/asistencia?id=${minga.id}&motivo=${encodeURIComponent(minga.motivo)}&fecha=${minga.fecha}`); }}
                           style={{
                             display: 'flex', alignItems: 'center', gap: '0.4rem',
                             padding: '0.5rem 1rem', borderRadius: '0.5rem', cursor: 'pointer',

@@ -22,44 +22,52 @@ function dibujarHeader(doc, titulo, subtituloDoc = '') {
   doc.setFillColor(...COLORS.primaryLight);
   doc.rect(0, 0, pageW, LAYOUT.headerHeight, 'F');
 
-  // Línea de acento
+  // Línea de acento inferior
   doc.setFillColor(...COLORS.primaryDark);
   doc.rect(0, LAYOUT.headerHeight - 2, pageW, 2, 'F');
 
-  // Nombre institución
-  doc.setFont('helvetica', FONTS.title.style);
-  doc.setFontSize(FONTS.title.size);
+  // ── COLUMNA IZQUIERDA ────────────────────────────────────────────
+  // Nombre institución — dos líneas para evitar solapamiento
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
   doc.setTextColor(...COLORS.primaryDark);
-  doc.text(INSTITUCION.nombre, LAYOUT.marginLeft, 16);
+  doc.text('Consejo de Gobierno Comunitario', LAYOUT.marginLeft, 12);
+
+  doc.setFontSize(11);
+  doc.text('Chibuleo-San Francisco', LAYOUT.marginLeft, 19);
 
   // Subtítulo sistema
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(...COLORS.mediumDark);
-  doc.text(INSTITUCION.subtitulo, LAYOUT.marginLeft, 23);
-
-  // Dirección
   doc.setFontSize(8);
+  doc.setTextColor(...COLORS.mediumDark);
+  doc.text(INSTITUCION.subtitulo, LAYOUT.marginLeft, 27);
+
+  // Dirección | teléfono
+  doc.setFontSize(7.5);
   doc.setTextColor(...COLORS.muted);
-  doc.text(`${INSTITUCION.direccion} | ${INSTITUCION.telefono}`, LAYOUT.marginLeft, 30);
+  doc.text(`${INSTITUCION.direccion} | ${INSTITUCION.telefono}`, LAYOUT.marginLeft, 34);
 
-  // Tipo de documento (derecha)
+  // ── COLUMNA DERECHA ──────────────────────────────────────────────
+  // Tipo de documento
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setTextColor(...COLORS.primaryDark);
-  doc.text(titulo.toUpperCase(), pageW - LAYOUT.marginRight, 16, { align: 'right' });
+  doc.text(titulo.toUpperCase(), pageW - LAYOUT.marginRight, 12, { align: 'right' });
 
+  // Período / subtítulo del documento
   if (subtituloDoc) {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
+    doc.setFontSize(8.5);
     doc.setTextColor(...COLORS.mediumDark);
-    doc.text(subtituloDoc, pageW - LAYOUT.marginRight, 23, { align: 'right' });
+    doc.text(subtituloDoc, pageW - LAYOUT.marginRight, 20, { align: 'right' });
   }
 
   // Fecha de generación
   const hoy = new Date().toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' });
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text(`Generado: ${hoy}`, pageW - LAYOUT.marginRight, 30, { align: 'right' });
+  doc.setTextColor(...COLORS.muted);
+  doc.text(`Generado: ${hoy}`, pageW - LAYOUT.marginRight, subtituloDoc ? 28 : 20, { align: 'right' });
 }
 
 /** Dibuja el pie de página con numeración */
@@ -74,9 +82,12 @@ function dibujarFooter(doc) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(FONTS.footer.size);
     doc.setTextColor(...COLORS.muted);
-    doc.text(INSTITUCION.nombre, LAYOUT.marginLeft, LAYOUT.footerY + 5);
+    // Línea 1: nombre institución (izq) + número de página (der)
+    doc.text('Consejo de Gobierno Comunitario Chibuleo-San Francisco', LAYOUT.marginLeft, LAYOUT.footerY + 5);
     doc.text(`Página ${i} de ${pageCount}`, pageW - LAYOUT.marginRight, LAYOUT.footerY + 5, { align: 'right' });
-    doc.text('Documento generado electrónicamente por el Consejo de Gobierno Comunitario Chibuleo-San Francisco', pageW / 2, LAYOUT.footerY + 5, { align: 'center' });
+    // Línea 2: leyenda electrónica (centrada)
+    doc.setFontSize(6.5);
+    doc.text('Documento generado electrónicamente — Sistema de Gestión Comunitaria', pageW / 2, LAYOUT.footerY + 10, { align: 'center' });
   }
 }
 

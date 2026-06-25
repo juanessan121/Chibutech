@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ArrowLeft, User, MapPin, DollarSign, Printer, CheckCircle, AlertTriangle, Filter } from 'lucide-react';
 import { toast } from 'sonner';
@@ -18,6 +18,10 @@ export default function CobrosVentanilla() {
 
   const [buscando, setBuscando] = useState(false);
   const [resultados, setResultados] = useState([]);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+
+  const inputRef    = useRef(null);
+  const dropdownRef = useRef(null);
 
   // Búsqueda dual: terrenos + personas con multas sin terreno
   useEffect(() => {
@@ -47,7 +51,57 @@ export default function CobrosVentanilla() {
     }
   }, [searchTerm]);
 
+  // Reiniciar highlight cuando cambian los resultados
+  useEffect(() => { setHighlightedIndex(-1); }, [resultados]);
+
+  const scrollHighlightIntoView = useCallback((index) => {
+    if (!dropdownRef.current) return;
+    const item = dropdownRef.current.children[index];
+    if (item) item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, []);
+
+  const handleKeyDown = useCallback((e) => {
+    if (!resultados.length) return;
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setHighlightedIndex(prev => {
+          const next = prev < resultados.length - 1 ? prev + 1 : 0;
+          scrollHighlightIntoView(next);
+          return next;
+        });
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setHighlightedIndex(prev => {
+          const next = prev > 0 ? prev - 1 : resultados.length - 1;
+          scrollHighlightIntoView(next);
+          return next;
+        });
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (highlightedIndex >= 0 && resultados[highlightedIndex]) {
+          seleccionarPersona(resultados[highlightedIndex]);
+        } else if (resultados.length === 1) {
+          seleccionarPersona(resultados[0]);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setSearchTerm('');
+        setResultados([]);
+        setHighlightedIndex(-1);
+        inputRef.current?.focus();
+        break;
+      default:
+        break;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resultados, highlightedIndex, scrollHighlightIntoView]);
+
   const seleccionarPersona = async (terreno) => {
+    setHighlightedIndex(-1);
     const userObj = {
       id_persona: terreno.id_persona_cobro || terreno.id_titular,
       cedula: terreno.cedula_cobro || terreno.cedula_titular,
@@ -160,12 +214,20 @@ export default function CobrosVentanilla() {
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <Search size={18} style={{ position: 'absolute', left: '1rem', color: 'var(--text-muted)' }} />
                 <input
+                  ref={inputRef}
                   type="text"
                   className="input-field"
                   style={{ paddingLeft: '2.5rem', width: '100%' }}
                   placeholder="Mín. 3 caracteres: cédula, nombre o clave..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={resultados.length > 0}
+                  aria-controls="ventanilla-search-results"
+                  aria-activedescendant={highlightedIndex >= 0 ? `result-${highlightedIndex}` : undefined}
+                  autoComplete="off"
                 />
               </div>
 
@@ -182,14 +244,32 @@ export default function CobrosVentanilla() {
               )}
 
               {!buscando && resultados.length > 0 && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'rgba(15,23,42,0.98)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.5rem', marginTop: '0.5rem', maxHeight: '300px', overflowY: 'auto', zIndex: 1000, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.6)' }}>
-                  {resultados.map((r, i) => (
+                <div
+                  ref={dropdownRef}
+                  id="ventanilla-search-results"
+                  role="listbox"
+                  aria-label="Resultados de búsqueda"
+                  style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'rgba(15,23,42,0.98)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.5rem', marginTop: '0.5rem', maxHeight: '300px', overflowY: 'auto', zIndex: 1000, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.6)' }}
+                >
+                  {resultados.map((r, i) => {
+                    const isHighlighted = i === highlightedIndex;
+                    return (
                     <div
                       key={`${r.id_terreno ?? r.id_titular}-${i}`}
-                      style={{ padding: '1rem', borderBottom: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', transition: 'background 0.15s' }}
+                      id={`result-${i}`}
+                      role="option"
+                      aria-selected={isHighlighted}
+                      style={{
+                        padding: '1rem',
+                        borderBottom: '1px solid rgba(255,255,255,0.07)',
+                        borderLeft: isHighlighted ? '3px solid var(--primary)' : '3px solid transparent',
+                        cursor: 'pointer',
+                        transition: 'background 0.12s, border-color 0.12s',
+                        background: isHighlighted ? 'rgba(14,165,233,0.12)' : 'transparent',
+                      }}
                       onClick={() => seleccionarPersona(r)}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = ''}
+                      onMouseEnter={() => setHighlightedIndex(i)}
+                      onMouseLeave={() => setHighlightedIndex(-1)}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: 'bold', color: 'var(--primary-light)' }}>
@@ -217,7 +297,8 @@ export default function CobrosVentanilla() {
                       )}
                       <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Sector: {r.sector || 'N/A'}</div>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               )}
             </div>
