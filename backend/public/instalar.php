@@ -3,12 +3,14 @@
  * Instalador de un solo uso — Chibutech ERP (hosting compartido / cPanel)
  *
  * Uso:
- *   1. Sube backend/ completo al hosting (incluida la carpeta vendor/).
+ *   1. Sube backend/ completo al hosting (incluida la carpeta vendor/ y
+ *      public/app/ con el frontend ya compilado adentro).
  *   2. Crea la base de datos en cPanel → MySQL® Databases (no hace falta
  *      importar el SQL a mano si usas este instalador; si ya lo importaste
  *      por phpMyAdmin, no pasa nada, este instalador no lo duplica).
- *   3. Visita: https://api.mi-dominio.com/instalar.php?token=TOKEN
- *      (el token está más abajo, en la constante TOKEN).
+ *   3. Visita: https://mi-dominio.com/instalar.php?token=TOKEN
+ *      (el token está más abajo, en la constante TOKEN — mismo dominio
+ *      donde apuntaste el Document Root a backend/public).
  *   4. Llena el formulario con los datos reales de tu base de datos.
  *   5. Cuando termine, BORRA ESTE ARCHIVO del servidor. No lo dejes ahí.
  */
@@ -62,10 +64,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dbName = trim($_POST['db_name'] ?? '');
     $dbUser = trim($_POST['db_user'] ?? '');
     $dbPass = trim($_POST['db_pass'] ?? '');
-    $appUrl = rtrim(trim($_POST['app_url'] ?? ''), '/');
-    $frontendUrl = rtrim(trim($_POST['frontend_url'] ?? ''), '/');
+    // El frontend compilado vive dentro del mismo Laravel (backend/public/app),
+    // así que la API y el frontend comparten un único dominio — sin CORS,
+    // sin subdominios aparte.
+    $dominio = rtrim(trim($_POST['dominio'] ?? ''), '/');
+    $appUrl = $dominio;
+    $frontendUrl = $dominio;
 
-    if (!$dbName || !$dbUser || !$appUrl || !$frontendUrl) {
+    if (!$dbName || !$dbUser || !$dominio) {
         $errors[] = 'Completa todos los campos obligatorios.';
     }
 
@@ -165,11 +171,8 @@ pagina('Instalar Chibutech', $errorHtml . '
     <label>Contraseña de la base de datos</label>
     <input type="password" name="db_pass" value="">
 
-    <label>URL de esta API (con https://, sin barra al final)</label>
-    <input name="app_url" value="' . h($_POST['app_url'] ?? '') . '" placeholder="https://api.mi-dominio.com" required>
-
-    <label>URL del frontend (con https://, sin barra al final)</label>
-    <input name="frontend_url" value="' . h($_POST['frontend_url'] ?? '') . '" placeholder="https://mi-dominio.com" required>
+    <label>Dominio donde quedó el sistema (con https://, sin barra al final)</label>
+    <input name="dominio" value="' . h($_POST['dominio'] ?? '') . '" placeholder="https://mi-dominio.com" required>
 
     <button type="submit">Instalar</button>
 </form>

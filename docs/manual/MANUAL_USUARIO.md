@@ -72,9 +72,9 @@ La carpeta `docs/manual/capturas/` ya está creada y lista para recibir las imá
     - 11.1 [Requisitos del hosting](#111-requisitos-del-hosting)
     - 11.2 [Paso 1 — Crear la base de datos y el usuario en cPanel](#112-paso-1--crear-la-base-de-datos-y-el-usuario-en-cpanel)
     - 11.3 [Paso 2 — Importar la base de datos vía phpMyAdmin (sin error)](#113-paso-2--importar-la-base-de-datos-vía-phpmyadmin-sin-error)
-    - 11.4 [Paso 3 — Subir y configurar el backend (Laravel)](#114-paso-3--subir-y-configurar-el-backend-laravel)
-    - 11.5 [Paso 4 — Compilar y subir el frontend (React)](#115-paso-4--compilar-y-subir-el-frontend-react)
-    - 11.6 [Paso 5 — Dominios, CORS y HTTPS](#116-paso-5--dominios-cors-y-https)
+    - 11.4 [Paso 3 — Subir y configurar todo (backend + frontend juntos)](#114-paso-3--subir-y-configurar-todo-backend--frontend-juntos)
+    - 11.5 [Paso 4 — HTTPS](#115-paso-4--https)
+    - 11.6 [(referencia) Actualizar el frontend en el futuro](#116-referencia-para-quien-mantiene-el-código-actualizar-el-frontend-en-el-futuro)
     - 11.7 [Mantenimiento: actualizar el sistema tras cambios](#117-mantenimiento-actualizar-el-sistema-tras-cambios)
     - 11.8 [Alternativa: servidor propio (VPS) con Docker](#118-alternativa-servidor-propio-vps-con-docker)
     - 11.9 [Checklist de "Acceso denegado" — todas las causas posibles](#119-checklist-de-acceso-denegado--todas-las-causas-posibles)
@@ -1258,81 +1258,65 @@ Si aun así ves "Acceso denegado" en este paso, revisa el [checklist completo](#
 
 ---
 
-### 11.4 Paso 3 — Subir y configurar el backend (Laravel)
+### 11.4 Paso 3 — Subir y configurar todo (backend + frontend juntos)
 
-Esta versión del proyecto ya incluye `backend/vendor/` pre-generado (no hace falta Composer ni Terminal en el hosting) y un instalador web de un solo uso (`backend/public/instalar.php`) que crea el `.env`, genera la clave de la aplicación y aplica lo que falte, todo desde el navegador.
+**El frontend y el backend viven en un solo paquete.** El frontend (React) ya está compilado y fusionado dentro de `backend/public/` (carpetas `app/` y `assets/`, y el archivo `config.js`) — Laravel sirve la API (`/api/*`) y también las pantallas del sistema desde el mismo dominio. Esto significa: **una sola carpeta para subir, un solo Document Root, un solo dominio, sin CORS.** El proyecto también incluye `backend/vendor/` pre-generado (no hace falta Composer ni Terminal en el hosting) y un instalador web de un solo uso (`backend/public/instalar.php`) que crea el `.env`, genera la clave de la aplicación y aplica lo que falte, todo desde el navegador.
 
-1. Comprime la carpeta `backend/` completa **incluyendo `vendor/`** (sin `node_modules`, que no existe en backend). El `.zip` pesará varios cientos de MB por el `vendor/` — es normal.
+1. Comprime la carpeta `backend/` completa **incluyendo `vendor/` y `public/app/`** (sin `node_modules`, que no existe en backend). El `.zip` pesará varios cientos de MB por el `vendor/` — es normal.
 2. Sube el `.zip` con el **Administrador de Archivos de cPanel** (File Manager) a una carpeta **fuera de `public_html`**, por ejemplo `laravel_chibutech/` al mismo nivel que `public_html`. Esto evita que el código PHP quede accesible directamente desde el navegador. Descomprímelo ahí.
-3. Crea un subdominio para la API, por ejemplo `api.mi-dominio.com` (cPanel → **"Subdomains"**).
-4. Muy importante: en la configuración del subdominio, el **"Document Root"** debe apuntar exactamente a:
+3. En cPanel, asigna tu **dominio principal** (o un subdominio, como prefieras — ya no hace falta que sea uno específico "para la API") a este proyecto: **"Domains"** → edita el dominio → **"Document Root"** debe apuntar exactamente a:
    ```
    laravel_chibutech/backend/public
    ```
-   (la carpeta `public` de Laravel, **no** la raíz de `backend/`). Laravel siempre se sirve desde ahí.
-5. En **"MultiPHP Manager"**, asigna PHP 8.2 al subdominio `api.mi-dominio.com`. En **"Select PHP Version"** para ese dominio, activa las extensiones listadas en 11.1.
-6. Da permisos de escritura a `backend/storage` y `backend/bootstrap/cache` (clic derecho → Permissions → 755, o 775 si tu hosting lo exige) desde el File Manager.
-7. Visita en el navegador:
+   (la carpeta `public` de Laravel, **no** la raíz de `backend/`). Laravel siempre se sirve desde ahí — y desde ahí también sale el frontend, porque ya está adentro.
+4. En **"MultiPHP Manager"**, asigna PHP 8.2 a ese dominio. En **"Select PHP Version"**, activa las extensiones listadas en 11.1.
+5. Da permisos de escritura a `backend/storage` y `backend/bootstrap/cache` (clic derecho → Permissions → 755, o 775 si tu hosting lo exige) desde el File Manager.
+6. Visita en el navegador:
    ```
-   https://api.mi-dominio.com/instalar.php?token=41e63afb15c07232c2b7353d587d8955
+   https://mi-dominio.com/instalar.php?token=41e63afb15c07232c2b7353d587d8955
    ```
-   Llena el formulario con los datos reales de la base de datos que creaste en el paso 11.2 y las URLs de tu API y tu frontend. Al enviarlo, el instalador automáticamente:
-   - Crea/actualiza `backend/.env` con esos datos.
+   Llena el formulario con los datos reales de la base de datos que creaste en el paso 11.2 y el dominio donde quedó el sistema (el mismo del paso 3). Al enviarlo, el instalador automáticamente:
+   - Crea/actualiza `backend/.env` con esos datos (usa el mismo dominio tanto para `APP_URL` como para `FRONTEND_URL`, ya que son el mismo sitio).
    - Genera una clave de aplicación (`APP_KEY`) nueva y única.
    - Aplica las migraciones que falten (si ya importaste el SQL completo en el paso 11.3, no duplica ni borra nada — Laravel detecta que esas migraciones ya están hechas y las salta).
    - Crea el enlace de almacenamiento público (`storage:link`).
-8. Si todo sale bien verás **"✅ ¡Listo!"**. **Borra `instalar.php` del servidor inmediatamente después** (Administrador de Archivos → clic derecho → Eliminar) — ya cumplió su función y dejarlo público es un riesgo de seguridad, aunque esté protegido por el token y no pueda ejecutarse dos veces.
+7. Si todo sale bien verás **"✅ ¡Listo!"**. **Borra `instalar.php` del servidor inmediatamente después** (Administrador de Archivos → clic derecho → Eliminar) — ya cumplió su función y dejarlo público es un riesgo de seguridad, aunque esté protegido por el token y no pueda ejecutarse dos veces.
+8. Entra a `https://mi-dominio.com` — deberías ver directamente la pantalla de login del sistema (no una carpeta vacía ni una página de Laravel por defecto), y las rutas internas como `https://mi-dominio.com/dashboard` deben funcionar incluso recargando la página.
 
 > El token de ejemplo de arriba (`41e63afb15c07232c2b7353d587d8955`) es el que trae el proyecto en este momento. Si por seguridad quieres cambiarlo, edita la constante `TOKEN` al inicio de `backend/public/instalar.php` antes de subirlo, y usa ese valor nuevo en la URL.
 
-![Espacio para captura: configuración del subdominio api.mi-dominio.com con Document Root apuntando a backend/public](capturas/cpanel-subdominio-backend.png)
+> **¿Por qué ya no hay un paso aparte para "subir el frontend"?** Antes el frontend y el backend eran dos sitios distintos (uno en `mi-dominio.com`, otro en `api.mi-dominio.com`), lo que obligaba a configurar dos Document Root, dos subdominios y CORS entre ambos — la fuente de la mayoría de los errores 403/404/pantalla en blanco. Ahora Laravel sirve los archivos del frontend directamente (`backend/public/app/index.html` para la pantalla inicial, `backend/public/assets/` para el código JS/CSS), y cualquier ruta que no sea `/api/*` ni un archivo real cae en una "ruta de respaldo" (`routes/web.php`) que muestra el frontend. Todo en un solo dominio, sin CORS.
 
-![Espacio para captura: formulario del instalador (instalar.php) con los campos de base de datos y dominios](capturas/instalar-formulario.png)
+![Espacio para captura: configuración del dominio en cPanel con Document Root apuntando a backend/public](capturas/cpanel-subdominio-backend.png)
 
----
-
-### 11.5 Paso 4 — Compilar y subir el frontend (React)
-
-La URL del backend **no** está escrita dentro del código que se compila — vive en un archivo aparte, `frontend/public/config.js`, que se copia tal cual a `dist/config.js` al compilar. Esto significa que **no hace falta saber el dominio final antes de compilar**: se puede ajustar después, directamente en el servidor, con el editor de texto de cPanel, sin instalar Node.js ni volver a compilar. Ideal para cuando la persona que compila el proyecto no es la misma que lo sube al hosting.
-
-1. En tu computador, dentro de `frontend/`, genera la versión de producción:
-   ```bash
-   npm install
-   npm run build
-   ```
-   Esto crea una carpeta `frontend/dist/` con archivos estáticos (HTML, JS, CSS) y el archivo `config.js`.
-2. Crea un subdominio o usa el dominio principal para el frontend, por ejemplo `mi-dominio.com` o `app.mi-dominio.com`, con Document Root apuntando a `public_html` (o `public_html/app` si usas subcarpeta).
-3. Sube **el contenido** de `frontend/dist/` (no la carpeta `dist` en sí) dentro del Document Root del frontend, vía File Manager o FTP/SFTP. Al terminar, `index.html` y `config.js` deben quedar **directamente** dentro de esa carpeta (no un nivel más adentro).
-4. Ya en el servidor, con el **Administrador de Archivos de cPanel**, abre `config.js` con el botón "Editar" (ícono de lápiz) y cambia la línea:
-   ```js
-   window.__API_BASE_URL__ = 'http://localhost:8080/api';
-   ```
-   por la URL real de tu API:
-   ```js
-   window.__API_BASE_URL__ = 'https://api.mi-dominio.com/api';
-   ```
-   Guarda el archivo. No hace falta recompilar ni volver a subir nada — con recargar la página (Ctrl+F5) alcanza. Si en el futuro cambia el dominio, se repite solo este paso.
-5. Como el sistema usa React Router (rutas como `/dashboard/usuarios`), crea un archivo `.htaccess` en esa misma carpeta con este contenido para que recargar la página en cualquier ruta no dé error 404:
-   ```apache
-   <IfModule mod_rewrite.c>
-     RewriteEngine On
-     RewriteBase /
-     RewriteRule ^index\.html$ - [L]
-     RewriteCond %{REQUEST_FILENAME} !-f
-     RewriteCond %{REQUEST_FILENAME} !-d
-     RewriteRule . /index.html [L]
-   </IfModule>
-   ```
-
-![Espacio para captura: contenido de frontend/dist subido dentro de public_html vía File Manager](capturas/cpanel-subir-frontend.png)
+![Espacio para captura: formulario del instalador (instalar.php) con los campos de base de datos y dominio](capturas/instalar-formulario.png)
 
 ---
 
-### 11.6 Paso 5 — Dominios, CORS y HTTPS
+### 11.5 Paso 4 — HTTPS
 
-1. **HTTPS:** en cPanel → **"SSL/TLS Status"**, activa **AutoSSL** para ambos subdominios (`mi-dominio.com` y `api.mi-dominio.com`). Es gratuito y se renueva solo.
-2. **CORS (para que el frontend pueda hablar con la API):** ya **no requiere editar ningún archivo**. `backend/config/cors.php` lee automáticamente el valor de `FRONTEND_URL` que guardaste en el `.env` a través del instalador (paso 11.4.7) y lo agrega solo a la lista de orígenes permitidos. Si necesitas agregar más de un dominio (por ejemplo con y sin `www`), edita `FRONTEND_URL` en el `.env` separando las URLs con coma: `FRONTEND_URL=https://mi-dominio.com,https://www.mi-dominio.com`.
-3. Prueba el login desde `https://mi-dominio.com` — si ves un error de CORS en la consola del navegador (F12), confirma que `FRONTEND_URL` en `backend/.env` tenga exactamente esa URL (con `https://` y sin `/` final), y que hayas corrido `php artisan config:clear` después de cualquier cambio manual al `.env` (el instalador ya lo hace automáticamente la primera vez).
+1. En cPanel → **"SSL/TLS Status"**, activa **AutoSSL** para tu dominio. Es gratuito y se renueva solo.
+2. Prueba el sitio con `https://` (no `http://`) — si el navegador marca el candado como inseguro, espera unos minutos a que AutoSSL termine de emitir el certificado, o revisa el estado en la misma pantalla de "SSL/TLS Status".
+
+---
+
+### 11.6 (referencia, para quien mantiene el código) Actualizar el frontend en el futuro
+
+Esta sección es para quien programa el sistema (no para quien solo lo despliega). Como el frontend queda **fusionado dentro de `backend/public/`**, cada vez que se modifique algo en `frontend/` hay que recompilarlo y volver a copiarlo ahí antes de subir los cambios:
+
+```bash
+# Con Docker corriendo:
+docker compose run --rm --entrypoint sh frontend -c "npm run build"
+sh deploy/fusionar-frontend.sh
+
+# Sin Docker (con Node.js instalado localmente):
+cd frontend && npm install && npm run build && cd ..
+sh deploy/fusionar-frontend.sh
+```
+
+El script `deploy/fusionar-frontend.sh` copia `frontend/dist/assets/`, `config.js`, `favicon.svg`, `icons.svg` y `index.html` (renombrado a `backend/public/app/index.html`) dentro de `backend/public/`, sin tocar los archivos propios de Laravel (`index.php`, `.htaccess`, etc.). Después de correrlo, se hace `git add`/`commit`/`push` de los cambios en `backend/public/` como cualquier otro archivo del proyecto.
+
+**Nota sobre CORS:** ya no requiere configuración manual. `backend/config/cors.php` lee automáticamente el valor de `FRONTEND_URL` del `.env` (el mismo dominio que `APP_URL`, ya que ahora comparten sitio). Solo sería relevante si en algún caso especial decides volver a separar el frontend en otro dominio.
 
 ---
 
@@ -1340,8 +1324,8 @@ La URL del backend **no** está escrita dentro del código que se compila — vi
 
 Cada vez que se actualice el código del proyecto:
 
-- **Backend:** sube los archivos PHP modificados, y si hubo cambios en la base de datos, aplica solo esos cambios puntuales por phpMyAdmin (pestaña SQL) en lugar de reimportar todo el archivo completo (para no perder los datos ya cargados en producción). Si hubo dependencias nuevas de Composer, vuelve a ejecutar `composer install --no-dev` y `php artisan config:clear`.
-- **Frontend:** vuelve a ejecutar `npm run build` en tu computador y sube de nuevo el contenido de `dist/` reemplazando los archivos anteriores.
+- **Backend:** sube los archivos PHP modificados, y si hubo cambios en la base de datos, aplica solo esos cambios puntuales por phpMyAdmin (pestaña SQL) en lugar de reimportar todo el archivo completo (para no perder los datos ya cargados en producción). Si hubo dependencias nuevas de Composer, vuelve a generar `vendor/` en tu computador (ver 11.6) y sube esa carpeta actualizada, y corre `php artisan config:clear`.
+- **Frontend:** recompílalo y fusiónalo de nuevo dentro de `backend/public/` (ver 11.6), luego sube esa carpeta actualizada (`backend/public/app/`, `backend/public/assets/`, `backend/public/config.js`) al servidor reemplazando lo anterior.
 - **Backups:** programa una tarea periódica en cPanel → **"Backup"** o **"Backup Wizard"** para respaldar la base de datos automáticamente (semanal, como mínimo). También puedes exportar manualmente desde phpMyAdmin (pestaña "Exportar") antes de cualquier actualización importante.
 
 ---
@@ -1376,6 +1360,9 @@ Si sigues viendo "Acceso denegado" en algún punto del proceso, revisa en orden:
 | Al hacer `git push` / `git pull` | Credenciales de Git vencidas o sin permisos en el repositorio remoto | Verifica el token/llave SSH configurado con tu proveedor de Git (GitHub/GitLab) |
 | Al conectar por SSH/Terminal al hosting | El plan de hosting no incluye SSH, o la IP no está en la lista blanca | Consulta con tu proveedor si el plan permite Terminal/SSH; si no, sigue el flujo de 11.4 sin Terminal (subiendo `vendor/` ya compilado) |
 | Al subir archivos por FTP | Permisos de la carpeta destino, o límite de cuota de disco superado | Revisa permisos de carpeta (755) y el espacio disponible en cPanel → "Estadísticas" |
+| La raíz del sitio (`/`) muestra un error o la instalación por defecto de Laravel, no el login del sistema | Falta `backend/public/app/index.html` (no se subió esa carpeta, o el Document Root no apunta a `backend/public`) | Verifica en el File Manager que exista `backend/public/app/index.html`; revisa también el Document Root (ver 11.4.3) |
+| Una ruta interna (`/dashboard/...`) da 404 al recargar la página, aunque el login sí funcionó | El backend no tiene la ruta de respaldo (`Route::fallback`) — versión desactualizada de `backend/routes/web.php` | Verifica que `backend/routes/web.php` tenga el `Route::fallback(...)` que sirve `public/app/index.html`; si falta, sube la versión más reciente del proyecto |
+| Aparece un error de CORS en la consola del navegador (F12) | Poco probable en el flujo actual (mismo dominio para todo), pero puede pasar si mezclaste dominios distintos para backend y frontend a propósito | Usa el mismo dominio para ambos (ya no se necesitan subdominios separados); si de verdad necesitas separarlos, edita `FRONTEND_URL` en `backend/.env` con el dominio real del frontend |
 
 ---
 

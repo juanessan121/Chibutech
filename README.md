@@ -82,12 +82,11 @@ Incluye también un checklist de errores comunes ("Acceso denegado", 403, 404, p
 
 Para importar la base de datos en un hosting compartido, usa **`database/01_chibutech_hosting_compartido.sql`** (no `01_chibutech_completo.sql`, que solo funciona en el entorno Docker de desarrollo).
 
-**Resumen del despliegue (sin Docker en el servidor):**
-1. Sube `backend/` completo — **ya incluye `vendor/`**, no hace falta Composer ni Terminal en el hosting.
-2. Sube el contenido de `frontend/dist/` (ya compilado, con `.htaccess` y `config.js` incluidos) directamente a `public_html`.
+**Resumen del despliegue (sin Docker en el servidor, un solo dominio):**
+1. Sube `backend/` completo — **ya incluye `vendor/` y el frontend compilado dentro de `public/app/` y `public/assets/`**. No hace falta Composer, npm ni Terminal en el hosting.
+2. Configura el Document Root de tu dominio apuntando a `backend/public`. Ese mismo dominio sirve la API (`/api/*`) y las pantallas del sistema — no hace falta un subdominio aparte ni configurar CORS.
 3. Importa `database/01_chibutech_hosting_compartido.sql` desde phpMyAdmin.
-4. Visita `https://api.mi-dominio.com/instalar.php?token=...` una sola vez — crea el `.env`, genera la clave y termina la configuración. Bórralo del servidor después.
-5. Edita `config.js` en el frontend con la URL real de la API.
+4. Visita `https://mi-dominio.com/instalar.php?token=...` una sola vez — crea el `.env`, genera la clave y termina la configuración. Bórralo del servidor después.
 
 ---
 
@@ -102,19 +101,27 @@ Chibutech/
 ├── database/
 │   ├── 01_chibutech_completo.sql             ← para Docker (desarrollo)
 │   └── 01_chibutech_hosting_compartido.sql   ← para hosting compartido / cPanel
-├── backend/                      ← Laravel 12
+├── deploy/fusionar-frontend.sh   ← recompila el frontend y lo fusiona en backend/public/
+├── backend/                      ← Laravel 12 (sirve la API Y el frontend juntos)
 │   ├── app/Models/                 modelos
 │   ├── app/Http/Controllers/Api/   controladores
 │   ├── app/Http/Middleware/        CheckRole, CheckPermission
 │   ├── database/migrations/
 │   ├── database/seeders/
-│   ├── config/cors.php             dominios permitidos (editar en producción)
-│   └── routes/api.php
-└── frontend/                     ← React 19 + Vite
-    ├── public/config.js           URL base de la API — editable en el servidor SIN recompilar
+│   ├── config/cors.php             lee FRONTEND_URL del .env (normalmente ni se usa, mismo dominio)
+│   ├── routes/web.php              Route::fallback sirve el frontend para rutas que no son /api/*
+│   ├── routes/api.php
+│   ├── vendor/                     dependencias PHP ya instaladas (no falta correr composer)
+│   └── public/
+│       ├── index.php               punto de entrada de Laravel
+│       ├── instalar.php            instalador web de un solo uso (borrar tras usarlo)
+│       ├── app/index.html          el frontend compilado (pantalla inicial)
+│       ├── assets/                 JS/CSS del frontend compilado
+│       └── config.js               override opcional de la URL de la API
+└── frontend/                     ← React 19 + Vite (código fuente, se compila y se fusiona en backend/public/)
     └── src/
         ├── pages/                  una pantalla por módulo
-        ├── services/axiosConfig.js  lee la URL desde config.js (window.__API_BASE_URL__)
+        ├── services/axiosConfig.js  usa ruta relativa /api en producción (mismo dominio)
         └── routes/AppRouter.jsx
 ```
 
@@ -136,4 +143,4 @@ docker-compose up -d --build
 ⚠️ Esto borra todos los datos y vuelve a importar el SQL desde cero.
 
 ### Estoy en producción (cPanel) y me sale 403 / 404 / pantalla en blanco
-Revisa el checklist de la sección 11.9 del manual: **[`docs/manual/MANUAL_USUARIO.md`](docs/manual/MANUAL_USUARIO.md)**. Las causas más comunes son: Document Root del backend mal configurado (debe apuntar a `backend/public`, no a `backend`), el contenido de `dist/` del frontend subido dentro de una subcarpeta en vez de la raíz del dominio, o `frontend/public/config.js` sin actualizar con la URL real de la API (se edita directamente en el servidor, no requiere recompilar).
+Revisa el checklist de la sección 11.9 del manual: **[`docs/manual/MANUAL_USUARIO.md`](docs/manual/MANUAL_USUARIO.md)**. La causa más común es el Document Root mal configurado (debe apuntar a `backend/public`, no a `backend`) o que falte la carpeta `backend/public/app/` (el frontend compilado) al subir los archivos.
