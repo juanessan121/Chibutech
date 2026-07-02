@@ -48,6 +48,8 @@ docker compose logs -f backend
 
 > Cambia la contraseña desde el perfil después del primer acceso.
 
+> ⚠️ **`http://localhost:5173` y `http://localhost:8080` solo existen en tu propia computadora.** No son URLs de producción — nadie más puede acceder a ellas, ni siquiera desde el mismo hosting. Si visitas `http://localhost:8080/api` directamente en el navegador verás "404 Not Found": es normal, esa ruta no existe por sí sola, solo rutas específicas como `/api/auth/login`. Para probar que el backend responde de verdad, usa Postman/Insomnia contra esa ruta con `POST`.
+
 ### Credenciales de base de datos (DBeaver / TablePlus / phpMyAdmin)
 
 | Campo      | Valor           |
@@ -134,3 +136,17 @@ MAIL_FROM_ADDRESS=tu_correo@gmail.com
 
 La clave de aplicación se genera en:
 `Cuenta Google → Seguridad → Verificación en 2 pasos → Contraseñas de aplicaciones`
+
+---
+
+## Subir el sistema a un servidor (producción / cPanel)
+
+Esta guía (arriba) es solo para desarrollo local con Docker. Para publicar el sistema en un hosting real con cPanel — crear la base de datos sin errores de permisos, configurar el backend, el frontend, el dominio, HTTPS y CORS — sigue la guía técnica completa:
+
+**[`docs/manual/MANUAL_USUARIO.md` — Sección 11: Guía técnica: subir Chibutech a un servidor con cPanel](docs/manual/MANUAL_USUARIO.md#11-guía-técnica-subir-chibutech-a-un-servidor-con-cpanel)**
+
+Puntos clave que se pierden fácilmente al pasar de Docker a cPanel:
+- Usa `database/01_chibutech_hosting_compartido.sql` para importar la base de datos (no `01_chibutech_completo.sql`, que solo sirve para Docker).
+- El Document Root del subdominio del backend debe apuntar a `backend/public`, **no** a `backend`.
+- Después de subir el frontend (`frontend/dist/`) al hosting, la URL de la API **no** requiere recompilar nada: se edita directamente en el servidor abriendo `config.js` con el Administrador de Archivos de cPanel y cambiando la línea `window.__API_BASE_URL__ = '...'` por la URL real (ej. `https://api.mi-dominio.com/api`). Si se deja en `localhost`, la app en producción queda en pantalla en blanco o no puede iniciar sesión.
+- Si ves "Acceso denegado", "403 Forbidden" o "404" al desplegar, revisa el checklist completo en la sección 11.9 del manual — cubre las causas más comunes con su solución exacta.
