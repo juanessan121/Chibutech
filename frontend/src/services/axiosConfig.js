@@ -1,8 +1,9 @@
 import axios from 'axios';
 
-// Configuración base para cuando nos conectemos al backend PHP
+// La URL real se define en public/config.js (editable sin recompilar).
+// Si ese archivo no cargó por algún motivo, cae de vuelta a localhost (desarrollo).
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api', // Ajustaremos esto cuando se levante el API final
+  baseURL: window.__API_BASE_URL__ || 'http://localhost:8080/api',
   headers: {
     'Content-Type': 'application/json',
   },

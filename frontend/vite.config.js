@@ -14,17 +14,19 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
+        // Vite 8 (Rolldown) requiere manualChunks como función, no como objeto.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
           // Core React — cambia rarísimo, máxima vida en caché
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          if (/[\\/](react|react-dom|react-router-dom)[\\/]/.test(id)) return 'vendor-react';
           // UI y estado
-          'vendor-ui': ['lucide-react', 'sonner', 'zustand'],
+          if (/[\\/](lucide-react|sonner|zustand)[\\/]/.test(id)) return 'vendor-ui';
           // Mapa — pesado (~600kb), solo carga en páginas de catastro
-          'vendor-map': ['leaflet', 'react-leaflet'],
+          if (/[\\/](leaflet|react-leaflet)[\\/]/.test(id)) return 'vendor-map';
           // PDF — pesado, solo carga al generar reportes
-          'vendor-pdf': ['jspdf', 'jspdf-autotable'],
+          if (/[\\/](jspdf|jspdf-autotable)[\\/]/.test(id)) return 'vendor-pdf';
           // Formularios
-          'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          if (/[\\/](react-hook-form|@hookform|zod)[\\/]/.test(id)) return 'vendor-forms';
         }
       }
     }
