@@ -1260,7 +1260,9 @@ Si aun así ves "Acceso denegado" en este paso, revisa el [checklist completo](#
 
 ### 11.4 Paso 3 — Subir y configurar el backend (Laravel)
 
-1. Comprime la carpeta `backend/` de tu proyecto **sin** las carpetas `vendor/` y `node_modules` (no existen en backend, pero sí evita subir `storage/logs` con archivos viejos).
+Esta versión del proyecto ya incluye `backend/vendor/` pre-generado (no hace falta Composer ni Terminal en el hosting) y un instalador web de un solo uso (`backend/public/instalar.php`) que crea el `.env`, genera la clave de la aplicación y aplica lo que falte, todo desde el navegador.
+
+1. Comprime la carpeta `backend/` completa **incluyendo `vendor/`** (sin `node_modules`, que no existe en backend). El `.zip` pesará varios cientos de MB por el `vendor/` — es normal.
 2. Sube el `.zip` con el **Administrador de Archivos de cPanel** (File Manager) a una carpeta **fuera de `public_html`**, por ejemplo `laravel_chibutech/` al mismo nivel que `public_html`. Esto evita que el código PHP quede accesible directamente desde el navegador. Descomprímelo ahí.
 3. Crea un subdominio para la API, por ejemplo `api.mi-dominio.com` (cPanel → **"Subdomains"**).
 4. Muy importante: en la configuración del subdominio, el **"Document Root"** debe apuntar exactamente a:
@@ -1269,34 +1271,23 @@ Si aun así ves "Acceso denegado" en este paso, revisa el [checklist completo](#
    ```
    (la carpeta `public` de Laravel, **no** la raíz de `backend/`). Laravel siempre se sirve desde ahí.
 5. En **"MultiPHP Manager"**, asigna PHP 8.2 al subdominio `api.mi-dominio.com`. En **"Select PHP Version"** para ese dominio, activa las extensiones listadas en 11.1.
-6. Si tienes Terminal/SSH, entra a la carpeta `backend/` y ejecuta:
-   ```bash
-   composer install --no-dev --optimize-autoloader
+6. Da permisos de escritura a `backend/storage` y `backend/bootstrap/cache` (clic derecho → Permissions → 755, o 775 si tu hosting lo exige) desde el File Manager.
+7. Visita en el navegador:
    ```
-   Si **no** tienes Terminal, ejecuta ese mismo comando en tu computador dentro de la carpeta `backend/` (con Composer instalado localmente) y sube la carpeta `vendor/` resultante comprimida.
-7. Copia `backend/.env.example` a `backend/.env` (con el Administrador de Archivos o por Terminal: `cp .env.example .env`) y edítalo con estos valores:
-   ```env
-   APP_ENV=production
-   APP_DEBUG=false
-   APP_URL=https://api.mi-dominio.com
-
-   DB_CONNECTION=mysql
-   DB_HOST=localhost
-   DB_PORT=3306
-   DB_DATABASE=tuusuario_basechi
-   DB_USERNAME=tuusuario_dbuser
-   DB_PASSWORD=la_contraseña_que_creaste
-
-   FRONTEND_URL=https://mi-dominio.com
+   https://api.mi-dominio.com/instalar.php?token=41e63afb15c07232c2b7353d587d8955
    ```
-8. Genera la clave de la aplicación:
-   - Con Terminal: `php artisan key:generate --force`
-   - Sin Terminal: ejecuta el mismo comando en tu entorno Docker local (`docker compose exec backend php artisan key:generate --show`) y copia manualmente el valor resultante en `APP_KEY=` dentro del `.env` del servidor.
-9. Da permisos de escritura a `backend/storage` y `backend/bootstrap/cache` (clic derecho → Permissions → 755, o 775 si tu hosting lo exige) desde el File Manager.
-10. **No ejecutes `php artisan migrate`** en este punto: ya creaste todas las tablas y triggers al importar el SQL en el paso 11.3. Si migras encima, Laravel intentará crear tablas que ya existen y fallará.
-    - Si en cambio prefieres arrancar **sin** los datos de prueba del entorno de desarrollo (una base limpia), no importes el SQL en el paso 11.3 y en su lugar ejecuta aquí `php artisan migrate --force` seguido de `php artisan db:seed --force` (esto recrea la estructura y solo los catálogos/usuario administrador iniciales).
+   Llena el formulario con los datos reales de la base de datos que creaste en el paso 11.2 y las URLs de tu API y tu frontend. Al enviarlo, el instalador automáticamente:
+   - Crea/actualiza `backend/.env` con esos datos.
+   - Genera una clave de aplicación (`APP_KEY`) nueva y única.
+   - Aplica las migraciones que falten (si ya importaste el SQL completo en el paso 11.3, no duplica ni borra nada — Laravel detecta que esas migraciones ya están hechas y las salta).
+   - Crea el enlace de almacenamiento público (`storage:link`).
+8. Si todo sale bien verás **"✅ ¡Listo!"**. **Borra `instalar.php` del servidor inmediatamente después** (Administrador de Archivos → clic derecho → Eliminar) — ya cumplió su función y dejarlo público es un riesgo de seguridad, aunque esté protegido por el token y no pueda ejecutarse dos veces.
+
+> El token de ejemplo de arriba (`41e63afb15c07232c2b7353d587d8955`) es el que trae el proyecto en este momento. Si por seguridad quieres cambiarlo, edita la constante `TOKEN` al inicio de `backend/public/instalar.php` antes de subirlo, y usa ese valor nuevo en la URL.
 
 ![Espacio para captura: configuración del subdominio api.mi-dominio.com con Document Root apuntando a backend/public](capturas/cpanel-subdominio-backend.png)
+
+![Espacio para captura: formulario del instalador (instalar.php) con los campos de base de datos y dominios](capturas/instalar-formulario.png)
 
 ---
 
@@ -1340,19 +1331,8 @@ La URL del backend **no** está escrita dentro del código que se compila — vi
 ### 11.6 Paso 5 — Dominios, CORS y HTTPS
 
 1. **HTTPS:** en cPanel → **"SSL/TLS Status"**, activa **AutoSSL** para ambos subdominios (`mi-dominio.com` y `api.mi-dominio.com`). Es gratuito y se renueva solo.
-2. **CORS (para que el frontend pueda hablar con la API):** edita `backend/config/cors.php` en el servidor y agrega tu dominio real de frontend a `allowed_origins`:
-   ```php
-   'allowed_origins' => [
-       'https://mi-dominio.com',
-       'https://app.mi-dominio.com', // si usaste subdominio para el frontend
-   ],
-   ```
-3. Tras editar `.env` o `config/cors.php`, limpia la caché de configuración (por Terminal, dentro de `backend/`):
-   ```bash
-   php artisan config:clear
-   php artisan cache:clear
-   ```
-4. Prueba el login desde `https://mi-dominio.com` — si ves un error de CORS en la consola del navegador (F12), confirma que el dominio exacto (con `https://` y sin `/` final) esté en `allowed_origins`.
+2. **CORS (para que el frontend pueda hablar con la API):** ya **no requiere editar ningún archivo**. `backend/config/cors.php` lee automáticamente el valor de `FRONTEND_URL` que guardaste en el `.env` a través del instalador (paso 11.4.7) y lo agrega solo a la lista de orígenes permitidos. Si necesitas agregar más de un dominio (por ejemplo con y sin `www`), edita `FRONTEND_URL` en el `.env` separando las URLs con coma: `FRONTEND_URL=https://mi-dominio.com,https://www.mi-dominio.com`.
+3. Prueba el login desde `https://mi-dominio.com` — si ves un error de CORS en la consola del navegador (F12), confirma que `FRONTEND_URL` en `backend/.env` tenga exactamente esa URL (con `https://` y sin `/` final), y que hayas corrido `php artisan config:clear` después de cualquier cambio manual al `.env` (el instalador ya lo hace automáticamente la primera vez).
 
 ---
 
@@ -1459,6 +1439,7 @@ Usa esta lista como checklist para completar el manual con imágenes. Guarda cad
 | 52 | `phpmyadmin-importar.png` | phpMyAdmin — pestaña Importar |
 | 53 | `cpanel-subdominio-backend.png` | cPanel — subdominio del backend |
 | 54 | `cpanel-subir-frontend.png` | cPanel — archivos del frontend subidos |
+| 55 | `instalar-formulario.png` | Formulario del instalador web (instalar.php) |
 
 ---
 

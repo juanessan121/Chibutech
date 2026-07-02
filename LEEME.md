@@ -148,5 +148,8 @@ Esta guía (arriba) es solo para desarrollo local con Docker. Para publicar el s
 Puntos clave que se pierden fácilmente al pasar de Docker a cPanel:
 - Usa `database/01_chibutech_hosting_compartido.sql` para importar la base de datos (no `01_chibutech_completo.sql`, que solo sirve para Docker).
 - El Document Root del subdominio del backend debe apuntar a `backend/public`, **no** a `backend`.
+- `backend/vendor/` **ya viene incluida en el proyecto**, lista para subir junto con todo lo demás — no hace falta Composer ni Terminal en el hosting.
+- El sistema trae un instalador web de un solo uso: `backend/public/instalar.php`. Se sube junto con el resto del backend y se visita una vez desde el navegador (`https://api.mi-dominio.com/instalar.php?token=...`, el token está dentro del propio archivo). Crea el `.env`, genera la clave de la aplicación y aplica lo que falte — sin Terminal, sin SSH. **Bórralo del servidor apenas termine de usarlo.**
 - Después de subir el frontend (`frontend/dist/`) al hosting, la URL de la API **no** requiere recompilar nada: se edita directamente en el servidor abriendo `config.js` con el Administrador de Archivos de cPanel y cambiando la línea `window.__API_BASE_URL__ = '...'` por la URL real (ej. `https://api.mi-dominio.com/api`). Si se deja en `localhost`, la app en producción queda en pantalla en blanco o no puede iniciar sesión.
+- El CORS ya no requiere editar código: se configura solo a partir de `FRONTEND_URL` en el `.env` (que el instalador ya escribe por ti).
 - Si ves "Acceso denegado", "403 Forbidden" o "404" al desplegar, revisa el checklist completo en la sección 11.9 del manual — cubre las causas más comunes con su solución exacta.

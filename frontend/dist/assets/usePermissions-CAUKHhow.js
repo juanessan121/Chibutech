@@ -1,0 +1,1 @@
+import{r as e}from"./rolldown-runtime-S-ySWqyJ.js";import{a as t}from"./vendor-forms-CLNCzHzA.js";import{d as n}from"./index-repm3SpI.js";var r=e(t(),1);function i(){let e=n(e=>e.user);return{hasPermission:(0,r.useCallback)(t=>e?.permisos?e.permisos.includes(t):!1,[e?.permisos]),isRole:(0,r.useCallback)(t=>e?.rol===t,[e?.rol]),userRole:e?.rol}}export{i as t};

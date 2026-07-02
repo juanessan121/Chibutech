@@ -82,6 +82,13 @@ Incluye también un checklist de errores comunes ("Acceso denegado", 403, 404, p
 
 Para importar la base de datos en un hosting compartido, usa **`database/01_chibutech_hosting_compartido.sql`** (no `01_chibutech_completo.sql`, que solo funciona en el entorno Docker de desarrollo).
 
+**Resumen del despliegue (sin Docker en el servidor):**
+1. Sube `backend/` completo — **ya incluye `vendor/`**, no hace falta Composer ni Terminal en el hosting.
+2. Sube el contenido de `frontend/dist/` (ya compilado, con `.htaccess` y `config.js` incluidos) directamente a `public_html`.
+3. Importa `database/01_chibutech_hosting_compartido.sql` desde phpMyAdmin.
+4. Visita `https://api.mi-dominio.com/instalar.php?token=...` una sola vez — crea el `.env`, genera la clave y termina la configuración. Bórralo del servidor después.
+5. Edita `config.js` en el frontend con la URL real de la API.
+
 ---
 
 ## Estructura del proyecto

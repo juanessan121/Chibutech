@@ -1,0 +1,1 @@
+var e=`/assets/bg_reportes-BMrpS2TF.png`;export{e as t};
