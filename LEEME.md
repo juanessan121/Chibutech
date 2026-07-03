@@ -139,17 +139,19 @@ La clave de aplicación se genera en:
 
 ---
 
-## Subir el sistema a un servidor (producción / cPanel)
+## Subir el sistema a un servidor (producción)
 
-Esta guía (arriba) es solo para desarrollo local con Docker. Para publicar el sistema en un hosting real con cPanel — crear la base de datos sin errores de permisos, configurar el backend, el frontend, el dominio, HTTPS y CORS — sigue la guía técnica completa:
+Esta guía (arriba) es solo para desarrollo local con Docker. Para publicar el sistema en un servidor real, la guía técnica completa — para **cualquier tipo de hosting**, no solo cPanel — está en:
 
-**[`docs/manual/MANUAL_USUARIO.md` — Sección 11: Guía técnica: subir Chibutech a un servidor con cPanel](docs/manual/MANUAL_USUARIO.md#11-guía-técnica-subir-chibutech-a-un-servidor-con-cpanel)**
+**[`docs/manual/MANUAL_TECNICO_DESPLIEGUE.md`](docs/manual/MANUAL_TECNICO_DESPLIEGUE.md)**
 
-Puntos clave que se pierden fácilmente al pasar de Docker a cPanel:
+Y para entender la arquitectura/el código (si además de desplegarlo necesitas modificarlo):
+
+**[`docs/manual/MANUAL_TECNICO_DESARROLLO.md`](docs/manual/MANUAL_TECNICO_DESARROLLO.md)**
+
+Puntos clave que se pierden fácilmente al pasar de Docker a producción:
 - Usa `database/01_chibutech_hosting_compartido.sql` para importar la base de datos (no `01_chibutech_completo.sql`, que solo sirve para Docker).
-- El Document Root del subdominio del backend debe apuntar a `backend/public`, **no** a `backend`.
-- `backend/vendor/` **ya viene incluida en el proyecto**, lista para subir junto con todo lo demás — no hace falta Composer ni Terminal en el hosting.
-- El sistema trae un instalador web de un solo uso: `backend/public/instalar.php`. Se sube junto con el resto del backend y se visita una vez desde el navegador (`https://api.mi-dominio.com/instalar.php?token=...`, el token está dentro del propio archivo). Crea el `.env`, genera la clave de la aplicación y aplica lo que falte — sin Terminal, sin SSH. **Bórralo del servidor apenas termine de usarlo.**
-- Después de subir el frontend (`frontend/dist/`) al hosting, la URL de la API **no** requiere recompilar nada: se edita directamente en el servidor abriendo `config.js` con el Administrador de Archivos de cPanel y cambiando la línea `window.__API_BASE_URL__ = '...'` por la URL real (ej. `https://api.mi-dominio.com/api`). Si se deja en `localhost`, la app en producción queda en pantalla en blanco o no puede iniciar sesión.
-- El CORS ya no requiere editar código: se configura solo a partir de `FRONTEND_URL` en el `.env` (que el instalador ya escribe por ti).
-- Si ves "Acceso denegado", "403 Forbidden" o "404" al desplegar, revisa el checklist completo en la sección 11.9 del manual — cubre las causas más comunes con su solución exacta.
+- El Document Root debe apuntar a `backend/public`, **no** a `backend`. Un solo dominio sirve la API y el frontend juntos — ya no hace falta un subdominio aparte para la API, ni configurar CORS.
+- `backend/vendor/` y el frontend ya compilado (`backend/public/app/`, `backend/public/assets/`) **vienen incluidos en el proyecto**, listos para subir — no hace falta Composer, npm ni Terminal en el hosting.
+- El sistema trae un instalador web de un solo uso: `backend/public/instalar.php`. Se visita una vez desde el navegador (`https://tu-dominio.com/instalar.php?token=...`, el token está dentro del propio archivo). Crea el `.env`, genera la clave de la aplicación y aplica lo que falte — sin Terminal, sin SSH. **Bórralo del servidor apenas termine de usarlo.**
+- Si ves "Acceso denegado", "403 Forbidden" o "404" al desplegar, revisa el checklist completo de errores comunes en el manual de despliegue.

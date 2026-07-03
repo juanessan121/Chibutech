@@ -67,17 +67,9 @@ La carpeta `docs/manual/capturas/` ya está creada y lista para recibir las imá
    - 9.2 [Configuración Global del Sistema](#92-configuración-global-del-sistema)
    - 9.3 [Bitácora de Auditoría](#93-bitácora-de-auditoría)
 10. [Reglas de negocio clave (resumen)](#10-reglas-de-negocio-clave-resumen)
-11. [Guía técnica: subir Chibutech a un servidor con cPanel](#11-guía-técnica-subir-chibutech-a-un-servidor-con-cpanel)
+11. [Guía técnica: subir Chibutech a un servidor](#11-guía-técnica-subir-chibutech-a-un-servidor)
     - 11.0 [Diagnóstico del error "Acceso denegado" que estás viendo](#110-diagnóstico-del-error-acceso-denegado-que-estás-viendo)
-    - 11.1 [Requisitos del hosting](#111-requisitos-del-hosting)
-    - 11.2 [Paso 1 — Crear la base de datos y el usuario en cPanel](#112-paso-1--crear-la-base-de-datos-y-el-usuario-en-cpanel)
-    - 11.3 [Paso 2 — Importar la base de datos vía phpMyAdmin (sin error)](#113-paso-2--importar-la-base-de-datos-vía-phpmyadmin-sin-error)
-    - 11.4 [Paso 3 — Subir y configurar todo (backend + frontend juntos)](#114-paso-3--subir-y-configurar-todo-backend--frontend-juntos)
-    - 11.5 [Paso 4 — HTTPS](#115-paso-4--https)
-    - 11.6 [(referencia) Actualizar el frontend en el futuro](#116-referencia-para-quien-mantiene-el-código-actualizar-el-frontend-en-el-futuro)
-    - 11.7 [Mantenimiento: actualizar el sistema tras cambios](#117-mantenimiento-actualizar-el-sistema-tras-cambios)
-    - 11.8 [Alternativa: servidor propio (VPS) con Docker](#118-alternativa-servidor-propio-vps-con-docker)
-    - 11.9 [Checklist de "Acceso denegado" — todas las causas posibles](#119-checklist-de-acceso-denegado--todas-las-causas-posibles)
+    - 11.1 [Guía completa y actualizada de despliegue](#111-guía-completa-y-actualizada-de-despliegue) → ver `MANUAL_TECNICO_DESPLIEGUE.md`
 
 ---
 
@@ -1161,9 +1153,9 @@ Estas reglas atraviesan varios módulos y son importantes para entender el compo
 
 ---
 
-## 11. Guía técnica: subir Chibutech a un servidor con cPanel
+## 11. Guía técnica: subir Chibutech a un servidor
 
-> **Esta sección es para la persona técnica** encargada de instalar el sistema en el hosting, no para el usuario final. Está escrita a partir del error real "Acceso denegado" que aparece al intentar crear la base de datos en phpMyAdmin/cPanel.
+> **Esta sección es para la persona técnica** encargada de instalar el sistema en el hosting, no para el usuario final.
 
 ### 11.0 Diagnóstico del error "Acceso denegado" que estás viendo
 
@@ -1208,164 +1200,19 @@ Tiene exactamente las mismas tablas, datos y triggers que el original, pero **si
 
 ---
 
-### 11.1 Requisitos del hosting
+### 11.1 Guía completa y actualizada de despliegue
 
-Verifica en tu panel de cPanel (sección "Estadísticas" o pregúntale a tu proveedor) que el plan incluya:
+El resto del proceso de despliegue (requisitos del servidor, empaquetar `backend/` con `vendor/` y el frontend fusionado, crear e importar la base de datos, subir los archivos, apuntar el dominio, correr el instalador web, HTTPS, mantenimiento, y un checklist de errores comunes) está documentado de forma completa y actualizada — para **cualquier tipo de servidor**, no solo cPanel — en:
 
-| Requisito | Dónde se configura en cPanel |
-|---|---|
-| PHP **8.2** o superior | "MultiPHP Manager" / "Select PHP Version" |
-| Extensiones PHP: `mbstring`, `pdo_mysql`, `openssl`, `bcmath`, `ctype`, `fileinfo`, `curl`, `xml`, `tokenizer`, `json` | "Select PHP Version" → pestaña "Extensions" |
-| MySQL o MariaDB | "MySQL® Databases" |
-| Poder crear subdominios | "Subdomains" o "Domains" |
-| SSL gratis (AutoSSL / Let's Encrypt) | "SSL/TLS Status" |
-| Terminal / acceso SSH (recomendado, no obligatorio) | "Terminal" (si tu plan lo incluye) |
+**[`docs/manual/MANUAL_TECNICO_DESPLIEGUE.md`](MANUAL_TECNICO_DESPLIEGUE.md)**
 
-No necesitas Node.js en el servidor: el frontend se compila en tu computador y solo se sube el resultado (archivos estáticos).
+Y para entender la arquitectura y el código (útil si además de desplegarlo necesitas modificarlo o depurar un error), ver:
+
+**[`docs/manual/MANUAL_TECNICO_DESARROLLO.md`](MANUAL_TECNICO_DESARROLLO.md)**
+
+> Nota histórica: esta sección originalmente tenía el paso a paso completo específico para cPanel con dos dominios separados (uno para el backend, otro para el frontend). Esa arquitectura quedó reemplazada por un solo dominio unificado (Laravel sirve la API y el frontend juntos desde `backend/public/`) — ver el manual de despliegue para el flujo actual, más simple y con menos puntos de falla.
 
 ---
-
-### 11.2 Paso 1 — Crear la base de datos y el usuario en cPanel
-
-1. En cPanel, entra a **"MySQL® Databases"** ("Bases de datos MySQL").
-2. En **"Create New Database"**, escribe `basechi` y pulsa **Create Database**. cPanel la creará como `tuusuario_basechi` (anota el nombre completo real que te muestre).
-3. Baja a **"MySQL Users" → "Add New User"**: escribe un nombre de usuario y genera una contraseña segura (usa el botón "Password Generator"). Pulsa **Create User**. El usuario final quedará como `tuusuario_dbuser`.
-4. En **"Add User To Database"**, selecciona el usuario y la base de datos que acabas de crear, pulsa **Add**.
-5. En la pantalla de privilegios, marca **"ALL PRIVILEGES"** y pulsa **Make Changes**.
-6. Anota estos 3 datos reales (los necesitarás en el paso 11.4):
-   - Base de datos: `tuusuario_basechi`
-   - Usuario: `tuusuario_dbuser`
-   - Contraseña: la que generaste
-
-![Espacio para captura: pantalla de cPanel "MySQL® Databases" con la base y el usuario creados](capturas/cpanel-crear-bd.png)
-
----
-
-### 11.3 Paso 2 — Importar la base de datos vía phpMyAdmin (sin error)
-
-1. En cPanel, entra a **phpMyAdmin**.
-2. En el panel izquierdo, selecciona tu base de datos (`tuusuario_basechi`).
-3. Ve a la pestaña **"Importar"** ("Import").
-4. En **"Seleccionar archivo"**, elige el archivo **`database/01_chibutech_hosting_compartido.sql`** (el corregido — **no** el archivo `01_chibutech_completo.sql` original, ese es el que causa el "Acceso denegado").
-5. Deja el formato en **SQL** y el resto de opciones por defecto.
-6. Pulsa **"Continuar"** / **"Go"**.
-7. Espera a que termine (el archivo pesa ~300 KB, no debería tardar ni topar límites de subida).
-8. Verifica: en el panel izquierdo deben aparecer todas las tablas dentro de `tuusuario_basechi`. Entra a cualquier tabla con auditoría (por ejemplo `Persona`) → pestaña **"Disparadores"** ("Triggers") y confirma que los 3 triggers de esa tabla existan sin error.
-
-Si aun así ves "Acceso denegado" en este paso, revisa el [checklist completo](#119-checklist-de-acceso-denegado--todas-las-causas-posibles) al final de esta sección.
-
-![Espacio para captura: pestaña Importar de phpMyAdmin con el archivo 01_chibutech_hosting_compartido.sql seleccionado](capturas/phpmyadmin-importar.png)
-
----
-
-### 11.4 Paso 3 — Subir y configurar todo (backend + frontend juntos)
-
-**El frontend y el backend viven en un solo paquete.** El frontend (React) ya está compilado y fusionado dentro de `backend/public/` (carpetas `app/` y `assets/`, y el archivo `config.js`) — Laravel sirve la API (`/api/*`) y también las pantallas del sistema desde el mismo dominio. Esto significa: **una sola carpeta para subir, un solo Document Root, un solo dominio, sin CORS.** El proyecto también incluye `backend/vendor/` pre-generado (no hace falta Composer ni Terminal en el hosting) y un instalador web de un solo uso (`backend/public/instalar.php`) que crea el `.env`, genera la clave de la aplicación y aplica lo que falte, todo desde el navegador.
-
-1. Comprime la carpeta `backend/` completa **incluyendo `vendor/` y `public/app/`** (sin `node_modules`, que no existe en backend). El `.zip` pesará varios cientos de MB por el `vendor/` — es normal.
-2. Sube el `.zip` con el **Administrador de Archivos de cPanel** (File Manager) a una carpeta **fuera de `public_html`**, por ejemplo `laravel_chibutech/` al mismo nivel que `public_html`. Esto evita que el código PHP quede accesible directamente desde el navegador. Descomprímelo ahí.
-3. En cPanel, asigna tu **dominio principal** (o un subdominio, como prefieras — ya no hace falta que sea uno específico "para la API") a este proyecto: **"Domains"** → edita el dominio → **"Document Root"** debe apuntar exactamente a:
-   ```
-   laravel_chibutech/backend/public
-   ```
-   (la carpeta `public` de Laravel, **no** la raíz de `backend/`). Laravel siempre se sirve desde ahí — y desde ahí también sale el frontend, porque ya está adentro.
-4. En **"MultiPHP Manager"**, asigna PHP 8.2 a ese dominio. En **"Select PHP Version"**, activa las extensiones listadas en 11.1.
-5. Da permisos de escritura a `backend/storage` y `backend/bootstrap/cache` (clic derecho → Permissions → 755, o 775 si tu hosting lo exige) desde el File Manager.
-6. Visita en el navegador:
-   ```
-   https://mi-dominio.com/instalar.php?token=41e63afb15c07232c2b7353d587d8955
-   ```
-   Llena el formulario con los datos reales de la base de datos que creaste en el paso 11.2 y el dominio donde quedó el sistema (el mismo del paso 3). Al enviarlo, el instalador automáticamente:
-   - Crea/actualiza `backend/.env` con esos datos (usa el mismo dominio tanto para `APP_URL` como para `FRONTEND_URL`, ya que son el mismo sitio).
-   - Genera una clave de aplicación (`APP_KEY`) nueva y única.
-   - Aplica las migraciones que falten (si ya importaste el SQL completo en el paso 11.3, no duplica ni borra nada — Laravel detecta que esas migraciones ya están hechas y las salta).
-   - Crea el enlace de almacenamiento público (`storage:link`).
-7. Si todo sale bien verás **"✅ ¡Listo!"**. **Borra `instalar.php` del servidor inmediatamente después** (Administrador de Archivos → clic derecho → Eliminar) — ya cumplió su función y dejarlo público es un riesgo de seguridad, aunque esté protegido por el token y no pueda ejecutarse dos veces.
-8. Entra a `https://mi-dominio.com` — deberías ver directamente la pantalla de login del sistema (no una carpeta vacía ni una página de Laravel por defecto), y las rutas internas como `https://mi-dominio.com/dashboard` deben funcionar incluso recargando la página.
-
-> El token de ejemplo de arriba (`41e63afb15c07232c2b7353d587d8955`) es el que trae el proyecto en este momento. Si por seguridad quieres cambiarlo, edita la constante `TOKEN` al inicio de `backend/public/instalar.php` antes de subirlo, y usa ese valor nuevo en la URL.
-
-> **¿Por qué ya no hay un paso aparte para "subir el frontend"?** Antes el frontend y el backend eran dos sitios distintos (uno en `mi-dominio.com`, otro en `api.mi-dominio.com`), lo que obligaba a configurar dos Document Root, dos subdominios y CORS entre ambos — la fuente de la mayoría de los errores 403/404/pantalla en blanco. Ahora Laravel sirve los archivos del frontend directamente (`backend/public/app/index.html` para la pantalla inicial, `backend/public/assets/` para el código JS/CSS), y cualquier ruta que no sea `/api/*` ni un archivo real cae en una "ruta de respaldo" (`routes/web.php`) que muestra el frontend. Todo en un solo dominio, sin CORS.
-
-![Espacio para captura: configuración del dominio en cPanel con Document Root apuntando a backend/public](capturas/cpanel-subdominio-backend.png)
-
-![Espacio para captura: formulario del instalador (instalar.php) con los campos de base de datos y dominio](capturas/instalar-formulario.png)
-
----
-
-### 11.5 Paso 4 — HTTPS
-
-1. En cPanel → **"SSL/TLS Status"**, activa **AutoSSL** para tu dominio. Es gratuito y se renueva solo.
-2. Prueba el sitio con `https://` (no `http://`) — si el navegador marca el candado como inseguro, espera unos minutos a que AutoSSL termine de emitir el certificado, o revisa el estado en la misma pantalla de "SSL/TLS Status".
-
----
-
-### 11.6 (referencia, para quien mantiene el código) Actualizar el frontend en el futuro
-
-Esta sección es para quien programa el sistema (no para quien solo lo despliega). Como el frontend queda **fusionado dentro de `backend/public/`**, cada vez que se modifique algo en `frontend/` hay que recompilarlo y volver a copiarlo ahí antes de subir los cambios:
-
-```bash
-# Con Docker corriendo:
-docker compose run --rm --entrypoint sh frontend -c "npm run build"
-sh deploy/fusionar-frontend.sh
-
-# Sin Docker (con Node.js instalado localmente):
-cd frontend && npm install && npm run build && cd ..
-sh deploy/fusionar-frontend.sh
-```
-
-El script `deploy/fusionar-frontend.sh` copia `frontend/dist/assets/`, `config.js`, `favicon.svg`, `icons.svg` y `index.html` (renombrado a `backend/public/app/index.html`) dentro de `backend/public/`, sin tocar los archivos propios de Laravel (`index.php`, `.htaccess`, etc.). Después de correrlo, se hace `git add`/`commit`/`push` de los cambios en `backend/public/` como cualquier otro archivo del proyecto.
-
-**Nota sobre CORS:** ya no requiere configuración manual. `backend/config/cors.php` lee automáticamente el valor de `FRONTEND_URL` del `.env` (el mismo dominio que `APP_URL`, ya que ahora comparten sitio). Solo sería relevante si en algún caso especial decides volver a separar el frontend en otro dominio.
-
----
-
-### 11.7 Mantenimiento: actualizar el sistema tras cambios
-
-Cada vez que se actualice el código del proyecto:
-
-- **Backend:** sube los archivos PHP modificados, y si hubo cambios en la base de datos, aplica solo esos cambios puntuales por phpMyAdmin (pestaña SQL) en lugar de reimportar todo el archivo completo (para no perder los datos ya cargados en producción). Si hubo dependencias nuevas de Composer, vuelve a generar `vendor/` en tu computador (ver 11.6) y sube esa carpeta actualizada, y corre `php artisan config:clear`.
-- **Frontend:** recompílalo y fusiónalo de nuevo dentro de `backend/public/` (ver 11.6), luego sube esa carpeta actualizada (`backend/public/app/`, `backend/public/assets/`, `backend/public/config.js`) al servidor reemplazando lo anterior.
-- **Backups:** programa una tarea periódica en cPanel → **"Backup"** o **"Backup Wizard"** para respaldar la base de datos automáticamente (semanal, como mínimo). También puedes exportar manualmente desde phpMyAdmin (pestaña "Exportar") antes de cualquier actualización importante.
-
----
-
-### 11.8 Alternativa: servidor propio (VPS) con Docker
-
-Si en el futuro migras a un servidor privado (VPS) donde sí tengas acceso root (DigitalOcean, Hetzner, AWS Lightsail, etc.), el proceso es más simple porque puedes usar exactamente el mismo `docker-compose.yml` que usas en desarrollo:
-
-1. Instala Docker y Docker Compose en el VPS (Ubuntu: `curl -fsSL https://get.docker.com | sh`).
-2. Sube el proyecto completo (`git clone` de tu repositorio, o `scp`/`rsync` de la carpeta).
-3. Antes de levantar los contenedores, cambia las contraseñas por defecto en `docker-compose.yml` y en `backend/.env` (las que aparecen en este manual, como `Chibutech2026` o `root_super_secreto`, son solo para desarrollo local y **no deben usarse en un servidor expuesto a internet**).
-4. En `backend/.env` ajusta `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL` y `FRONTEND_URL` con tu dominio real.
-5. **No publiques el puerto de la base de datos (3308) hacia internet** — en `docker-compose.yml`, quita o restringe la línea `ports: - "3308:3306"` del servicio `db` si el servidor tiene IP pública; solo el backend necesita hablarle a la base de datos, y lo hace dentro de la red interna de Docker sin necesidad de exponer el puerto.
-6. Coloca un proxy inverso delante de los contenedores (Nginx o Traefik) para servir con HTTPS real (Let's Encrypt/Certbot), redirigiendo `mi-dominio.com` al contenedor `frontend` (o mejor, a una build estática servida por Nginx) y `api.mi-dominio.com` al contenedor `backend`.
-7. Ejecuta `docker compose up -d --build`. La base de datos se crea automáticamente la primera vez importando lo que haya en `./database/` (en este caso sí puedes usar el archivo `01_chibutech_completo.sql` original, porque el contenedor de MariaDB corre como root y no tiene las restricciones de cPanel).
-8. Programa backups con `docker compose exec db mysqldump -u root -p basechi > backup.sql` en una tarea `cron` periódica.
-
----
-
-### 11.9 Checklist de "Acceso denegado" — todas las causas posibles
-
-Si sigues viendo "Acceso denegado" en algún punto del proceso, revisa en orden:
-
-| Dónde aparece | Causa más probable | Solución |
-|---|---|---|
-| Al importar el SQL en phpMyAdmin | Usaste el archivo original (`01_chibutech_completo.sql`) en vez del corregido | Usa `database/01_chibutech_hosting_compartido.sql` (ver 11.0 y 11.3) |
-| Al importar, mensaje menciona "SUPER privilege" | Quedó algún `DEFINER=` root sin limpiar | Vuelve a generar el archivo corregido o edítalo manualmente buscando y borrando cualquier `DEFINER=\`root\`@\`localhost\`` |
-| Al importar, mensaje `#1231 - Variable 'sql_mode' no puede ser configurada para el valor de 'NO_AUTO_CREATE_USER'` | Tu MySQL es versión 8+ y ya no reconoce ese modo SQL (ver Causa 3 en 11.0) | Usa la versión más reciente de `01_chibutech_hosting_compartido.sql` (ya no contiene `NO_AUTO_CREATE_USER`); si lo editaste a mano, busca y borra `NO_AUTO_CREATE_USER,` en todas las líneas `SET sql_mode = '...'` |
-| Al importar, mensaje menciona "CREATE command denied" o el nombre `basechi` sin prefijo | El script intenta crear la base de datos o usa el nombre sin el prefijo de tu cPanel | Confirma que seleccionaste primero tu base de datos real (`tuusuario_basechi`) en el panel izquierdo de phpMyAdmin antes de importar |
-| Al conectar Laravel a la base de datos ("SQLSTATE[HY000] [1045] Access denied for user") | `DB_USERNAME`/`DB_PASSWORD`/`DB_DATABASE` en `backend/.env` no coinciden con los datos reales de cPanel | Verifica los 3 valores contra lo anotado en el paso 11.2 (deben incluir el prefijo de tu usuario cPanel) |
-| Al conectar Laravel a la base de datos | El usuario no fue agregado a la base de datos, o no tiene "ALL PRIVILEGES" | Repite el paso "Add User To Database" en cPanel → MySQL® Databases |
-| Al hacer `git push` / `git pull` | Credenciales de Git vencidas o sin permisos en el repositorio remoto | Verifica el token/llave SSH configurado con tu proveedor de Git (GitHub/GitLab) |
-| Al conectar por SSH/Terminal al hosting | El plan de hosting no incluye SSH, o la IP no está en la lista blanca | Consulta con tu proveedor si el plan permite Terminal/SSH; si no, sigue el flujo de 11.4 sin Terminal (subiendo `vendor/` ya compilado) |
-| Al subir archivos por FTP | Permisos de la carpeta destino, o límite de cuota de disco superado | Revisa permisos de carpeta (755) y el espacio disponible en cPanel → "Estadísticas" |
-| La raíz del sitio (`/`) muestra un error o la instalación por defecto de Laravel, no el login del sistema | Falta `backend/public/app/index.html` (no se subió esa carpeta, o el Document Root no apunta a `backend/public`) | Verifica en el File Manager que exista `backend/public/app/index.html`; revisa también el Document Root (ver 11.4.3) |
-| Una ruta interna (`/dashboard/...`) da 404 al recargar la página, aunque el login sí funcionó | El backend no tiene la ruta de respaldo (`Route::fallback`) — versión desactualizada de `backend/routes/web.php` | Verifica que `backend/routes/web.php` tenga el `Route::fallback(...)` que sirve `public/app/index.html`; si falta, sube la versión más reciente del proyecto |
-| Aparece un error de CORS en la consola del navegador (F12) | Poco probable en el flujo actual (mismo dominio para todo), pero puede pasar si mezclaste dominios distintos para backend y frontend a propósito | Usa el mismo dominio para ambos (ya no se necesitan subdominios separados); si de verdad necesitas separarlos, edita `FRONTEND_URL` en `backend/.env` con el dominio real del frontend |
-
----
-
 ## Anexo — Lista de capturas pendientes
 
 Usa esta lista como checklist para completar el manual con imágenes. Guarda cada archivo en `docs/manual/capturas/` con el nombre indicado.

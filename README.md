@@ -72,13 +72,13 @@ docker-compose exec backend php artisan migrate   # correr migraciones nuevas ma
 
 ---
 
-## Producción (hosting compartido / cPanel)
+## Documentación técnica
 
-El proceso completo para subir el sistema a un hosting con cPanel (crear base de datos, importar el SQL sin errores de permisos, configurar el backend y el frontend, dominios, CORS y HTTPS) está documentado paso a paso en:
-
-**[`docs/manual/MANUAL_USUARIO.md` — Sección 11](docs/manual/MANUAL_USUARIO.md#11-guía-técnica-subir-chibutech-a-un-servidor-con-cpanel)**
-
-Incluye también un checklist de errores comunes ("Acceso denegado", 403, 404, pantalla en blanco) con su causa y solución.
+| Manual | Para qué sirve |
+|---|---|
+| [`docs/manual/MANUAL_TECNICO_DESARROLLO.md`](docs/manual/MANUAL_TECNICO_DESARROLLO.md) | Arquitectura, stack, estructura del código, base de datos, cómo agregar funcionalidades — para quien programa/mantiene el sistema |
+| [`docs/manual/MANUAL_TECNICO_DESPLIEGUE.md`](docs/manual/MANUAL_TECNICO_DESPLIEGUE.md) | Cómo llevar el sistema a un servidor de producción — **general, sirve para cualquier proveedor** (cPanel, Plesk, VPS con Apache/Nginx, Docker, plataformas cloud), con checklist de errores comunes |
+| [`docs/manual/MANUAL_USUARIO.md`](docs/manual/MANUAL_USUARIO.md) | Manual de uso del sistema, pantalla por pantalla, para comuneros/directiva/administradores |
 
 Para importar la base de datos en un hosting compartido, usa **`database/01_chibutech_hosting_compartido.sql`** (no `01_chibutech_completo.sql`, que solo funciona en el entorno Docker de desarrollo).
 
@@ -97,7 +97,7 @@ Chibutech/
 ├── docker-compose.yml
 ├── README.md                     ← este archivo
 ├── LEEME.md                      ← guía rápida para el equipo
-├── docs/manual/                  ← manual de usuario + guía de despliegue en cPanel
+├── docs/manual/                  ← manual de usuario + manual técnico de desarrollo + manual técnico de despliegue
 ├── database/
 │   ├── 01_chibutech_completo.sql             ← para Docker (desarrollo)
 │   └── 01_chibutech_hosting_compartido.sql   ← para hosting compartido / cPanel
@@ -142,5 +142,5 @@ docker-compose up -d --build
 ```
 ⚠️ Esto borra todos los datos y vuelve a importar el SQL desde cero.
 
-### Estoy en producción (cPanel) y me sale 403 / 404 / pantalla en blanco
-Revisa el checklist de la sección 11.9 del manual: **[`docs/manual/MANUAL_USUARIO.md`](docs/manual/MANUAL_USUARIO.md)**. La causa más común es el Document Root mal configurado (debe apuntar a `backend/public`, no a `backend`) o que falte la carpeta `backend/public/app/` (el frontend compilado) al subir los archivos.
+### Estoy en producción y me sale 403 / 404 / pantalla en blanco
+Revisa el checklist de errores comunes en **[`docs/manual/MANUAL_TECNICO_DESPLIEGUE.md`](docs/manual/MANUAL_TECNICO_DESPLIEGUE.md#11-checklist-de-errores-comunes)**. La causa más común es el Document Root mal configurado (debe apuntar a `backend/public`, no a `backend`) o que falte la carpeta `backend/public/app/` (el frontend compilado) al subir los archivos.
